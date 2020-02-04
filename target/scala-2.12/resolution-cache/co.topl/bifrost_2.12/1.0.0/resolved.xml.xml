@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0" xmlns:e="http://ant.apache.org/ivy/extra">
+	<info organisation="co.topl"
+		module="bifrost_2.12"
+		revision="1.0.0"
+		status="integration"
+		publication="20200204142224"
+	>
+		<description homepage="https://github.com/Topl/Bifrost">
+		bifrost
+		</description>
+	</info>
+	<configurations>
+		<conf name="compile" visibility="public" description=""/>
+		<conf name="runtime" visibility="public" description="" extends="compile"/>
+		<conf name="test" visibility="public" description="" extends="runtime"/>
+		<conf name="provided" visibility="public" description=""/>
+		<conf name="optional" visibility="public" description=""/>
+		<conf name="protobuf" visibility="public" description=""/>
+		<conf name="compile-internal" visibility="private" description="" extends="compile,optional,provided"/>
+		<conf name="runtime-internal" visibility="private" description="" extends="runtime,optional"/>
+		<conf name="test-internal" visibility="private" description="" extends="test,optional,provided"/>
+		<conf name="plugin" visibility="private" description=""/>
+		<conf name="sources" visibility="public" description=""/>
+		<conf name="docs" visibility="public" description=""/>
+		<conf name="pom" visibility="public" description=""/>
+		<conf name="scala-tool" visibility="private" description=""/>
+	</configurations>
+	<publications>
+		<artifact name="bifrost_2.12" type="pom" ext="pom" conf="pom"/>
+		<artifact name="bifrost_2.12" type="jar" ext="jar" conf="compile"/>
+		<artifact name="bifrost_2.12" type="src" ext="jar" conf="sources" e:classifier="sources"/>
+		<artifact name="bifrost_2.12" type="doc" ext="jar" conf="docs" e:classifier="javadoc"/>
+	</publications>
+	<dependencies>
+		<dependency org="org.scala-lang" name="scala-compiler" rev="2.12.7" conf="scala-tool->default,optional(default)"/>
+		<dependency org="org.scala-lang" name="scala-library" rev="2.12.7" conf="scala-tool->default,optional(default);compile->default(compile)"/>
+		<dependency org="com.thesamet.scalapb" name="scalapb-runtime_2.12" rev="0.7.4" conf="compile->default(compile)"/>
+		<dependency org="com.chuusai" name="shapeless_2.12" rev="2.3.2" conf="compile->default(compile)"/>
+		<dependency org="org.consensusresearch" name="scrypto_2.12" rev="1.2.0-RC3" conf="compile->default(compile)"/>
+		<dependency org="io.circe" name="circe-optics_2.12" rev="0.7.1" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-actor_2.12" rev="2.4.19" conf="compile->default(compile)"/>
+		<dependency org="org.bitlet" name="weupnp" rev="0.1.4" conf="compile->default(compile)"/>
+		<dependency org="commons-net" name="commons-net" rev="3.6" conf="compile->default(compile)"/>
+		<dependency org="io.circe" name="circe-core_2.12" rev="0.7.1" conf="compile->default(compile)"/>
+		<dependency org="io.circe" name="circe-generic_2.12" rev="0.7.1" conf="compile->default(compile)"/>
+		<dependency org="io.circe" name="circe-parser_2.12" rev="0.7.1" conf="compile->default(compile)"/>
+		<dependency org="io.circe" name="circe-literal_2.12" rev="0.7+" conf="compile->default(compile)"/>
+		<dependency org="io.swagger" name="swagger-scala-module_2.12" rev="1.0.4" conf="compile->default(compile)"/>
+		<dependency org="com.github.swagger-akka-http" name="swagger-akka-http_2.12" rev="0.9.2" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-http_2.12" rev="10.0.9" conf="compile->default(compile)"/>
+		<dependency org="ch.qos.logback" name="logback-classic" rev="1.2.3" conf="compile->default(compile)"/>
+		<dependency org="ch.qos.logback" name="logback-core" rev="1.2.3" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-slf4j_2.12" rev="2.4.17" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-testkit_2.12" rev="2.4.18" conf="test->default(compile)"/>
+		<dependency org="org.scalactic" name="scalactic_2.12" rev="3.0.+" conf="compile->default(compile)"/>
+		<dependency org="org.scalatest" name="scalatest_2.12" rev="3.0.+" conf="test->default(compile)"/>
+		<dependency org="org.scalacheck" name="scalacheck_2.12" rev="1.13.+" conf="test->default(compile)"/>
+		<dependency org="net.databinder.dispatch" name="dispatch-core_2.12" rev="+" conf="test->default(compile)"/>
+		<dependency org="org.scorexfoundation" name="iodb_2.12" rev="0.3.1" conf="compile->default(compile)"/>
+		<dependency org="com.typesafe.akka" name="akka-http-testkit_2.12" rev="10.0.7" conf="compile->default(compile)"/>
+		<dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="1.54" conf="compile->default(compile)"/>
+		<dependency org="org.json4s" name="json4s-native_2.12" rev="3.5.2" conf="compile->default(compile)"/>
+		<dependency org="com.thesamet.scalapb" name="scalapb-json4s_2.12" rev="0.7.0" conf="compile->default(compile)"/>
+		<dependency org="org.graalvm.sdk" name="graal-sdk" rev="19.2.0" conf="compile->default(compile)"/>
+		<dependency org="org.graalvm.js" name="js" rev="19.2.0" conf="compile->default(compile)"/>
+		<dependency org="org.graalvm.truffle" name="truffle-api" rev="19.2.0" conf="compile->default(compile)"/>
+		<dependency org="org.apache.httpcomponents" name="httpclient" rev="4.5.3" conf="compile->default(compile)"/>
+		<dependency org="org.apache.httpcomponents" name="httpasyncclient" rev="4.1.3" conf="compile->default(compile)"/>
+		<dependency org="org.apache.commons" name="commons-pool2" rev="2.4.2" conf="compile->default(compile)"/>
+		<dependency org="org.scalanlp" name="breeze_2.12" rev="0.13.1" conf="compile->default(compile)"/>
+		<override org="org.scala-lang.modules" module="scala-java8-compat_2.12" matcher="exact" rev="0.8.0"/>
+		<override org="com.chuusai" module="shapeless_2.12" matcher="exact" rev="2.3.2"/>
+		<override org="org.scalanlp" module="breeze_2.12" matcher="exact" rev="0.13.1"/>
+		<override org="org.spire-math" module="jawn-parser_2.12" matcher="exact" rev="0.10.4"/>
+		<override org="com.lihaoyi" module="sourcecode_2.12" matcher="exact" rev="0.1.3"/>
+		<override org="org.slf4j" module="slf4j-api" matcher="exact" rev="1.7.25"/>
+		<override org="commons-net" module="commons-net" matcher="exact" rev="3.6"/>
+		<override org="io.circe" module="circe-core_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="com.fasterxml.jackson.module" module="jackson-module-paranamer" matcher="exact" rev="2.8.8"/>
+		<override org="org.reactivestreams" module="reactive-streams" matcher="exact" rev="1.0.0"/>
+		<override org="org.consensusresearch" module="scrypto_2.12" matcher="exact" rev="1.2.0-RC3"/>
+		<override org="javax.ws.rs" module="jsr311-api" matcher="exact" rev="1.1.1"/>
+		<override org="io.circe" module="circe-optics_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="com.lihaoyi" module="fastparse-utils_2.12" matcher="exact" rev="0.4.2"/>
+		<override org="org.bouncycastle" module="bcprov-jdk15on" matcher="exact" rev="1.54"/>
+		<override org="io.circe" module="circe-generic_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="junit" module="junit" matcher="exact" rev="4.8.2"/>
+		<override org="io.circe" module="circe-parser_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="org.scorexfoundation" module="iodb_2.12" matcher="exact" rev="0.3.1"/>
+		<override org="org.reflections" module="reflections" matcher="exact" rev="0.9.10"/>
+		<override org="com.typesafe" module="config" matcher="exact" rev="1.3.0"/>
+		<override org="com.github.rwl" module="jtransforms" matcher="exact" rev="2.4.0"/>
+		<override org="com.typesafe.akka" module="akka-http-testkit_2.12" matcher="exact" rev="10.0.7"/>
+		<override org="org.javassist" module="javassist" matcher="exact" rev="3.18.2-GA"/>
+		<override org="org.scalanlp" module="breeze-macros_2.12" matcher="exact" rev="0.13.1"/>
+		<override org="org.scalaz" module="scalaz-core_2.12" matcher="exact" rev="7.2.8"/>
+		<override org="io.swagger" module="swagger-jaxrs" matcher="exact" rev="1.5.13"/>
+		<override org="org.apache.commons" module="commons-pool2" matcher="exact" rev="2.4.2"/>
+		<override org="org.typelevel" module="cats-macros_2.12" matcher="exact" rev="0.9.0"/>
+		<override org="org.apache.commons" module="commons-math3" matcher="exact" rev="3.2"/>
+		<override org="org.apache.httpcomponents" module="httpcore" matcher="exact" rev="4.4.6"/>
+		<override org="org.scala-js" module="scalajs-library_2.12" matcher="exact" rev="0.6.18"/>
+		<override org="com.lihaoyi" module="fastparse_2.12" matcher="exact" rev="0.4.2"/>
+		<override org="org.whispersystems" module="curve25519-java" matcher="exact" rev="0.3.0"/>
+		<override org="org.apache.httpcomponents" module="httpcore-nio" matcher="exact" rev="4.4.6"/>
+		<override org="com.thoughtworks.paranamer" module="paranamer" matcher="exact" rev="2.8"/>
+		<override org="org.spire-math" module="spire_2.12" matcher="exact" rev="0.13.0"/>
+		<override org="com.typesafe.akka" module="akka-slf4j_2.12" matcher="exact" rev="2.4.17"/>
+		<override org="javax.validation" module="validation-api" matcher="exact" rev="1.1.0.Final"/>
+		<override org="net.sourceforge.f2j" module="arpack_combined_all" matcher="exact" rev="0.1"/>
+		<override org="com.fasterxml.jackson.core" module="jackson-databind" matcher="exact" rev="2.8.8"/>
+		<override org="com.typesafe.akka" module="akka-stream-testkit_2.12" matcher="exact" rev="2.4.18"/>
+		<override org="org.yaml" module="snakeyaml" matcher="exact" rev="1.17"/>
+		<override org="com.trueaccord.scalapb" module="scalapb-runtime_2.12" matcher="exact" rev="0.6.0"/>
+		<override org="net.sf.opencsv" module="opencsv" matcher="exact" rev="2.3"/>
+		<override org="com.google.protobuf" module="protobuf-java" matcher="exact" rev="3.3.1"/>
+		<override org="com.typesafe.akka" module="akka-testkit_2.12" matcher="exact" rev="2.4.18"/>
+		<override org="com.typesafe.akka" module="akka-actor_2.12" matcher="exact" rev="2.4.19"/>
+		<override org="com.typesafe.akka" module="akka-parsing_2.12" matcher="exact" rev="10.0.9"/>
+		<override org="org.scala-lang.modules" module="scala-parser-combinators_2.12" matcher="exact" rev="1.0.4"/>
+		<override org="commons-codec" module="commons-codec" matcher="exact" rev="1.9"/>
+		<override org="com.typesafe" module="ssl-config-core_2.12" matcher="exact" rev="0.2.1"/>
+		<override org="io.swagger" module="swagger-core" matcher="exact" rev="1.5.13"/>
+		<override org="io.circe" module="circe-jawn_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="io.swagger" module="swagger-annotations" matcher="exact" rev="1.5.13"/>
+		<override org="ch.qos.logback" module="logback-core" matcher="exact" rev="1.2.3"/>
+		<override org="org.typelevel" module="macro-compat_2.12" matcher="exact" rev="1.1.1"/>
+		<override org="com.fasterxml.jackson.core" module="jackson-core" matcher="exact" rev="2.8.8"/>
+		<override org="com.trueaccord.lenses" module="lenses_2.12" matcher="exact" rev="0.4.12"/>
+		<override org="org.apache.commons" module="commons-lang3" matcher="exact" rev="3.2.1"/>
+		<override org="com.github.mpilquist" module="simulacrum_2.12" matcher="exact" rev="0.10.0"/>
+		<override org="com.github.swagger-akka-http" module="swagger-akka-http_2.12" matcher="exact" rev="0.9.2"/>
+		<override org="org.typelevel" module="machinist_2.12" matcher="exact" rev="0.6.1"/>
+		<override org="ch.qos.logback" module="logback-classic" matcher="exact" rev="1.2.3"/>
+		<override org="io.swagger" module="swagger-scala-module_2.12" matcher="exact" rev="1.0.4"/>
+		<override org="com.github.fommil.netlib" module="core" matcher="exact" rev="1.1.2"/>
+		<override org="io.circe" module="circe-numbers_2.12" matcher="exact" rev="0.7.1"/>
+		<override org="com.fasterxml.jackson.core" module="jackson-annotations" matcher="exact" rev="2.8.8"/>
+		<override org="org.spire-math" module="spire-macros_2.12" matcher="exact" rev="0.13.0"/>
+		<override org="com.typesafe.akka" module="akka-http_2.12" matcher="exact" rev="10.0.9"/>
+		<override org="com.fasterxml.jackson.module" module="jackson-module-scala_2.12" matcher="exact" rev="2.8.8"/>
+		<override org="org.typelevel" module="cats-core_2.12" matcher="exact" rev="0.9.0"/>
+		<override org="commons-logging" module="commons-logging" matcher="exact" rev="1.2"/>
+		<override org="io.swagger" module="swagger-models" matcher="exact" rev="1.5.13"/>
+		<override org="com.fasterxml.jackson.dataformat" module="jackson-dataformat-yaml" matcher="exact" rev="2.8.8"/>
+		<override org="net.jpountz.lz4" module="lz4" matcher="exact" rev="1.3.0"/>
+		<override org="org.bitlet" module="weupnp" matcher="exact" rev="0.1.4"/>
+		<override org="com.typesafe.akka" module="akka-http-core_2.12" matcher="exact" rev="10.0.9"/>
+		<override org="com.google.guava" module="guava" matcher="exact" rev="20.0"/>
+		<override org="com.github.julien-truffaut" module="monocle-core_2.12" matcher="exact" rev="1.4.0"/>
+		<override org="org.apache.httpcomponents" module="httpclient" matcher="exact" rev="4.5.3"/>
+		<override org="org.typelevel" module="cats-kernel_2.12" matcher="exact" rev="0.9.0"/>
+		<override org="com.google.code.findbugs" module="annotations" matcher="exact" rev="2.0.1"/>
+		<override org="com.typesafe.akka" module="akka-stream_2.12" matcher="exact" rev="2.4.19"/>
+		<override org="org.apache.httpcomponents" module="httpasyncclient" matcher="exact" rev="4.1.3"/>
+	</dependencies>
+</ivy-module>

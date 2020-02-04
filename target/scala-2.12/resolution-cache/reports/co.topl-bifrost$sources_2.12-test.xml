@@ -1,0 +1,1469 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="ivy-report.xsl"?>
+<ivy-report version="1.0">
+	<info
+		organisation="co.topl"
+		module="bifrost$sources_2.12"
+		revision="1.0.0"
+		conf="test"
+		confs="compile, runtime, test, provided, optional, protobuf, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
+		date="20200204142235"/>
+	<dependencies>
+		<module organisation="net.databinder.dispatch" name="dispatch-core_2.12">
+			<revision name="0.13.4" status="release" pubdate="20180526220024" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://dispatch.databinder.net/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="117">
+				<license name="LGPL v3" url="http://www.gnu.org/licenses/lgpl.txt"/>
+				<metadata-artifact status="no" details="" size="3128" time="0" location="/home/aaron/.ivy2/cache/net.databinder.dispatch/dispatch-core_2.12/ivy-0.13.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/net/databinder/dispatch/dispatch-core_2.12/0.13.4/dispatch-core_2.12-0.13.4.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.13.4" rev-constraint-default="0.13.4" rev-constraint-dynamic="0.13.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="dispatch-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="16099" time="0" location="/home/aaron/.ivy2/cache/net.databinder.dispatch/dispatch-core_2.12/srcs/dispatch-core_2.12-0.13.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/net/databinder/dispatch/dispatch-core_2.12/0.13.4/dispatch-core_2.12-0.13.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.asynchttpclient" name="async-http-client">
+			<revision name="2.0.39" status="release" pubdate="20180227074845" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="111">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="9438" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/async-http-client/ivy-2.0.39.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/asynchttpclient/async-http-client/2.0.39/async-http-client-2.0.39.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.0.39" rev-constraint-default="2.0.39" rev-constraint-dynamic="2.0.39" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="async-http-client" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="314311" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/async-http-client/srcs/async-http-client-2.0.39-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/asynchttpclient/async-http-client/2.0.39/async-http-client-2.0.39-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.asynchttpclient" name="async-http-client-netty-utils">
+			<revision name="2.0.39" status="release" pubdate="20180227074823" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="115">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="8305" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/async-http-client-netty-utils/ivy-2.0.39.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/asynchttpclient/async-http-client-netty-utils/2.0.39/async-http-client-netty-utils-2.0.39.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.0.39" rev-constraint-default="2.0.39" rev-constraint-dynamic="2.0.39" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="async-http-client-netty-utils" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="5411" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/async-http-client-netty-utils/srcs/async-http-client-netty-utils-2.0.39-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/asynchttpclient/async-http-client-netty-utils/2.0.39/async-http-client-netty-utils-2.0.39-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalatest" name="scalatest_2.12">
+			<revision name="3.0.8" status="release" pubdate="20190610094512" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scalatest.org" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="110">
+				<license name="the Apache License, ASL Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="4732" time="0" location="/home/aaron/.ivy2/cache/org.scalatest/scalatest_2.12/ivy-3.0.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalatest/scalatest_2.12/3.0.8/scalatest_2.12-3.0.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.0.8" rev-constraint-default="3.0.8" rev-constraint-dynamic="3.0.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalatest_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="1744723" time="0" location="/home/aaron/.ivy2/cache/org.scalatest/scalatest_2.12/srcs/scalatest_2.12-3.0.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalatest/scalatest_2.12/3.0.8/scalatest_2.12-3.0.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang.modules" name="scala-xml_2.12">
+			<revision name="1.2.0" status="release" pubdate="20190405100728" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="112">
+				<license name="Apache-2.0" url="https://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3264" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-xml_2.12/ivy-1.2.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.12/1.2.0/scala-xml_2.12-1.2.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.2.0" rev-constraint-default="1.2.0" rev-constraint-dynamic="1.2.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scala-xml_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="111652" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-xml_2.12/srcs/scala-xml_2.12-1.2.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.12/1.2.0/scala-xml_2.12-1.2.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+			<revision name="1.0.6" status="release" pubdate="20161101092105" resolver="sbt-chain" artresolver="sbt-chain" evicted="latest-revision" evicted-reason="" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="-1">
+				<license name="BSD 3-clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="3137" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-xml_2.12/ivy-1.0.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.12/1.0.6/scala-xml_2.12-1.0.6.pom"/>
+				<evicted-by rev="1.2.0"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0.6" rev-constraint-default="1.0.6" rev-constraint-dynamic="1.0.6" callerrev="1.0.0"/>
+				<artifacts>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.asynchttpclient" name="netty-resolver-dns">
+			<revision name="2.0.39" status="release" pubdate="20180227074747" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="107">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="9718" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-resolver-dns/ivy-2.0.39.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-resolver-dns/2.0.39/netty-resolver-dns-2.0.39.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.0.39" rev-constraint-default="2.0.39" rev-constraint-dynamic="2.0.39" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-resolver-dns" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="55637" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-resolver-dns/srcs/netty-resolver-dns-2.0.39-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-resolver-dns/2.0.39/netty-resolver-dns-2.0.39-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.asynchttpclient" name="netty-codec-dns">
+			<revision name="2.0.39" status="release" pubdate="20180227074640" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="109">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="9401" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-codec-dns/ivy-2.0.39.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-codec-dns/2.0.39/netty-codec-dns-2.0.39.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.0.39" rev-constraint-default="2.0.39" rev-constraint-dynamic="2.0.39" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-codec-dns" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="52180" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-codec-dns/srcs/netty-codec-dns-2.0.39-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-codec-dns/2.0.39/netty-codec-dns-2.0.39-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.asynchttpclient" name="netty-resolver">
+			<revision name="2.0.39" status="release" pubdate="20180227074710" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="116">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="9400" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-resolver/ivy-2.0.39.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-resolver/2.0.39/netty-resolver-2.0.39.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.0.39" rev-constraint-default="2.0.39" rev-constraint-dynamic="2.0.39" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-resolver" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="22392" time="0" location="/home/aaron/.ivy2/cache/org.asynchttpclient/netty-resolver/srcs/netty-resolver-2.0.39-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/asynchttpclient/netty-resolver/2.0.39/netty-resolver-2.0.39-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-transport-native-epoll">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205091947" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="105">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="16171" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-transport-native-epoll/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.0.56.Final/netty-transport-native-epoll-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-transport-native-epoll" type="jar" ext="jar" extra-classifier="linux-x86_64" status="no" details="" size="152583" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-transport-native-epoll/jars/netty-transport-native-epoll-4.0.56.Final-linux-x86_64.jar">
+						<origin-location is-local="false" location="UNKNOWN"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-codec-http">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205085342" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="104">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="15410" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-codec-http/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-codec-http/4.0.56.Final/netty-codec-http-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-codec-http" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="361444" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-codec-http/srcs/netty-codec-http-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-codec-http/4.0.56.Final/netty-codec-http-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-handler">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205085238" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="114">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="16514" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-handler/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-handler/4.0.56.Final/netty-handler-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-handler" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="243254" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-handler/srcs/netty-handler-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-handler/4.0.56.Final/netty-handler-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-codec">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205084812" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="103">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="15829" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-codec/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-codec/4.0.56.Final/netty-codec-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-codec" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="138865" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-codec/srcs/netty-codec-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-codec/4.0.56.Final/netty-codec-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-transport">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205084659" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="108">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="15147" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-transport/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-transport/4.0.56.Final/netty-transport-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-transport" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="264077" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-transport/srcs/netty-transport-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-transport/4.0.56.Final/netty-transport-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-buffer">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205084453" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="106">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="15141" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-buffer/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-buffer/4.0.56.Final/netty-buffer-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-buffer" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="150049" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-buffer/srcs/netty-buffer-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-buffer/4.0.56.Final/netty-buffer-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.netty" name="netty-common">
+			<revision name="4.0.56.Final" status="release" pubdate="20180205084301" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="119">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="16916" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-common/ivy-4.0.56.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/netty/netty-common/4.0.56.Final/netty-common-4.0.56.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.0.56.Final" rev-constraint-default="4.0.56.Final" rev-constraint-dynamic="4.0.56.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-common" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="232574" time="0" location="/home/aaron/.ivy2/cache/io.netty/netty-common/srcs/netty-common-4.0.56.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/netty/netty-common/4.0.56.Final/netty-common-4.0.56.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.netty" name="netty-reactive-streams">
+			<revision name="1.0.8" status="release" pubdate="20160912030042" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="102">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="4889" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.netty/netty-reactive-streams/ivy-1.0.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/netty/netty-reactive-streams/1.0.8/netty-reactive-streams-1.0.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0.8" rev-constraint-default="1.0.8" rev-constraint-dynamic="1.0.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="netty-reactive-streams" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="6826" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.netty/netty-reactive-streams/srcs/netty-reactive-streams-1.0.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/netty/netty-reactive-streams/1.0.8/netty-reactive-streams-1.0.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.httpcomponents" name="httpasyncclient">
+			<revision name="4.1.3" status="release" pubdate="20170205073802" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://hc.apache.org/httpcomponents-asyncclient" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="98">
+				<license name="Apache License, Version 2.0" url="LICENSE.txt"/>
+				<metadata-artifact status="no" details="" size="9765" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpasyncclient/ivy-4.1.3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpasyncclient/4.1.3/httpasyncclient-4.1.3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.1.3" rev-constraint-default="4.1.3" rev-constraint-dynamic="4.1.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="httpasyncclient" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="140787" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpasyncclient/srcs/httpasyncclient-4.1.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpasyncclient/4.1.3/httpasyncclient-4.1.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.bouncycastle" name="bcprov-jdk15on">
+			<revision name="1.54" status="release" pubdate="20151229203411" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.bouncycastle.org/java.html" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="96">
+				<license name="Bouncy Castle Licence" url="http://www.bouncycastle.org/licence.html"/>
+				<metadata-artifact status="no" details="" size="2676" time="0" location="/home/aaron/.ivy2/cache/org.bouncycastle/bcprov-jdk15on/ivy-1.54.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/1.54/bcprov-jdk15on-1.54.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.54" rev-constraint-default="1.54" rev-constraint-dynamic="1.54" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="bcprov-jdk15on" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3068916" time="0" location="/home/aaron/.ivy2/cache/org.bouncycastle/bcprov-jdk15on/srcs/bcprov-jdk15on-1.54-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/1.54/bcprov-jdk15on-1.54-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.lihaoyi" name="fastparse_2.12">
+			<revision name="0.4.2" status="release" pubdate="20161102142316" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/lihaoyi/scala-parser" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="86">
+				<license name="MIT license" url="http://www.opensource.org/licenses/mit-license.php"/>
+				<metadata-artifact status="no" details="" size="3512" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/fastparse_2.12/ivy-0.4.2.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/com.lihaoyi/fastparse_2.12/0.4.2/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.4.2" rev-constraint-default="0.4.2" rev-constraint-dynamic="0.4.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="fastparse_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="22896" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/fastparse_2.12/srcs/fastparse_2.12-0.4.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/lihaoyi/fastparse_2.12/0.4.2/fastparse_2.12-0.4.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-optics_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220626" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="85">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3357" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-optics_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-optics_2.12/0.7.1/circe-optics_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-optics_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="5682" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-optics_2.12/srcs/circe-optics_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-optics_2.12/0.7.1/circe-optics_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.httpcomponents" name="httpcore-nio">
+			<revision name="4.4.6" status="release" pubdate="20170107075109" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://hc.apache.org/httpcomponents-core-ga" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="76">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="8147" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpcore-nio/ivy-4.4.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore-nio/4.4.6/httpcore-nio-4.4.6.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.4.6" rev-constraint-default="4.4.6" rev-constraint-dynamic="4.4.6" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="httpcore-nio" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="358853" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpcore-nio/srcs/httpcore-nio-4.4.6-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore-nio/4.4.6/httpcore-nio-4.4.6-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang" name="scala-reflect">
+			<revision name="2.12.7" status="release" pubdate="20180927043203" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" extra-info.apiURL="http://www.scala-lang.org/api/2.12.7/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="74">
+				<license name="BSD 3-Clause" url="http://www.scala-lang.org/license.html"/>
+				<metadata-artifact status="no" details="" size="2812" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang/scala-reflect/ivy-2.12.7.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/org.scala-lang/scala-reflect/2.12.7/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.12.7" rev-constraint-default="2.12.7" rev-constraint-dynamic="2.12.7" callerrev="1.0.0" extra-info.apiURL="http://www.scala-lang.org/api/2.12.7/"/>
+				<artifacts>
+					<artifact name="scala-reflect" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="590262" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang/scala-reflect/srcs/scala-reflect-2.12.7-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.12.7/scala-reflect-2.12.7-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang" name="scala-library">
+			<revision name="2.12.7" status="release" pubdate="20180927043542" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" extra-info.apiURL="http://www.scala-lang.org/api/2.12.7/" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="77">
+				<license name="BSD 3-Clause" url="http://www.scala-lang.org/license.html"/>
+				<metadata-artifact status="no" details="" size="2640" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang/scala-library/ivy-2.12.7.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/org.scala-lang/scala-library/2.12.7/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.12.7" rev-constraint-default="2.12.7" rev-constraint-dynamic="2.12.7" callerrev="1.0.0" extra-info.apiURL="http://www.scala-lang.org/api/2.12.7/"/>
+				<artifacts>
+					<artifact name="scala-library" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="991412" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang/scala-library/srcs/scala-library-2.12.7-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.12.7/scala-library-2.12.7-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.thesamet.scalapb" name="scalapb-json4s_2.12">
+			<revision name="0.7.0" status="release" pubdate="20180219012611" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/scalapb/scalapb-json4s" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="69">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3395" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/scalapb-json4s_2.12/ivy-0.7.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-json4s_2.12/0.7.0/scalapb-json4s_2.12-0.7.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.0" rev-constraint-default="0.7.0" rev-constraint-dynamic="0.7.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalapb-json4s_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="11543" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/scalapb-json4s_2.12/srcs/scalapb-json4s_2.12-0.7.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-json4s_2.12/0.7.0/scalapb-json4s_2.12-0.7.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.github.julien-truffaut" name="monocle-core_2.12">
+			<revision name="1.4.0" status="release" pubdate="20170114165000" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/julien-truffaut/Monocle" extra-info.apiURL="https://julien-truffaut.github.io/Monocle/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="68">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="2971" time="0" location="/home/aaron/.ivy2/cache/com.github.julien-truffaut/monocle-core_2.12/ivy-1.4.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/julien-truffaut/monocle-core_2.12/1.4.0/monocle-core_2.12-1.4.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.4.0" rev-constraint-default="1.4.0" rev-constraint-dynamic="1.4.0" callerrev="1.0.0" extra-info.apiURL="https://julien-truffaut.github.io/Monocle/api/"/>
+				<artifacts>
+					<artifact name="monocle-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="62387" time="0" location="/home/aaron/.ivy2/cache/com.github.julien-truffaut/monocle-core_2.12/srcs/monocle-core_2.12-1.4.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/julien-truffaut/monocle-core_2.12/1.4.0/monocle-core_2.12-1.4.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalaz" name="scalaz-core_2.12">
+			<revision name="7.2.8" status="release" pubdate="20161203070121" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://scalaz.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="93">
+				<license name="BSD-style" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="2639" time="0" location="/home/aaron/.ivy2/cache/org.scalaz/scalaz-core_2.12/ivy-7.2.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalaz/scalaz-core_2.12/7.2.8/scalaz-core_2.12-7.2.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="7.2.8" rev-constraint-default="7.2.8" rev-constraint-dynamic="7.2.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalaz-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="366624" time="0" location="/home/aaron/.ivy2/cache/org.scalaz/scalaz-core_2.12/srcs/scalaz-core_2.12-7.2.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalaz/scalaz-core_2.12/7.2.8/scalaz-core_2.12-7.2.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.commons" name="commons-pool2">
+			<revision name="2.4.2" status="release" pubdate="20150728212011" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-pool/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="66">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="10663" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-pool2/ivy-2.4.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.4.2/commons-pool2-2.4.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.2" rev-constraint-default="2.4.2" rev-constraint-dynamic="2.4.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-pool2" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="117433" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-pool2/srcs/commons-pool2-2.4.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.4.2/commons-pool2-2.4.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scorexfoundation" name="iodb_2.12">
+			<revision name="0.3.1" status="release" pubdate="20170426045753" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/ScorexProject/iodb" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="64">
+				<license name="CC0" url="https://creativecommons.org/publicdomain/zero/1.0/legalcode"/>
+				<metadata-artifact status="no" details="" size="3922" time="0" location="/home/aaron/.ivy2/cache/org.scorexfoundation/iodb_2.12/ivy-0.3.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scorexfoundation/iodb_2.12/0.3.1/iodb_2.12-0.3.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.3.1" rev-constraint-default="0.3.1" rev-constraint-dynamic="0.3.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="iodb_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="20314" time="0" location="/home/aaron/.ivy2/cache/org.scorexfoundation/iodb_2.12/srcs/iodb_2.12-0.3.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scorexfoundation/iodb_2.12/0.3.1/iodb_2.12-0.3.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.json4s" name="json4s-jackson_2.12">
+			<revision name="3.5.1" status="release" pubdate="20170317232546" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/json4s/json4s" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="63">
+				<license name="Apache-2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2966" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-jackson_2.12/ivy-3.5.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/json4s/json4s-jackson_2.12/3.5.1/json4s-jackson_2.12-3.5.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.5.1" rev-constraint-default="3.5.1" rev-constraint-dynamic="3.5.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="json4s-jackson_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="7297" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-jackson_2.12/srcs/json4s-jackson_2.12-3.5.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/json4s/json4s-jackson_2.12/3.5.1/json4s-jackson_2.12-3.5.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.github.swagger-akka-http" name="swagger-akka-http_2.12">
+			<revision name="0.9.2" status="release" pubdate="20170607142537" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/swagger-akka-http/swagger-akka-http" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="60">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="4976" time="0" location="/home/aaron/.ivy2/cache/com.github.swagger-akka-http/swagger-akka-http_2.12/ivy-0.9.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/swagger-akka-http/swagger-akka-http_2.12/0.9.2/swagger-akka-http_2.12-0.9.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.9.2" rev-constraint-default="0.9.2" rev-constraint-dynamic="0.9.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-akka-http_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="4474" time="0" location="/home/aaron/.ivy2/cache/com.github.swagger-akka-http/swagger-akka-http_2.12/srcs/swagger-akka-http_2.12-0.9.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/swagger-akka-http/swagger-akka-http_2.12/0.9.2/swagger-akka-http_2.12-0.9.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.module" name="jackson-module-scala_2.12">
+			<revision name="2.8.8" status="release" pubdate="20170405135043" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://wiki.fasterxml.com/JacksonModuleScala" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="70">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="4217" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.module/jackson-module-scala_2.12/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/module/jackson-module-scala_2.12/2.8.8/jackson-module-scala_2.12-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-module-scala_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="53619" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.module/jackson-module-scala_2.12/srcs/jackson-module-scala_2.12-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/module/jackson-module-scala_2.12/2.8.8/jackson-module-scala_2.12-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.core" name="jackson-annotations">
+			<revision name="2.8.8" status="release" pubdate="20170404222047" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/FasterXML/jackson" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="84">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="6969" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-annotations/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.8.8/jackson-annotations-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-annotations" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="57660" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-annotations/srcs/jackson-annotations-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.8.8/jackson-annotations-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.swagger" name="swagger-scala-module_2.12">
+			<revision name="1.0.4" status="release" pubdate="20170607095954" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/swagger-api/swagger-scala-module" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="71">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="3252" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-scala-module_2.12/ivy-1.0.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/swagger/swagger-scala-module_2.12/1.0.4/swagger-scala-module_2.12-1.0.4.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0.4" rev-constraint-default="1.0.4" rev-constraint-dynamic="1.0.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-scala-module_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2417" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-scala-module_2.12/srcs/swagger-scala-module_2.12-1.0.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/swagger/swagger-scala-module_2.12/1.0.4/swagger-scala-module_2.12-1.0.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.swagger" name="swagger-jaxrs">
+			<revision name="1.5.13" status="release" pubdate="20170317005538" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="87">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="11234" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-jaxrs/ivy-1.5.13.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/swagger/swagger-jaxrs/1.5.13/swagger-jaxrs-1.5.13.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.5.13" rev-constraint-default="1.5.13" rev-constraint-dynamic="1.5.13" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-jaxrs" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="33651" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-jaxrs/srcs/swagger-jaxrs-1.5.13-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/swagger/swagger-jaxrs/1.5.13/swagger-jaxrs-1.5.13-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.swagger" name="swagger-core">
+			<revision name="1.5.13" status="release" pubdate="20170317005515" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="72">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="11618" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-core/ivy-1.5.13.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/swagger/swagger-core/1.5.13/swagger-core-1.5.13.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.5.13" rev-constraint-default="1.5.13" rev-constraint-dynamic="1.5.13" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-core" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="46967" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-core/srcs/swagger-core-1.5.13-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/swagger/swagger-core/1.5.13/swagger-core-1.5.13-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="javax.validation" name="validation-api">
+			<revision name="1.1.0.Final" status="release" pubdate="20130410080303" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://beanvalidation.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="78">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3200" time="0" location="/home/aaron/.ivy2/cache/javax.validation/validation-api/ivy-1.1.0.Final.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.1.0.Final" rev-constraint-default="1.1.0.Final" rev-constraint-dynamic="1.1.0.Final" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="validation-api" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="94671" time="0" location="/home/aaron/.ivy2/cache/javax.validation/validation-api/srcs/validation-api-1.1.0.Final-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.commons" name="commons-lang3">
+			<revision name="3.2.1" status="release" pubdate="20140105110213" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-lang/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="101">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="10408" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-lang3/ivy-3.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.2.1/commons-lang3-3.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.2.1" rev-constraint-default="3.2.1" rev-constraint-dynamic="3.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-lang3" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="440579" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-lang3/srcs/commons-lang3-3.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.2.1/commons-lang3-3.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="commons-net" name="commons-net">
+			<revision name="3.6" status="release" pubdate="20170211091823" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-net/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="55">
+				<license name="Apache License, Version 2.0" url="https://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="12894" time="0" location="/home/aaron/.ivy2/cache/commons-net/commons-net/ivy-3.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/commons-net/commons-net/3.6/commons-net-3.6.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.6" rev-constraint-default="3.6" rev-constraint-dynamic="3.6" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-net" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="435798" time="0" location="/home/aaron/.ivy2/cache/commons-net/commons-net/srcs/commons-net-3.6-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/commons-net/commons-net/3.6/commons-net-3.6-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.thesamet.scalapb" name="scalapb-runtime_2.12">
+			<revision name="0.7.4" status="release" pubdate="20180501171308" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/scalapb/ScalaPB" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="53">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3488" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/scalapb-runtime_2.12/ivy-0.7.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-runtime_2.12/0.7.4/scalapb-runtime_2.12-0.7.4.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.4" rev-constraint-default="0.7.4" rev-constraint-dynamic="0.7.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalapb-runtime_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="241797" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/scalapb-runtime_2.12/srcs/scalapb-runtime_2.12-0.7.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-runtime_2.12/0.7.4/scalapb-runtime_2.12-0.7.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalacheck" name="scalacheck_2.12">
+			<revision name="1.13.5" status="release" pubdate="20170313063619" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scalacheck.org" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="113">
+				<license name="BSD-style" url="http://www.opensource.org/licenses/bsd-license.php"/>
+				<metadata-artifact status="no" details="" size="2797" time="0" location="/home/aaron/.ivy2/cache/org.scalacheck/scalacheck_2.12/ivy-1.13.5.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalacheck/scalacheck_2.12/1.13.5/scalacheck_2.12-1.13.5.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.13.5" rev-constraint-default="1.13.5" rev-constraint-dynamic="1.13.5" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalacheck_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="53555" time="0" location="/home/aaron/.ivy2/cache/org.scalacheck/scalacheck_2.12/srcs/scalacheck_2.12-1.13.5-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalacheck/scalacheck_2.12/1.13.5/scalacheck_2.12-1.13.5-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-sbt" name="test-interface">
+			<revision name="1.0" status="release" pubdate="20130628174435" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-sbt.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="118">
+				<license name="BSD" url="https://github.com/sbt/test-interface/blob/master/LICENSE"/>
+				<metadata-artifact status="no" details="" size="2589" time="0" location="/home/aaron/.ivy2/cache/org.scala-sbt/test-interface/ivy-1.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-sbt/test-interface/1.0/test-interface-1.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0" rev-constraint-default="1.0" rev-constraint-dynamic="1.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="test-interface" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="18792" time="0" location="/home/aaron/.ivy2/cache/org.scala-sbt/test-interface/srcs/test-interface-1.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-sbt/test-interface/1.0/test-interface-1.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.swagger" name="swagger-models">
+			<revision name="1.5.13" status="release" pubdate="20170317005500" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="51">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="10764" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-models/ivy-1.5.13.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/swagger/swagger-models/1.5.13/swagger-models-1.5.13.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.5.13" rev-constraint-default="1.5.13" rev-constraint-dynamic="1.5.13" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-models" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="64073" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-models/srcs/swagger-models-1.5.13-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/swagger/swagger-models/1.5.13/swagger-models-1.5.13-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.module" name="jackson-module-paranamer">
+			<revision name="2.8.8" status="release" pubdate="20170404224326" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/FasterXML/jackson-modules-base" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="50">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="21310" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.module/jackson-module-paranamer/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/module/jackson-module-paranamer/2.8.8/jackson-module-paranamer-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-module-paranamer" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="7271" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.module/jackson-module-paranamer/srcs/jackson-module-paranamer-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/module/jackson-module-paranamer/2.8.8/jackson-module-paranamer-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-slf4j_2.12">
+			<revision name="2.4.17" status="release" pubdate="20170210094527" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.17" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="49">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3347" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-slf4j_2.12/ivy-2.4.17.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-slf4j_2.12/2.4.17/akka-slf4j_2.12-2.4.17.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="1.0.0" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.17"/>
+				<artifacts>
+					<artifact name="akka-slf4j_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2364" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-slf4j_2.12/srcs/akka-slf4j_2.12-2.4.17-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-slf4j_2.12/2.4.17/akka-slf4j_2.12-2.4.17-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.httpcomponents" name="httpclient">
+			<revision name="4.5.3" status="release" pubdate="20170121100023" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://hc.apache.org/httpcomponents-client" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="45">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="9802" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpclient/ivy-4.5.3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpclient/4.5.3/httpclient-4.5.3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.5.3" rev-constraint-default="4.5.3" rev-constraint-dynamic="4.5.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="httpclient" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="712826" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpclient/srcs/httpclient-4.5.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpclient/4.5.3/httpclient-4.5.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.httpcomponents" name="httpcore">
+			<revision name="4.4.6" status="release" pubdate="20170107075008" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://hc.apache.org/httpcomponents-core-ga" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="95">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="8156" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpcore/ivy-4.4.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.4.6/httpcore-4.4.6.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.4.6" rev-constraint-default="4.4.6" rev-constraint-dynamic="4.4.6" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="httpcore" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="399237" time="0" location="/home/aaron/.ivy2/cache/org.apache.httpcomponents/httpcore/srcs/httpcore-4.4.6-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.4.6/httpcore-4.4.6-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-generic_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220641" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="44">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3536" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-generic_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-generic_2.12/0.7.1/circe-generic_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-generic_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="12539" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-generic_2.12/srcs/circe-generic_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-generic_2.12/0.7.1/circe-generic_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="ch.qos.logback" name="logback-classic">
+			<revision name="1.2.3" status="release" pubdate="20170331142753" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="43">
+				<license name="Eclipse Public License - v 1.0" url="http://www.eclipse.org/legal/epl-v10.html"/>
+				<license name="GNU Lesser General Public License" url="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
+				<metadata-artifact status="no" details="" size="10412" time="0" location="/home/aaron/.ivy2/cache/ch.qos.logback/logback-classic/ivy-1.2.3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.2.3" rev-constraint-default="1.2.3" rev-constraint-dynamic="1.2.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="logback-classic" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="230201" time="0" location="/home/aaron/.ivy2/cache/ch.qos.logback/logback-classic/srcs/logback-classic-1.2.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.slf4j" name="slf4j-api">
+			<revision name="1.7.25" status="release" pubdate="20170316123632" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.slf4j.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="48">
+				<license name="MIT License" url="http://www.opensource.org/licenses/mit-license.php"/>
+				<metadata-artifact status="no" details="" size="5188" time="0" location="/home/aaron/.ivy2/cache/org.slf4j/slf4j-api/ivy-1.7.25.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/org.slf4j/slf4j-api/1.7.25/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.7.25" rev-constraint-default="1.7.25" rev-constraint-dynamic="1.7.25" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="slf4j-api" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="55539" time="0" location="/home/aaron/.ivy2/cache/org.slf4j/slf4j-api/srcs/slf4j-api-1.7.25-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="ch.qos.logback" name="logback-core">
+			<revision name="1.2.3" status="release" pubdate="20170331142715" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="92">
+				<license name="Eclipse Public License - v 1.0" url="http://www.eclipse.org/legal/epl-v10.html"/>
+				<license name="GNU Lesser General Public License" url="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"/>
+				<metadata-artifact status="no" details="" size="7917" time="0" location="/home/aaron/.ivy2/cache/ch.qos.logback/logback-core/ivy-1.2.3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/ch/qos/logback/logback-core/1.2.3/logback-core-1.2.3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.2.3" rev-constraint-default="1.2.3" rev-constraint-dynamic="1.2.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="logback-core" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="399141" time="0" location="/home/aaron/.ivy2/cache/ch.qos.logback/logback-core/srcs/logback-core-1.2.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/ch/qos/logback/logback-core/1.2.3/logback-core-1.2.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-literal_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220647" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="42">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3392" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-literal_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-literal_2.12/0.7.1/circe-literal_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-literal_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3592" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-literal_2.12/srcs/circe-literal_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-literal_2.12/0.7.1/circe-literal_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.google.protobuf" name="protobuf-java">
+			<revision name="3.3.1" status="release" pubdate="20170515134637" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="41">
+				<license name="3-Clause BSD License" url="https://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="5073" time="0" location="/home/aaron/.ivy2/cache/com.google.protobuf/protobuf-java/ivy-3.3.1.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/com.google.protobuf/protobuf-java/3.3.1/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.3.1" rev-constraint-default="3.3.1" rev-constraint-dynamic="3.3.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="protobuf-java" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="669226" time="0" location="/home/aaron/.ivy2/cache/com.google.protobuf/protobuf-java/srcs/protobuf-java-3.3.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/google/protobuf/protobuf-java/3.3.1/protobuf-java-3.3.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.lihaoyi" name="fastparse-utils_2.12">
+			<revision name="0.4.2" status="release" pubdate="20161102142336" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/lihaoyi/scala-parser" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="40">
+				<license name="MIT license" url="http://www.opensource.org/licenses/mit-license.php"/>
+				<metadata-artifact status="no" details="" size="3380" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/fastparse-utils_2.12/ivy-0.4.2.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/com.lihaoyi/fastparse-utils_2.12/0.4.2/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.4.2" rev-constraint-default="0.4.2" rev-constraint-dynamic="0.4.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="fastparse-utils_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="8522" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/fastparse-utils_2.12/srcs/fastparse-utils_2.12-0.4.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/lihaoyi/fastparse-utils_2.12/0.4.2/fastparse-utils_2.12-0.4.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.lihaoyi" name="sourcecode_2.12">
+			<revision name="0.1.3" status="release" pubdate="20161031143242" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/lihaoyi/sourcecode" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="61">
+				<license name="MIT license" url="http://www.opensource.org/licenses/mit-license.php"/>
+				<metadata-artifact status="no" details="" size="2955" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/sourcecode_2.12/ivy-0.1.3.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/com.lihaoyi/sourcecode_2.12/0.1.3/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.1.3" rev-constraint-default="0.1.3" rev-constraint-dynamic="0.1.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="sourcecode_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2593" time="0" location="/home/aaron/.ivy2/cache/com.lihaoyi/sourcecode_2.12/srcs/sourcecode_2.12-0.1.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.12/0.1.3/sourcecode_2.12-0.1.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="net.jpountz.lz4" name="lz4">
+			<revision name="1.3.0" status="release" pubdate="20141126144014" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/jpountz/lz4-java" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="37">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="2738" time="0" location="/home/aaron/.ivy2/cache/net.jpountz.lz4/lz4/ivy-1.3.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/net/jpountz/lz4/lz4/1.3.0/lz4-1.3.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.3.0" rev-constraint-default="1.3.0" rev-constraint-dynamic="1.3.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="lz4" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="50577" time="0" location="/home/aaron/.ivy2/cache/net.jpountz.lz4/lz4/srcs/lz4-1.3.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/net/jpountz/lz4/lz4/1.3.0/lz4-1.3.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-parser_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220700" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="34">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3079" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-parser_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-parser_2.12/0.7.1/circe-parser_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-parser_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="828" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-parser_2.12/srcs/circe-parser_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-parser_2.12/0.7.1/circe-parser_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.consensusresearch" name="scrypto_2.12">
+			<revision name="1.2.0-RC3" status="release" pubdate="20161208082749" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/ScorexProject/scrypto" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="31">
+				<license name="CC0" url="https://creativecommons.org/publicdomain/zero/1.0/legalcode"/>
+				<metadata-artifact status="no" details="" size="3604" time="0" location="/home/aaron/.ivy2/cache/org.consensusresearch/scrypto_2.12/ivy-1.2.0-RC3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/consensusresearch/scrypto_2.12/1.2.0-RC3/scrypto_2.12-1.2.0-RC3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.2.0-RC3" rev-constraint-default="1.2.0-RC3" rev-constraint-dynamic="1.2.0-RC3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scrypto_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="312797" time="0" location="/home/aaron/.ivy2/cache/org.consensusresearch/scrypto_2.12/srcs/scrypto_2.12-1.2.0-RC3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/consensusresearch/scrypto_2.12/1.2.0-RC3/scrypto_2.12-1.2.0-RC3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.whispersystems" name="curve25519-java">
+			<revision name="0.3.0" status="release" pubdate="20161018143733" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/WhisperSystems/curve25519-java" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="73">
+				<license name="GPLv3" url="https://www.gnu.org/licenses/gpl-3.0.txt"/>
+				<metadata-artifact status="no" details="" size="2658" time="0" location="/home/aaron/.ivy2/cache/org.whispersystems/curve25519-java/ivy-0.3.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/whispersystems/curve25519-java/0.3.0/curve25519-java-0.3.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.3.0" rev-constraint-default="0.3.0" rev-constraint-dynamic="0.3.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="curve25519-java" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="88864" time="0" location="/home/aaron/.ivy2/cache/org.whispersystems/curve25519-java/srcs/curve25519-java-0.3.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/whispersystems/curve25519-java/0.3.0/curve25519-java-0.3.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="commons-logging" name="commons-logging">
+			<revision name="1.2" status="release" pubdate="20140705131228" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-logging/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="28">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="11623" time="0" location="/home/aaron/.ivy2/cache/commons-logging/commons-logging/ivy-1.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/commons-logging/commons-logging/1.2/commons-logging-1.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.2" rev-constraint-default="1.2" rev-constraint-dynamic="1.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-logging" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="73295" time="0" location="/home/aaron/.ivy2/cache/commons-logging/commons-logging/srcs/commons-logging-1.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/commons-logging/commons-logging/1.2/commons-logging-1.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.dataformat" name="jackson-dataformat-yaml">
+			<revision name="2.8.8" status="release" pubdate="20170404230732" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/FasterXML/jackson" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="25">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="8856" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.8.8/jackson-dataformat-yaml-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-dataformat-yaml" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="30602" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/srcs/jackson-dataformat-yaml-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.8.8/jackson-dataformat-yaml-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.yaml" name="snakeyaml">
+			<revision name="1.17" status="release" pubdate="20160219071344" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.snakeyaml.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="91">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3956" time="0" location="/home/aaron/.ivy2/cache/org.yaml/snakeyaml/ivy-1.17.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/yaml/snakeyaml/1.17/snakeyaml-1.17.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.17" rev-constraint-default="1.17" rev-constraint-dynamic="1.17" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="snakeyaml" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="171312" time="0" location="/home/aaron/.ivy2/cache/org.yaml/snakeyaml/srcs/snakeyaml-1.17-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/yaml/snakeyaml/1.17/snakeyaml-1.17-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.core" name="jackson-databind">
+			<revision name="2.8.8" status="release" pubdate="20170404222958" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/FasterXML/jackson" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="83">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="8156" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-databind/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.8.8/jackson-databind-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-databind" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="927247" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-databind/srcs/jackson-databind-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.8.8/jackson-databind-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.fasterxml.jackson.core" name="jackson-core">
+			<revision name="2.8.8" status="release" pubdate="20170404222329" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/FasterXML/jackson-core" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="39">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="7423" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-core/ivy-2.8.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.8.8/jackson-core-2.8.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8.8" rev-constraint-default="2.8.8" rev-constraint-dynamic="2.8.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jackson-core" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="294498" time="0" location="/home/aaron/.ivy2/cache/com.fasterxml.jackson.core/jackson-core/srcs/jackson-core-2.8.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.8.8/jackson-core-2.8.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.swagger" name="swagger-annotations">
+			<revision name="1.5.13" status="release" pubdate="20170317005441" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="23">
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="9092" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-annotations/ivy-1.5.13.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/swagger/swagger-annotations/1.5.13/swagger-annotations-1.5.13.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.5.13" rev-constraint-default="1.5.13" rev-constraint-dynamic="1.5.13" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="swagger-annotations" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="28561" time="0" location="/home/aaron/.ivy2/cache/io.swagger/swagger-annotations/srcs/swagger-annotations-1.5.13-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/swagger/swagger-annotations/1.5.13/swagger-annotations-1.5.13-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.json4s" name="json4s-native_2.12">
+			<revision name="3.5.2" status="release" pubdate="20170504153500" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/json4s/json4s" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="22">
+				<license name="Apache-2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2802" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-native_2.12/ivy-3.5.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/json4s/json4s-native_2.12/3.5.2/json4s-native_2.12-3.5.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.5.2" rev-constraint-default="3.5.2" rev-constraint-dynamic="3.5.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="json4s-native_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="9066" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-native_2.12/srcs/json4s-native_2.12-3.5.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/json4s/json4s-native_2.12/3.5.2/json4s-native_2.12-3.5.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.thesamet.scalapb" name="lenses_2.12">
+			<revision name="0.7.0" status="release" pubdate="20180411071806" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/scalapb/Lenses" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="21">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="2766" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/lenses_2.12/ivy-0.7.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/thesamet/scalapb/lenses_2.12/0.7.0/lenses_2.12-0.7.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.0" rev-constraint-default="0.7.0" rev-constraint-dynamic="0.7.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="lenses_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3197" time="0" location="/home/aaron/.ivy2/cache/com.thesamet.scalapb/lenses_2.12/srcs/lenses_2.12-0.7.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/thesamet/scalapb/lenses_2.12/0.7.0/lenses_2.12-0.7.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.reflections" name="reflections">
+			<revision name="0.9.10" status="release" pubdate="20150516044630" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/ronmamo/reflections" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="20">
+				<license name="WTFPL" url="http://www.wtfpl.net/"/>
+				<license name="The New BSD License" url="http://www.opensource.org/licenses/bsd-license.html"/>
+				<metadata-artifact status="no" details="" size="4248" time="0" location="/home/aaron/.ivy2/cache/org.reflections/reflections/ivy-0.9.10.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/reflections/reflections/0.9.10/reflections-0.9.10.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.9.10" rev-constraint-default="0.9.10" rev-constraint-dynamic="0.9.10" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="reflections" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="53049" time="0" location="/home/aaron/.ivy2/cache/org.reflections/reflections/srcs/reflections-0.9.10-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/reflections/reflections/0.9.10/reflections-0.9.10-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.bitlet" name="weupnp">
+			<revision name="0.1.4" status="release" pubdate="20151006181514" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/bitletorg/weupnp" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="18">
+				<license name="GNU Lesser General Public License (LGPL)"/>
+				<metadata-artifact status="no" details="" size="3175" time="0" location="/home/aaron/.ivy2/cache/org.bitlet/weupnp/ivy-0.1.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/bitlet/weupnp/0.1.4/weupnp-0.1.4.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.1.4" rev-constraint-default="0.1.4" rev-constraint-dynamic="0.1.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="weupnp" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="26652" time="0" location="/home/aaron/.ivy2/cache/org.bitlet/weupnp/srcs/weupnp-0.1.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/bitlet/weupnp/0.1.4/weupnp-0.1.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.json4s" name="json4s-core_2.12">
+			<revision name="3.5.2" status="release" pubdate="20170504153438" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/json4s/json4s" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="16">
+				<license name="Apache-2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3249" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-core_2.12/ivy-3.5.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/json4s/json4s-core_2.12/3.5.2/json4s-core_2.12-3.5.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.5.2" rev-constraint-default="3.5.2" rev-constraint-dynamic="3.5.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="json4s-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="42923" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-core_2.12/srcs/json4s-core_2.12-3.5.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/json4s/json4s-core_2.12/3.5.2/json4s-core_2.12-3.5.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.json4s" name="json4s-scalap_2.12">
+			<revision name="3.5.2" status="release" pubdate="20170504153451" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/json4s/json4s" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="62">
+				<license name="Apache-2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2657" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-scalap_2.12/ivy-3.5.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/json4s/json4s-scalap_2.12/3.5.2/json4s-scalap_2.12-3.5.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.5.2" rev-constraint-default="3.5.2" rev-constraint-dynamic="3.5.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="json4s-scalap_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="18583" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-scalap_2.12/srcs/json4s-scalap_2.12-3.5.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/json4s/json4s-scalap_2.12/3.5.2/json4s-scalap_2.12-3.5.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.json4s" name="json4s-ast_2.12">
+			<revision name="3.5.2" status="release" pubdate="20170504153220" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/json4s/json4s" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="33">
+				<license name="Apache-2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2648" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-ast_2.12/ivy-3.5.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/json4s/json4s-ast_2.12/3.5.2/json4s-ast_2.12-3.5.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.5.2" rev-constraint-default="3.5.2" rev-constraint-dynamic="3.5.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="json4s-ast_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="6976" time="0" location="/home/aaron/.ivy2/cache/org.json4s/json4s-ast_2.12/srcs/json4s-ast_2.12-3.5.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/json4s/json4s-ast_2.12/3.5.2/json4s-ast_2.12-3.5.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-http-testkit_2.12">
+			<revision name="10.0.7" status="release" pubdate="20170525105845" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="15">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="3443" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http-testkit_2.12/ivy-10.0.7.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-testkit_2.12/10.0.7/akka-http-testkit_2.12-10.0.7.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="10.0.7" rev-constraint-default="10.0.7" rev-constraint-dynamic="10.0.7" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="akka-http-testkit_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="18564" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http-testkit_2.12/srcs/akka-http-testkit_2.12-10.0.7-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-testkit_2.12/10.0.7/akka-http-testkit_2.12-10.0.7-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-stream-testkit_2.12">
+			<revision name="2.4.18" status="release" pubdate="20170502042645" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.18" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="29">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3489" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-stream-testkit_2.12/ivy-2.4.18.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream-testkit_2.12/2.4.18/akka-stream-testkit_2.12-2.4.18.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.18" rev-constraint-default="2.4.18" rev-constraint-dynamic="2.4.18" callerrev="1.0.0" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.18"/>
+				<artifacts>
+					<artifact name="akka-stream-testkit_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="9147" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-stream-testkit_2.12/srcs/akka-stream-testkit_2.12-2.4.18-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream-testkit_2.12/2.4.18/akka-stream-testkit_2.12-2.4.18-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-testkit_2.12">
+			<revision name="2.4.18" status="release" pubdate="20170502042455" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.18" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="94">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3690" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-testkit_2.12/ivy-2.4.18.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-testkit_2.12/2.4.18/akka-testkit_2.12-2.4.18.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.18" rev-constraint-default="2.4.18" rev-constraint-dynamic="2.4.18" callerrev="1.0.0" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.18"/>
+				<artifacts>
+					<artifact name="akka-testkit_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="33261" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-testkit_2.12/srcs/akka-testkit_2.12-2.4.18-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-testkit_2.12/2.4.18/akka-testkit_2.12-2.4.18-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalanlp" name="breeze_2.12">
+			<revision name="0.13.1" status="release" pubdate="20170424013538" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://scalanlp.org/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="14">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="4830" time="0" location="/home/aaron/.ivy2/cache/org.scalanlp/breeze_2.12/ivy-0.13.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalanlp/breeze_2.12/0.13.1/breeze_2.12-0.13.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.13.1" rev-constraint-default="0.13.1" rev-constraint-dynamic="0.13.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="breeze_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="529997" time="0" location="/home/aaron/.ivy2/cache/org.scalanlp/breeze_2.12/srcs/breeze_2.12-0.13.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalanlp/breeze_2.12/0.13.1/breeze_2.12-0.13.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.spire-math" name="spire_2.12">
+			<revision name="0.13.0" status="release" pubdate="20161128223252" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://spire-math.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="54">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="3059" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/spire_2.12/ivy-0.13.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/spire-math/spire_2.12/0.13.0/spire_2.12-0.13.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.13.0" rev-constraint-default="0.13.0" rev-constraint-dynamic="0.13.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="spire_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="251335" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/spire_2.12/srcs/spire_2.12-0.13.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/spire-math/spire_2.12/0.13.0/spire_2.12-0.13.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.spire-math" name="spire-macros_2.12">
+			<revision name="0.13.0" status="release" pubdate="20161128223152" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://spire-math.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="26">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="3294" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/spire-macros_2.12/ivy-0.13.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/spire-math/spire-macros_2.12/0.13.0/spire-macros_2.12-0.13.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.13.0" rev-constraint-default="0.13.0" rev-constraint-dynamic="0.13.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="spire-macros_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="5407" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/spire-macros_2.12/srcs/spire-macros_2.12-0.13.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/spire-math/spire-macros_2.12/0.13.0/spire-macros_2.12-0.13.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.chuusai" name="shapeless_2.12">
+			<revision name="2.3.2" status="release" pubdate="20161102045049" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/milessabin/shapeless" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="81">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3226" time="0" location="/home/aaron/.ivy2/cache/com.chuusai/shapeless_2.12/ivy-2.3.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/chuusai/shapeless_2.12/2.3.2/shapeless_2.12-2.3.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.3.2" rev-constraint-default="2.3.2" rev-constraint-dynamic="2.3.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="shapeless_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="163673" time="0" location="/home/aaron/.ivy2/cache/com.chuusai/shapeless_2.12/srcs/shapeless_2.12-2.3.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/chuusai/shapeless_2.12/2.3.2/shapeless_2.12-2.3.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.github.rwl" name="jtransforms">
+			<revision name="2.4.0" status="release" pubdate="20120519090656" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://sourceforge.net/projects/jtransforms/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="52">
+				<license name="MPL" url="http://www.mozilla.org/MPL/2.0/index.txt"/>
+				<license name="LGPL" url="http://www.gnu.org/licenses/lgpl-2.1.txt"/>
+				<license name="GPL" url="http://www.gnu.org/licenses/gpl-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="2991" time="0" location="/home/aaron/.ivy2/cache/com.github.rwl/jtransforms/ivy-2.4.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/rwl/jtransforms/2.4.0/jtransforms-2.4.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.0" rev-constraint-default="2.4.0" rev-constraint-dynamic="2.4.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jtransforms" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="224626" time="0" location="/home/aaron/.ivy2/cache/com.github.rwl/jtransforms/srcs/jtransforms-2.4.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/rwl/jtransforms/2.4.0/jtransforms-2.4.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="net.sf.opencsv" name="opencsv">
+			<revision name="2.3" status="release" pubdate="20110728000018" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://opencsv.sf.net" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="17">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="3354" time="0" location="/home/aaron/.ivy2/cache/net.sf.opencsv/opencsv/ivy-2.3.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/net/sf/opencsv/opencsv/2.3/opencsv-2.3.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.3" rev-constraint-default="2.3" rev-constraint-dynamic="2.3" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="opencsv" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="17058" time="0" location="/home/aaron/.ivy2/cache/net.sf.opencsv/opencsv/srcs/opencsv-2.3-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/net/sf/opencsv/opencsv/2.3/opencsv-2.3-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.github.fommil.netlib" name="core">
+			<revision name="1.1.2" status="release" pubdate="20131126055411" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="30">
+				<license name="BSD 3 Clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="4893" time="0" location="/home/aaron/.ivy2/cache/com.github.fommil.netlib/core/ivy-1.1.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/fommil/netlib/core/1.1.2/core-1.1.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.1.2" rev-constraint-default="1.1.2" rev-constraint-dynamic="1.1.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="core" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="679224" time="0" location="/home/aaron/.ivy2/cache/com.github.fommil.netlib/core/srcs/core-1.1.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/fommil/netlib/core/1.1.2/core-1.1.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalanlp" name="breeze-macros_2.12">
+			<revision name="0.13.1" status="release" pubdate="20170424013111" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://scalanlp.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="79">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
+				<metadata-artifact status="no" details="" size="3152" time="0" location="/home/aaron/.ivy2/cache/org.scalanlp/breeze-macros_2.12/ivy-0.13.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalanlp/breeze-macros_2.12/0.13.1/breeze-macros_2.12-0.13.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.13.1" rev-constraint-default="0.13.1" rev-constraint-dynamic="0.13.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="breeze-macros_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="7975" time="0" location="/home/aaron/.ivy2/cache/org.scalanlp/breeze-macros_2.12/srcs/breeze-macros_2.12-0.13.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalanlp/breeze-macros_2.12/0.13.1/breeze-macros_2.12-0.13.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.apache.commons" name="commons-math3">
+			<revision name="3.2" status="release" pubdate="20130402143128" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-math/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="13">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="9676" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-math3/ivy-3.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/apache/commons/commons-math3/3.2/commons-math3-3.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.2" rev-constraint-default="3.2" rev-constraint-dynamic="3.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-math3" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2005074" time="0" location="/home/aaron/.ivy2/cache/org.apache.commons/commons-math3/srcs/commons-math3-3.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/apache/commons/commons-math3/3.2/commons-math3-3.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="junit" name="junit">
+			<revision name="4.8.2" status="release" pubdate="20101005035127" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://junit.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="12">
+				<license name="Common Public License Version 1.0" url="http://www.opensource.org/licenses/cpl1.0.txt"/>
+				<metadata-artifact status="no" details="" size="2546" time="0" location="/home/aaron/.ivy2/cache/junit/junit/ivy-4.8.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/junit/junit/4.8.2/junit-4.8.2.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="4.8.2" rev-constraint-default="4.8.2" rev-constraint-dynamic="4.8.2" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="junit" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="147086" time="0" location="/home/aaron/.ivy2/cache/junit/junit/srcs/junit-4.8.2-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/junit/junit/4.8.2/junit-4.8.2-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-jawn_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220649" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="10">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3081" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-jawn_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-jawn_2.12/0.7.1/circe-jawn_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-jawn_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2041" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-jawn_2.12/srcs/circe-jawn_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-jawn_2.12/0.7.1/circe-jawn_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-core_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220619" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="19">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3080" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-core_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-core_2.12/0.7.1/circe-core_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="37749" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-core_2.12/srcs/circe-core_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-core_2.12/0.7.1/circe-core_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.typelevel" name="cats-core_2.12">
+			<revision name="0.9.0" status="release" pubdate="20170115173305" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typelevel/cats" extra-info.apiURL="http://typelevel.org/cats/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="32">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="3494" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-core_2.12/ivy-0.9.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/typelevel/cats-core_2.12/0.9.0/cats-core_2.12-0.9.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.9.0" rev-constraint-default="0.9.0" rev-constraint-dynamic="0.9.0" callerrev="1.0.0" extra-info.apiURL="http://typelevel.org/cats/api/"/>
+				<artifacts>
+					<artifact name="cats-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="135323" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-core_2.12/srcs/cats-core_2.12-0.9.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/typelevel/cats-core_2.12/0.9.0/cats-core_2.12-0.9.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.typelevel" name="cats-kernel_2.12">
+			<revision name="0.9.0" status="release" pubdate="20170115173107" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typelevel/cats" extra-info.apiURL="http://typelevel.org/cats/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="11">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="2777" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-kernel_2.12/ivy-0.9.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/typelevel/cats-kernel_2.12/0.9.0/cats-kernel_2.12-0.9.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.9.0" rev-constraint-default="0.9.0" rev-constraint-dynamic="0.9.0" callerrev="1.0.0" extra-info.apiURL="http://typelevel.org/cats/api/"/>
+				<artifacts>
+					<artifact name="cats-kernel_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="33234" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-kernel_2.12/srcs/cats-kernel_2.12-0.9.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/typelevel/cats-kernel_2.12/0.9.0/cats-kernel_2.12-0.9.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.circe" name="circe-numbers_2.12">
+			<revision name="0.7.1" status="release" pubdate="20170403220601" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/circe/circe" extra-info.apiURL="https://circe.github.io/circe/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="47">
+				<license name="Apache 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3047" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-numbers_2.12/ivy-0.7.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/circe/circe-numbers_2.12/0.7.1/circe-numbers_2.12-0.7.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.7.1" rev-constraint-default="0.7.1" rev-constraint-dynamic="0.7.1" callerrev="1.0.0" extra-info.apiURL="https://circe.github.io/circe/api/"/>
+				<artifacts>
+					<artifact name="circe-numbers_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3821" time="0" location="/home/aaron/.ivy2/cache/io.circe/circe-numbers_2.12/srcs/circe-numbers_2.12-0.7.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/circe/circe-numbers_2.12/0.7.1/circe-numbers_2.12-0.7.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scalactic" name="scalactic_2.12">
+			<revision name="3.0.8" status="release" pubdate="20190610094304" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scalatest.org" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="9">
+				<license name="the Apache License, ASL Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2967" time="0" location="/home/aaron/.ivy2/cache/org.scalactic/scalactic_2.12/ivy-3.0.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scalactic/scalactic_2.12/3.0.8/scalactic_2.12-3.0.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.0.8" rev-constraint-default="3.0.8" rev-constraint-dynamic="3.0.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scalactic_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="171119" time="0" location="/home/aaron/.ivy2/cache/org.scalactic/scalactic_2.12/srcs/scalactic_2.12-3.0.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scalactic/scalactic_2.12/3.0.8/scalactic_2.12-3.0.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.graalvm.js" name="js">
+			<revision name="19.2.0" status="release" pubdate="20190821081742" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.graalvm.org/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="8">
+				<license name="Universal Permissive License, Version 1.0" url="http://opensource.org/licenses/UPL"/>
+				<license name="MIT License" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="3843" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.js/js/ivy-19.2.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/graalvm/js/js/19.2.0/js-19.2.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="19.2.0" rev-constraint-default="19.2.0" rev-constraint-dynamic="19.2.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="js" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="16228051" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.js/js/srcs/js-19.2.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/graalvm/js/js/19.2.0/js-19.2.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.ibm.icu" name="icu4j">
+			<revision name="62.1" status="release" pubdate="20180620114549" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://icu-project.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="57">
+				<license name="Unicode/ICU License" url="http://source.icu-project.org/repos/icu/trunk/icu4j/main/shared/licenses/LICENSE"/>
+				<metadata-artifact status="no" details="" size="2614" time="0" location="/home/aaron/.ivy2/cache/com.ibm.icu/icu4j/ivy-62.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/ibm/icu/icu4j/62.1/icu4j-62.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="62.1" rev-constraint-default="62.1" rev-constraint-dynamic="62.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="icu4j" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2339608" time="0" location="/home/aaron/.ivy2/cache/com.ibm.icu/icu4j/srcs/icu4j-62.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/ibm/icu/icu4j/62.1/icu4j-62.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.ow2.asm" name="asm-commons">
+			<revision name="6.2.1" status="release" pubdate="20180805020731" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://asm.ow2.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="46">
+				<license name="BSD" url="http://asm.ow2.org/license.html"/>
+				<metadata-artifact status="no" details="" size="4943" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-commons/ivy-6.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/6.2.1/asm-commons-6.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="6.2.1" rev-constraint-default="6.2.1" rev-constraint-dynamic="6.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="asm-commons" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="85905" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-commons/srcs/asm-commons-6.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/6.2.1/asm-commons-6.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.ow2.asm" name="asm-util">
+			<revision name="6.2.1" status="release" pubdate="20180805020743" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://asm.ow2.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="35">
+				<license name="BSD" url="http://asm.ow2.org/license.html"/>
+				<metadata-artifact status="no" details="" size="4925" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-util/ivy-6.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/ow2/asm/asm-util/6.2.1/asm-util-6.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="6.2.1" rev-constraint-default="6.2.1" rev-constraint-dynamic="6.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="asm-util" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="73304" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-util/srcs/asm-util-6.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/ow2/asm/asm-util/6.2.1/asm-util-6.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.ow2.asm" name="asm-analysis">
+			<revision name="6.2.1" status="release" pubdate="20180805020727" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://asm.ow2.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="75">
+				<license name="BSD" url="http://asm.ow2.org/license.html"/>
+				<metadata-artifact status="no" details="" size="4551" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-analysis/ivy-6.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/ow2/asm/asm-analysis/6.2.1/asm-analysis-6.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="6.2.1" rev-constraint-default="6.2.1" rev-constraint-dynamic="6.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="asm-analysis" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="39776" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-analysis/srcs/asm-analysis-6.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/ow2/asm/asm-analysis/6.2.1/asm-analysis-6.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.ow2.asm" name="asm-tree">
+			<revision name="6.2.1" status="release" pubdate="20180805020738" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://asm.ow2.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="58">
+				<license name="BSD" url="http://asm.ow2.org/license.html"/>
+				<metadata-artifact status="no" details="" size="4522" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-tree/ivy-6.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/ow2/asm/asm-tree/6.2.1/asm-tree-6.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="6.2.1" rev-constraint-default="6.2.1" rev-constraint-dynamic="6.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="asm-tree" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="73183" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm-tree/srcs/asm-tree-6.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/ow2/asm/asm-tree/6.2.1/asm-tree-6.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.ow2.asm" name="asm">
+			<revision name="6.2.1" status="release" pubdate="20180805020722" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://asm.ow2.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="99">
+				<license name="BSD" url="http://asm.ow2.org/license.html"/>
+				<metadata-artifact status="no" details="" size="4367" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm/ivy-6.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/ow2/asm/asm/6.2.1/asm-6.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="6.2.1" rev-constraint-default="6.2.1" rev-constraint-dynamic="6.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="asm" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="168991" time="0" location="/home/aaron/.ivy2/cache/org.ow2.asm/asm/srcs/asm-6.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/ow2/asm/asm/6.2.1/asm-6.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.graalvm.regex" name="regex">
+			<revision name="19.2.0" status="release" pubdate="20190821081004" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.graalvm.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="80">
+				<license name="GNU General Public License, version 2, with the Classpath Exception" url="http://openjdk.java.net/legal/gplv2+ce.html"/>
+				<metadata-artifact status="no" details="" size="2715" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.regex/regex/ivy-19.2.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/graalvm/regex/regex/19.2.0/regex-19.2.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="19.2.0" rev-constraint-default="19.2.0" rev-constraint-dynamic="19.2.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="regex" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="2267268" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.regex/regex/srcs/regex-19.2.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/graalvm/regex/regex/19.2.0/regex-19.2.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.graalvm.truffle" name="truffle-api">
+			<revision name="19.2.0" status="release" pubdate="20190821081911" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://openjdk.java.net/projects/graal" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="38">
+				<license name="Universal Permissive License, Version 1.0" url="http://opensource.org/licenses/UPL"/>
+				<metadata-artifact status="no" details="" size="2792" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.truffle/truffle-api/ivy-19.2.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/graalvm/truffle/truffle-api/19.2.0/truffle-api-19.2.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="19.2.0" rev-constraint-default="19.2.0" rev-constraint-dynamic="19.2.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="truffle-api" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="5303911" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.truffle/truffle-api/srcs/truffle-api-19.2.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/graalvm/truffle/truffle-api/19.2.0/truffle-api-19.2.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.graalvm.sdk" name="graal-sdk">
+			<revision name="19.2.0" status="release" pubdate="20190821083111" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/oracle/graal" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="56">
+				<license name="Universal Permissive License, Version 1.0" url="http://opensource.org/licenses/UPL"/>
+				<metadata-artifact status="no" details="" size="2677" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.sdk/graal-sdk/ivy-19.2.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/graalvm/sdk/graal-sdk/19.2.0/graal-sdk-19.2.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="19.2.0" rev-constraint-default="19.2.0" rev-constraint-dynamic="19.2.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="graal-sdk" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="1044369" time="0" location="/home/aaron/.ivy2/cache/org.graalvm.sdk/graal-sdk/srcs/graal-sdk-19.2.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/graalvm/sdk/graal-sdk/19.2.0/graal-sdk-19.2.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.google.guava" name="guava">
+			<revision name="20.0" status="release" pubdate="20161028155635" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="7">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="6358" time="0" location="/home/aaron/.ivy2/cache/com.google.guava/guava/ivy-20.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/google/guava/guava/20.0/guava-20.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="20.0" rev-constraint-default="20.0" rev-constraint-dynamic="20.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="guava" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="1453695" time="0" location="/home/aaron/.ivy2/cache/com.google.guava/guava/srcs/guava-20.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/google/guava/guava/20.0/guava-20.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-http_2.12">
+			<revision name="10.0.9" status="release" pubdate="20170626101633" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="6">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="2791" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http_2.12/ivy-10.0.9.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http_2.12/10.0.9/akka-http_2.12-10.0.9.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="10.0.9" rev-constraint-default="10.0.9" rev-constraint-dynamic="10.0.9" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="akka-http_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="197281" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http_2.12/srcs/akka-http_2.12-10.0.9-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http_2.12/10.0.9/akka-http_2.12-10.0.9-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-http-core_2.12">
+			<revision name="10.0.9" status="release" pubdate="20170626101619" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="65">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="3568" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http-core_2.12/ivy-10.0.9.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-core_2.12/10.0.9/akka-http-core_2.12-10.0.9.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="10.0.9" rev-constraint-default="10.0.9" rev-constraint-dynamic="10.0.9" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="akka-http-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="389383" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-http-core_2.12/srcs/akka-http-core_2.12-10.0.9-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-core_2.12/10.0.9/akka-http-core_2.12-10.0.9-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-stream_2.12">
+			<revision name="2.4.19" status="release" pubdate="20170612074701" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.19" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="24">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3506" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-stream_2.12/ivy-2.4.19.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream_2.12/2.4.19/akka-stream_2.12-2.4.19.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.19" rev-constraint-default="2.4.19" rev-constraint-dynamic="2.4.19" callerrev="1.0.0" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.19"/>
+				<artifacts>
+					<artifact name="akka-stream_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="390950" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-stream_2.12/srcs/akka-stream_2.12-2.4.19-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream_2.12/2.4.19/akka-stream_2.12-2.4.19-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe" name="ssl-config-core_2.12">
+			<revision name="0.2.1" status="release" pubdate="20161102083833" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typesafehub/ssl-config" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="88">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3613" time="0" location="/home/aaron/.ivy2/cache/com.typesafe/ssl-config-core_2.12/ivy-0.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.12/0.2.1/ssl-config-core_2.12-0.2.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.2.1" rev-constraint-default="0.2.1" rev-constraint-dynamic="0.2.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="ssl-config-core_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="49384" time="0" location="/home/aaron/.ivy2/cache/com.typesafe/ssl-config-core_2.12/srcs/ssl-config-core_2.12-0.2.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.12/0.2.1/ssl-config-core_2.12-0.2.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang.modules" name="scala-parser-combinators_2.12">
+			<revision name="1.0.4" status="release" pubdate="20161028191045" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="67">
+				<license name="BSD 3-clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="2918" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.12/ivy-1.0.4.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/org.scala-lang.modules/scala-parser-combinators_2.12/1.0.4/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0.4" rev-constraint-default="1.0.4" rev-constraint-dynamic="1.0.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scala-parser-combinators_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="42274" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.12/srcs/scala-parser-combinators_2.12-1.0.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.12/1.0.4/scala-parser-combinators_2.12-1.0.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.reactivestreams" name="reactive-streams">
+			<revision name="1.0.0" status="release" pubdate="20150615233204" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.reactive-streams.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="97">
+				<license name="CC0" url="http://creativecommons.org/publicdomain/zero/1.0/"/>
+				<metadata-artifact status="no" details="" size="2386" time="0" location="/home/aaron/.ivy2/cache/org.reactivestreams/reactive-streams/ivy-1.0.0.xml" searched="false" origin-is-local="false" origin-location="file:////home/aaron/.sbt/preloaded/org.reactivestreams/reactive-streams/1.0.0/ivys/ivy.xml"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.0.0" rev-constraint-default="1.0.0" rev-constraint-dynamic="1.0.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="reactive-streams" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3130" time="0" location="/home/aaron/.ivy2/cache/org.reactivestreams/reactive-streams/srcs/reactive-streams-1.0.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.0/reactive-streams-1.0.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-parsing_2.12">
+			<revision name="10.0.9" status="release" pubdate="20170626101606" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="89">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="2947" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-parsing_2.12/ivy-10.0.9.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-parsing_2.12/10.0.9/akka-parsing_2.12-10.0.9.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="10.0.9" rev-constraint-default="10.0.9" rev-constraint-dynamic="10.0.9" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="akka-parsing_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="63824" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-parsing_2.12/srcs/akka-parsing_2.12-10.0.9-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-parsing_2.12/10.0.9/akka-parsing_2.12-10.0.9-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-actor_2.12">
+			<revision name="2.4.19" status="release" pubdate="20170612074409" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.19" downloaded="false" searched="false" default="false" conf="default, compile, runtime(*), master(compile), runtime, default(compile), compile(*), master" position="27">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3102" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-actor_2.12/ivy-2.4.19.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-actor_2.12/2.4.19/akka-actor_2.12-2.4.19.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.4.19" rev-constraint-default="2.4.19" rev-constraint-dynamic="2.4.19" callerrev="1.0.0" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.19"/>
+				<artifacts>
+					<artifact name="akka-actor_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="410365" time="0" location="/home/aaron/.ivy2/cache/com.typesafe.akka/akka-actor_2.12/srcs/akka-actor_2.12-2.4.19-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-actor_2.12/2.4.19/akka-actor_2.12-2.4.19-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang.modules" name="scala-java8-compat_2.12">
+			<revision name="0.8.0" status="release" pubdate="20161029171227" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="100">
+				<license name="BSD 3-clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="3036" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-java8-compat_2.12/ivy-0.8.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-java8-compat_2.12/0.8.0/scala-java8-compat_2.12-0.8.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.8.0" rev-constraint-default="0.8.0" rev-constraint-dynamic="0.8.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="scala-java8-compat_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="63853" time="0" location="/home/aaron/.ivy2/cache/org.scala-lang.modules/scala-java8-compat_2.12/srcs/scala-java8-compat_2.12-0.8.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-java8-compat_2.12/0.8.0/scala-java8-compat_2.12-0.8.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe" name="config">
+			<revision name="1.3.0" status="release" pubdate="20150508104611" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typesafehub/config" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="90">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2875" time="0" location="/home/aaron/.ivy2/cache/com.typesafe/config/ivy-1.3.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/config/1.3.0/config-1.3.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.3.0" rev-constraint-default="1.3.0" rev-constraint-dynamic="1.3.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="config" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="167084" time="0" location="/home/aaron/.ivy2/cache/com.typesafe/config/srcs/config-1.3.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/config/1.3.0/config-1.3.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.javassist" name="javassist">
+			<revision name="3.18.2-GA" status="release" pubdate="20140527115509" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.javassist.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="5">
+				<license name="MPL 1.1" url="http://www.mozilla.org/MPL/MPL-1.1.html"/>
+				<license name="LGPL 2.1" url="http://www.gnu.org/licenses/lgpl-2.1.html"/>
+				<license name="Apache License 2.0" url="http://www.apache.org/licenses/"/>
+				<metadata-artifact status="no" details="" size="3199" time="0" location="/home/aaron/.ivy2/cache/org.javassist/javassist/ivy-3.18.2-GA.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/javassist/javassist/3.18.2-GA/javassist-3.18.2-GA.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="3.18.2-GA" rev-constraint-default="3.18.2-GA" rev-constraint-dynamic="3.18.2-GA" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="javassist" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="513516" time="0" location="/home/aaron/.ivy2/cache/org.javassist/javassist/srcs/javassist-3.18.2-GA-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/javassist/javassist/3.18.2-GA/javassist-3.18.2-GA-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.typelevel" name="cats-macros_2.12">
+			<revision name="0.9.0" status="release" pubdate="20170115173024" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typelevel/cats" extra-info.apiURL="http://typelevel.org/cats/api/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="4">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="3078" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-macros_2.12/ivy-0.9.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/typelevel/cats-macros_2.12/0.9.0/cats-macros_2.12-0.9.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.9.0" rev-constraint-default="0.9.0" rev-constraint-dynamic="0.9.0" callerrev="1.0.0" extra-info.apiURL="http://typelevel.org/cats/api/"/>
+				<artifacts>
+					<artifact name="cats-macros_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="1199" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/cats-macros_2.12/srcs/cats-macros_2.12-0.9.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/typelevel/cats-macros_2.12/0.9.0/cats-macros_2.12-0.9.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.typelevel" name="machinist_2.12">
+			<revision name="0.6.1" status="release" pubdate="20161029101418" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/typelevel/machinist" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="82">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="2785" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/machinist_2.12/ivy-0.6.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/typelevel/machinist_2.12/0.6.1/machinist_2.12-0.6.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.6.1" rev-constraint-default="0.6.1" rev-constraint-dynamic="0.6.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="machinist_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="3546" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/machinist_2.12/srcs/machinist_2.12-0.6.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/typelevel/machinist_2.12/0.6.1/machinist_2.12-0.6.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.github.mpilquist" name="simulacrum_2.12">
+			<revision name="0.10.0" status="release" pubdate="20161103091330" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mpilquist/simulacrum" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="36">
+				<license name="Three-clause BSD-style" url="https://github.com/mpilquist/simulacrum/blob/master/LICENSE"/>
+				<metadata-artifact status="no" details="" size="3140" time="0" location="/home/aaron/.ivy2/cache/com.github.mpilquist/simulacrum_2.12/ivy-0.10.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/mpilquist/simulacrum_2.12/0.10.0/simulacrum_2.12-0.10.0.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.10.0" rev-constraint-default="0.10.0" rev-constraint-dynamic="0.10.0" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="simulacrum_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="6576" time="0" location="/home/aaron/.ivy2/cache/com.github.mpilquist/simulacrum_2.12/srcs/simulacrum_2.12-0.10.0-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/mpilquist/simulacrum_2.12/0.10.0/simulacrum_2.12-0.10.0-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.typelevel" name="macro-compat_2.12">
+			<revision name="1.1.1" status="release" pubdate="20161102034258" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/milessabin/macro-compat" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="59">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="2964" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/macro-compat_2.12/ivy-1.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/typelevel/macro-compat_2.12/1.1.1/macro-compat_2.12-1.1.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.1.1" rev-constraint-default="1.1.1" rev-constraint-dynamic="1.1.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="macro-compat_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="1052" time="0" location="/home/aaron/.ivy2/cache/org.typelevel/macro-compat_2.12/srcs/macro-compat_2.12-1.1.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/typelevel/macro-compat_2.12/1.1.1/macro-compat_2.12-1.1.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="javax.ws.rs" name="jsr311-api">
+			<revision name="1.1.1" status="release" pubdate="20091123174141" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://jsr311.dev.java.net" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="3">
+				<license name="                 CDDL License             " url="http://www.opensource.org/licenses/cddl1.php"/>
+				<metadata-artifact status="no" details="" size="2918" time="0" location="/home/aaron/.ivy2/cache/javax.ws.rs/jsr311-api/ivy-1.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.1.1" rev-constraint-default="1.1.1" rev-constraint-dynamic="1.1.1" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jsr311-api" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="70022" time="0" location="/home/aaron/.ivy2/cache/javax.ws.rs/jsr311-api/srcs/jsr311-api-1.1.1-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.thoughtworks.paranamer" name="paranamer">
+			<revision name="2.8" status="release" pubdate="20150826062928" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="2">
+				<license name="BSD" url="LICENSE.txt"/>
+				<metadata-artifact status="no" details="" size="4254" time="0" location="/home/aaron/.ivy2/cache/com.thoughtworks.paranamer/paranamer/ivy-2.8.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/thoughtworks/paranamer/paranamer/2.8/paranamer-2.8.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="2.8" rev-constraint-default="2.8" rev-constraint-dynamic="2.8" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="paranamer" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="27125" time="0" location="/home/aaron/.ivy2/cache/com.thoughtworks.paranamer/paranamer/srcs/paranamer-2.8-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/thoughtworks/paranamer/paranamer/2.8/paranamer-2.8-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="commons-codec" name="commons-codec">
+			<revision name="1.9" status="release" pubdate="20131220215739" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://commons.apache.org/proper/commons-codec/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="1">
+				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="10097" time="0" location="/home/aaron/.ivy2/cache/commons-codec/commons-codec/ivy-1.9.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/commons-codec/commons-codec/1.9/commons-codec-1.9.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="1.9" rev-constraint-default="1.9" rev-constraint-dynamic="1.9" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="commons-codec" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="278370" time="0" location="/home/aaron/.ivy2/cache/commons-codec/commons-codec/srcs/commons-codec-1.9-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/commons-codec/commons-codec/1.9/commons-codec-1.9-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.spire-math" name="jawn-parser_2.12">
+			<revision name="0.10.4" status="release" pubdate="20161112220016" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/non/jawn" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="0">
+				<license name="MIT" url="http://opensource.org/licenses/MIT"/>
+				<metadata-artifact status="no" details="" size="2879" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/jawn-parser_2.12/ivy-0.10.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/spire-math/jawn-parser_2.12/0.10.4/jawn-parser_2.12-0.10.4.pom"/>
+				<caller organisation="co.topl" name="bifrost$sources_2.12" conf="test, compile, runtime" rev="0.10.4" rev-constraint-default="0.10.4" rev-constraint-dynamic="0.10.4" callerrev="1.0.0"/>
+				<artifacts>
+					<artifact name="jawn-parser_2.12" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="18474" time="0" location="/home/aaron/.ivy2/cache/org.spire-math/jawn-parser_2.12/srcs/jawn-parser_2.12-0.10.4-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/spire-math/jawn-parser_2.12/0.10.4/jawn-parser_2.12-0.10.4-sources.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+	</dependencies>
+</ivy-report>

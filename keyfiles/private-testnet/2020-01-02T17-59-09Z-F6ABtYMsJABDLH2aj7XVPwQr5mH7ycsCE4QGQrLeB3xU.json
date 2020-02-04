@@ -1,0 +1,13 @@
+{
+  "crypto" : {
+    "mac" : "HeuPCWkhnbsGodi7LeSpvLmmEbexpsj47a7sYNsGoRDV",
+    "kdf" : "scrypt",
+    "cipherText" : "676mH2K9nGAU3X1yUituVmR3bFjTQfPkk4rSGiwhKyNM",
+    "kdfSalt" : "E2zCE9VcfHVL4kGD1DPbgDM6zygsnsiUqB8syEetkjno",
+    "cipher" : "aes-128-ctr",
+    "cipherParams" : {
+      "iv" : "6cMT3yfpgUAhmGCnq1yF5w"
+    }
+  },
+  "publicKeyId" : "F6ABtYMsJABDLH2aj7XVPwQr5mH7ycsCE4QGQrLeB3xU"
+}
