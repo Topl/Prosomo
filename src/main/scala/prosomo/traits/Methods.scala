@@ -1,22 +1,21 @@
-package prosomo
+package prosomo.traits
 
-import akka.actor.ActorRef
-import akka.actor._
-import akka.pattern.ask
+import akka.actor.{ActorPath, ActorRef}
 import akka.util.Timeout
-
-import scala.concurrent.Await
-import scala.language.postfixOps
+import akka.pattern.ask
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases.{GetBlockTree, GetGossipers, GetPositionData, GetState}
+import prosomo.history.History
+import prosomo.primitives.{Kes, Sig, Vrf, sharedData}
+import scorex.crypto.encode.Base58
 import prosomo.cases._
 
 import scala.collection.immutable.ListMap
-import util.control.Breaks._
+import scala.concurrent.Await
 import scala.math.BigInt
 import scala.util.Random
-import scorex.crypto.encode.Base58
-
+import scala.util.control.Breaks.{break, breakable}
 
 trait Methods
   extends Functions {

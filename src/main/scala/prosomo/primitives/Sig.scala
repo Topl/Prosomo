@@ -1,4 +1,4 @@
-package prosomo
+package prosomo.primitives
 
 import java.security.SecureRandom
 

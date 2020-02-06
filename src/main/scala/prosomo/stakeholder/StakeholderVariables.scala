@@ -1,7 +1,9 @@
-package prosomo
+package prosomo.stakeholder
 
 import akka.actor.ActorRef
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.Utils
+import prosomo.traits.{Methods, Types}
 
 trait StakeholderVariables
   extends Types
@@ -58,4 +60,3 @@ trait StakeholderVariables
   //toggle for nothing-at-stake forging
   var forgeAll:Boolean = false
 }
-

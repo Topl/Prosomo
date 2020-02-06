@@ -1,7 +1,9 @@
-package prosomo
+package prosomo.coordinator
 
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.Utils
+import prosomo.traits.{Methods, Types}
 
 trait CoordinatorVariables
   extends Types

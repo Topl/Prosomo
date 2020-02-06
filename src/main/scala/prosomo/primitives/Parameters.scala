@@ -1,12 +1,13 @@
-package prosomo
+package prosomo.primitives
 
-import scala.concurrent.duration._
-import com.typesafe.config.{Config, ConfigFactory}
 import java.io.File
 
+import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.Prosomo
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 trait Parameters extends Utils {
 

@@ -1,4 +1,4 @@
-package prosomo;
+package prosomo.router;
 
 class DistanceCalculator
 {

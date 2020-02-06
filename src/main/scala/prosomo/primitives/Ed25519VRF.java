@@ -1,4 +1,4 @@
-package prosomo;
+package prosomo.primitives;
 
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.digests.SHA512Digest;

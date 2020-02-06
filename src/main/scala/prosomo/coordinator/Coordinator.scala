@@ -1,7 +1,9 @@
-package prosomo
+package prosomo.coordinator
 
-import java.io.{BufferedWriter, FileWriter}
-import java.io.File
+import prosomo.router.Router
+import prosomo.stakeholder.Stakeholder
+
+import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -11,12 +13,15 @@ import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
+import prosomo.primitives.{SystemLoadMonitor, sharedData}
+import prosomo._
+import prosomo.traits.Methods
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
 import scala.reflect.io.Path
-import scala.util.{Random, Try}
 import scala.sys.process._
+import scala.util.{Random, Try}
 
 /**
   * Coordinator actor that initializes the genesis block and instantiates the staking party,

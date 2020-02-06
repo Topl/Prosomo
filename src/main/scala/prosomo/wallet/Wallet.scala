@@ -1,6 +1,8 @@
-package prosomo
+package prosomo.wallet
 
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.Sig
+import prosomo.traits.Functions
 
 import scala.collection.immutable.ListMap
 import scala.util.Random

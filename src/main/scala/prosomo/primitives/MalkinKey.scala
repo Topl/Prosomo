@@ -1,4 +1,4 @@
-package prosomo
+package prosomo.primitives
 
 class MalkinKey {
   private var L:Tree[Array[Byte]] = Leaf(Array())

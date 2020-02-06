@@ -1,8 +1,8 @@
-package prosomo
+package prosomo.traits
 
-import scala.language.postfixOps
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.{Parameters, Sig, Utils}
 
 import scala.math.BigInt
 import scala.util.Random

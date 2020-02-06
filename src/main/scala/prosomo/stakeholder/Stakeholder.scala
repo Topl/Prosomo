@@ -1,18 +1,19 @@
-package prosomo
+package prosomo.stakeholder
+
+import java.io.BufferedWriter
 
 import akka.actor.{Actor, ActorPath, ActorRef, Props, Timers}
 import bifrost.crypto.hash.FastCryptographicHash
-
-import util.control.Breaks._
-import java.io.BufferedWriter
-
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import scala.math.BigInt
-import scala.util.Random
+import prosomo.primitives.{Keys, sharedData}
+import prosomo.traits.Methods
+import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
-import scala.util.{Failure, Success, Try}
+import scala.math.BigInt
+import scala.util.Random
+import scala.util.control.Breaks._
 
 /**
   * Stakeholder actor that executes the staking protocol and communicates with other stakeholders,
@@ -32,8 +33,6 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val wallet:Wallet = new Wallet(keys.pkw)
 
   private case object timerKey
-
-  /*************************Honest************************************/
 
   def blockInfo:String = {
     "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
@@ -457,7 +456,6 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     }
   }
 
-  /************************Adversarial********************************/
 
   var honestPrefix:BlockId = (-1,ByteArrayWrapper(Array()))
   var covertHead:BlockId = (-1,ByteArrayWrapper(Array()))

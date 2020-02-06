@@ -7,17 +7,11 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.StdIn
 import bifrost.BifrostApp
-import com.typesafe.sslconfig.ssl.SSLParametersConfig
+import prosomo.primitives.ParameterConfig
+import prosomo.coordinator.Coordinator
 
 
 class Prosomo(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
-  /**
-    * Ouroboros Prosomoiotís:
-    *
-    * Dynamic proof of stake protocol simulated with akka actors
-    * based on Praos and Genesis revisions of Ouroboros
-    *
-    */
 
   val system = actorSystem
   val coordinator = system.actorOf(Coordinator.props, "Coordinator")

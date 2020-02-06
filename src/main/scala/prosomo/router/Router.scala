@@ -1,18 +1,18 @@
-package prosomo
+package prosomo.router
 
 import akka.actor.{Actor, ActorRef, Props, Timers}
-import akka.util.Timeout
 import akka.pattern.ask
-import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.ByteArrayWrapper
+import akka.util.Timeout
 import prosomo.cases._
+import prosomo.primitives.{Parameters, sharedData}
+import prosomo.traits.Types
+import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.Random
-import scala.concurrent.duration._
-import scorex.crypto.encode.Base58
 
 class Router(seed:Array[Byte]) extends Actor
   with Parameters

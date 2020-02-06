@@ -1,7 +1,9 @@
-package prosomo
+package prosomo.traits
+
+import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.Tree
 
 import scala.math.BigInt
-import io.iohk.iodb.ByteArrayWrapper
 
 trait Types {
   type KesKey = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])

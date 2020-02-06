@@ -1,9 +1,10 @@
-package prosomo
+package prosomo.primitives
 
 import java.security.SecureRandom
-import prosomo.Ed25519VRF.{PointAccum, PointExt}
+
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.{Ed25519KeyGenerationParameters, Ed25519PrivateKeyParameters, Ed25519PublicKeyParameters}
+import prosomo.primitives.Ed25519VRF.{PointAccum, PointExt}
 import scorex.crypto.hash.Sha512
 
 /**

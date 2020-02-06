@@ -1,5 +1,0 @@
-package prosomo
-
-class Mempool {
-
-}
