@@ -1,13 +1,16 @@
 package prosomo
 
 import akka.actor.ActorSystem
+import prosomo.cases._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.StdIn
+import bifrost.BifrostApp
+import com.typesafe.sslconfig.ssl.SSLParametersConfig
 
-object Prosomo extends App {
 
+class Prosomo(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
   /**
     * Ouroboros Prosomoiotís:
     *
@@ -16,8 +19,7 @@ object Prosomo extends App {
     *
     */
 
-  val input = args
-  val system = ActorSystem("Stakeholders")
+  val system = actorSystem
   val coordinator = system.actorOf(Coordinator.props, "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
@@ -32,5 +34,10 @@ object Prosomo extends App {
   }
 
   Await.ready(system.whenTerminated, Duration.Inf)
+}
 
+object Prosomo extends App {
+  val input = args
+  val config = new ParameterConfig
+  new Prosomo(config.settingsFilename).run()
 }

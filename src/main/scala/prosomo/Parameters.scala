@@ -165,7 +165,7 @@ trait Parameters extends Utils {
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")
   //toggle for action based round execution
-  val useFencing = config.getBoolean("params.useFencing")
+  val useFencing:Boolean = config.getBoolean("params.useFencing")
   //seed for pseudo random runs
   val inputSeed:String = {
     if (randomFlag) {
@@ -177,4 +177,7 @@ trait Parameters extends Utils {
   val stakeDistribution:String = config.getString("params.stakeDistribution")
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
+  val settingsFilename:String = config.getString("params.settingsFilename")
 }
+
+class ParameterConfig extends Parameters {}

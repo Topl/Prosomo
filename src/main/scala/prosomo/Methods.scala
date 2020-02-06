@@ -9,6 +9,7 @@ import scala.concurrent.Await
 import scala.language.postfixOps
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases._
 
 import scala.collection.immutable.ListMap
 import util.control.Breaks._

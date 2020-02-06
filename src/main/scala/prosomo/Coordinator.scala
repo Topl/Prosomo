@@ -10,7 +10,9 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases._
 import scorex.crypto.encode.Base58
+
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.util.{Random, Try}

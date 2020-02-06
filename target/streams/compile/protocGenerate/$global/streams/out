@@ -1,5 +1,0 @@
-[0m[[0minfo[0m] [0mCompiling 1 protobuf files to /home/aaron/topl/Prosomo/target/scala-2.12/src_managed/main[0m
-[0m[[0mdebug[0m] [0mprotoc options:[0m
-[0m[[0minfo[0m] [0mCompiling schema /home/aaron/topl/Prosomo/src/main/protobuf/serializer.proto[0m
-[0m[[0minfo[0m] [0mCompiling protobuf[0m
-[0m[[0minfo[0m] [0mProtoc target directory: /home/aaron/topl/Prosomo/target/scala-2.12/src_managed/main[0m

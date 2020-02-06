@@ -2,13 +2,17 @@ package prosomo
 
 import akka.actor.{Actor, ActorPath, ActorRef, Props, Timers}
 import bifrost.crypto.hash.FastCryptographicHash
+
 import util.control.Breaks._
 import java.io.BufferedWriter
+
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases._
 import scala.math.BigInt
 import scala.util.Random
 import scorex.crypto.encode.Base58
-import scala.util.{Try, Success, Failure}
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * Stakeholder actor that executes the staking protocol and communicates with other stakeholders,
@@ -28,7 +32,6 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val wallet:Wallet = new Wallet(keys.pkw)
 
   private case object timerKey
-
 
   /*************************Honest************************************/
 

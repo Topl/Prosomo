@@ -5,6 +5,7 @@ import akka.util.Timeout
 import akka.pattern.ask
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases._
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
