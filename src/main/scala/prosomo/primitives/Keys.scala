@@ -1,7 +1,7 @@
 package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.traits.Types
+import prosomo.components.Types
 
 class Keys extends Types {
   var sk_vrf:PrivateKey = Array()

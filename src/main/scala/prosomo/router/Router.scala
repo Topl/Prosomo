@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases._
 import prosomo.primitives.{Parameters, sharedData}
-import prosomo.traits.Types
+import prosomo.components.Types
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
@@ -125,7 +125,7 @@ class Router(seed:Array[Byte]) extends Actor
             holders.indexOf(r),
             c.getClass,message._1,
             c match {
-              case value:SendBlock => Base58.encode(value.s match {case s:Box => {s._1 match {case bInfo: (Block,BlockId) => {bInfo._2._2.data}}}})
+              case value:SendBlock => Base58.encode(value.s match {case s:Box => {s._1 match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
               case value:SendTx => Base58.encode(value.s match {case trans:Transaction => {trans._4.data}})
               case _ => " "
             }

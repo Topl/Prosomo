@@ -11,9 +11,28 @@ import prosomo.primitives.ParameterConfig
 import prosomo.coordinator.Coordinator
 
 
-class Prosomo(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
+class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
 
   val system = actorSystem
+  val coordinator = system.actorOf(Coordinator.props, "Coordinator")
+  coordinator ! NewDataFile
+  coordinator ! Populate
+  coordinator ! Run
+
+  if (true) {
+    println("-->Press ENTER to exit<--")
+    try StdIn.readLine()
+    finally {
+      system.terminate()
+    }
+  }
+
+  Await.ready(system.whenTerminated, Duration.Inf)
+}
+
+class Prosomo {
+
+  val system = ActorSystem("prosomo")
   val coordinator = system.actorOf(Coordinator.props, "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
@@ -33,5 +52,6 @@ class Prosomo(override val settingsFilename: String) extends BifrostApp(settings
 object Prosomo extends App {
   val input = args
   val config = new ParameterConfig
-  new Prosomo(config.settingsFilename).run()
+  //new ProsomoBifrost(config.settingsFilename).run()
+  new Prosomo
 }

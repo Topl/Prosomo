@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.ActorRef
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.Utils
-import prosomo.traits.{Methods, Types}
+import prosomo.components.{Methods, Types}
 
 trait StakeholderVariables
   extends Types
@@ -24,11 +24,11 @@ trait StakeholderVariables
   //slot time as determined from coordinator clock
   var globalSlot = 0
   //all tines that are pending built from new blocks that are received
-  var tines:Map[Int,(Chain,Int,Int,Int,ActorRef)] = Map()
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)] = Map()
   //counter for identifying tines
   var tineCounter = 0
   //completed tines waiting to be selected with maxvalid-bg
-  var candidateTines:Array[(Chain,Slot,Int)] = Array()
+  var candidateTines:Array[(Tine,Slot,Int)] = Array()
   //placeholder for genesis block
   var genBlock: Any = 0
   //placeholder for genesis block ID

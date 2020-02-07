@@ -7,7 +7,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.primitives.{Keys, sharedData}
-import prosomo.traits.Methods
+import prosomo.components.{Methods,Block}
 import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
@@ -45,7 +45,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
       roundBlock = {
-        val pb:Block = getBlock(localChain(lastActiveSlot(localChain,localSlot-1))) match {case b:Block => b}
+        val pb:BlockHeader = getBlockHeader(localChain(lastActiveSlot(localChain,localSlot-1))) match {case b:BlockHeader => b}
         val bn:Int = pb._9 + 1
         val ps:Slot = pb._3
         val blockBox: Box = signBox((forgeBytes,BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
@@ -61,13 +61,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       roundBlock = -1
     }
     roundBlock match {
-      case b: Block => {
+      case b: BlockHeader => {
         val hb = hash(b)
         val bn = b._9
         if (printFlag) {
           println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))
         }
-        blocks.update(localSlot, blocks(localSlot) + (hb -> b))
+        blocks.add(new Block(hb,b))
         localChain.update(localSlot, (localSlot, hb))
         chainHistory.update(localSlot,(localSlot, hb)::chainHistory(localSlot))
         send(self,gossipers, SendBlock(signBox((b,(localSlot, hb)), sessionId, keys.sk_sig, keys.pk_sig)))
@@ -87,9 +87,9 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     }
   }
 
-  def updateTine(inputTine:Chain): (Chain,Slot) = {
+  def updateTine(inputTine:Tine): (Tine,Slot) = {
     var foundAncestor = true
-    var tine:Chain = inputTine
+    var tine:Tine = inputTine
     var prefix:Slot = 0
     if (localChain(tine.head._1) == tine.head) {
       (tine,-1)
@@ -97,7 +97,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       breakable{
         while(foundAncestor) {
           getParentId(tine.head) match {
-            case pb:BlockId => {
+            case pb:SlotId => {
               tine = Array(pb) ++ tine
               if (tine.head == localChain(tine.head._1)) {
                 prefix = tine.head._1
@@ -124,10 +124,10 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
   def updateWallet = {
     var id = localChain(lastActiveSlot(localChain,localSlot))
-    val bn = {getBlock(id) match {case b:Block => b._9}}
+    val bn = {getBlockHeader(id) match {case b:BlockHeader => b._9}}
     if (bn == 0) {
-      getBlock(id) match {
-        case b:Block => {
+      getBlockHeader(id) match {
+        case b:BlockHeader => {
           val bni = b._9
           history.get(id._2) match {
             case value:(State,Eta) => {
@@ -139,9 +139,9 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     } else {
       breakable{
         while (true) {
-          id = getParentId(id) match {case value:BlockId => value}
-          getBlock(id) match {
-            case b:Block => {
+          id = getParentId(id) match {case value:SlotId => value}
+          getBlockHeader(id) match {
+            case b:BlockHeader => {
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
                 history.get(id._2) match {
@@ -162,10 +162,10 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     }
   }
 
-  def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))): Unit = {
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRef))): Unit = {
     val entry = job._2
     var foundAncestor = true
-    var tine:Chain = entry._1
+    var tine:Tine = entry._1
     var counter:Int = entry._2
     val previousLen:Int = entry._3
     val totalTries:Int = entry._4
@@ -174,7 +174,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     breakable{
       while(foundAncestor) {
         getParentId(tine.head) match {
-          case pb:BlockId => {
+          case pb:SlotId => {
             tine = Array(pb) ++ tine
             if (tine.head == localChain(tine.head._1)) {
               prefix = tine.head._1
@@ -227,12 +227,12 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   /**main chain selection routine, maxvalid-bg*/
   def maxValidBG = {
     val prefix:Slot = candidateTines.last._2
-    val tine:Chain = expand(candidateTines.last._1,prefix,localSlot)
+    val tine:Tine = expand(candidateTines.last._1,prefix,localSlot)
     val job:Int = candidateTines.last._3
     var trueChain = false
     val s1 = tine.last._1
-    val bnt = {getBlock(tine(lastActiveSlot(tine,localSlot-prefix-1))) match {case b:Block => b._9}}
-    val bnl = {getBlock(localChain(lastActiveSlot(localChain,localSlot))) match {case b:Block => b._9}}
+    val bnt = {getBlockHeader(tine(lastActiveSlot(tine,localSlot-prefix-1))) match {case b:BlockHeader => b._9}}
+    val bnl = {getBlockHeader(localChain(lastActiveSlot(localChain,localSlot))) match {case b:BlockHeader => b._9}}
     if(s1 - prefix < k_s && bnl < bnt) {
       trueChain = true
     } else {
@@ -250,8 +250,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       collectLedger(subChain(localChain,prefix+1,localSlot))
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,localSlot)) {
-        getBlock(id) match {
-          case b:Block => {
+        getBlockHeader(id) match {
+          case b:BlockHeader => {
             val ledger:Ledger = b._2
             wallet.add(ledger)
           }
@@ -264,8 +264,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           assert(id._1 == i)
           chainHistory.update(id._1,id::{chainHistory(id._1).tail})
           localChain.update(id._1,id)
-          getBlock(id) match {
-            case b:Block => {
+          getBlockHeader(id) match {
+            case b:BlockHeader => {
               val blockLedger = b._2
               for (entry<-blockLedger.tail) {
                 entry match {
@@ -286,7 +286,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         }
       }
       candidateTines = candidateTines.dropRight(1)
-      var newCandidateTines:Array[(Chain,Slot,Int)] = Array()
+      var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- candidateTines) {
         val newTine = updateTine(Array(entry._1.last))
         if (newTine._2 > 0) {
@@ -300,8 +300,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,localSlot)) {
         if (id._1 > -1) {
-          getBlock(id) match {
-            case b: Block => {
+          getBlockHeader(id) match {
+            case b: BlockHeader => {
               val blockState = b._2
               for (entry <- blockState.tail) {
                 entry match {
@@ -326,7 +326,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     var pid = localChain.head
     for (id <- localChain.tail) {
       getParentId(id) match {
-        case bid:BlockId => {
+        case bid:SlotId => {
           if (bid == pid) {
             pid = id
           } else {
@@ -457,11 +457,11 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   }
 
 
-  var honestPrefix:BlockId = (-1,ByteArrayWrapper(Array()))
-  var covertHead:BlockId = (-1,ByteArrayWrapper(Array()))
-  var covertTine:Chain = Array()
+  var honestPrefix:SlotId = (-1,ByteArrayWrapper(Array()))
+  var covertHead:SlotId = (-1,ByteArrayWrapper(Array()))
+  var covertTine:Tine = Array()
   var leaderPredict:Map[Slot,Boolean] = Map()
-  var allTines:Set[BlockId] = Set()
+  var allTines:Set[SlotId] = Set()
   val numFutureSlots = 100
   val probability_threshold = 0.5
   val maxCovertLength = 10
@@ -531,8 +531,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
   def sendCovertTine = {
     if (!covertTine.isEmpty) {
-      val b = getBlock(covertHead) match {
-        case value:Block => value
+      val b = getBlockHeader(covertHead) match {
+        case value:BlockHeader => value
       }
       val jobNumber = tineCounter
       tines += (jobNumber -> (Array(covertHead),0,0,0,self))
@@ -544,7 +544,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     }
   }
 
-  def forgeBlock(forgerKeys:Keys,pb:Block,slot:Int,stateIn:State,etaIn:Eta):Block = {
+  def forgeBlock(forgerKeys:Keys, pb:BlockHeader, slot:Int, stateIn:State, etaIn:Eta):BlockHeader = {
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serialize(slot) ++ serialize("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     val bn:Int = pb._9 + 1
@@ -564,7 +564,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     if (predictive_selfish_mining_logic) {
       val data:(State,Eta) = history.get(covertHead._2) match {case value:(State,Eta) => value}
       if (leaderTest(keys,localSlot,eta)) {
-        val parentBlock:Block = getBlock(covertHead) match {case value:Block => value}
+        val parentBlock:BlockHeader = getBlockHeader(covertHead) match {case value:BlockHeader => value}
         //(forgerKeys:Keys,pb:Block,slot:Int,stateIn:State,etaIn:Eta)
         val covertBlock = forgeBlock(keys,parentBlock,localSlot,data._1,eta)
         roundBlock = covertBlock
@@ -572,13 +572,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         roundBlock = -1
       }
       roundBlock match {
-        case b: Block => {
+        case b: BlockHeader => {
           val hb = hash(b)
           val bn = b._9
           if (printFlag) {
             println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))
           }
-          blocks.update(localSlot, blocks(localSlot) + (hb -> b))
+          blocks.add(new Block(hb,b))
           blocksForged += 1
           updateLocalState(data._1, Array((localSlot,hb))) match {
             case value:State => {
@@ -601,22 +601,22 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
   def forgeEveryTine(keys:Keys) = {
     if (leaderTest(keys,localSlot,eta)) {
-      var newTines:Set[BlockId] = Set()
+      var newTines:Set[SlotId] = Set()
       for (entry <- allTines) {
         val data: (State, Eta) = history.get(entry._2) match {
           case value: (State, Eta) => value
         }
-        val parentBlock: Block = getBlock(entry) match {
-          case value: Block => value
+        val parentBlock: BlockHeader = getBlockHeader(entry) match {
+          case value: BlockHeader => value
         }
         forgeBlock(keys, parentBlock, localSlot, data._1, eta) match {
-          case b: Block => {
+          case b: BlockHeader => {
             val hb = hash(b)
             val bn = b._9
             if (printFlag) {
               println(Console.RED + "Holder " + holderIndex.toString + s" forged block $bn with id:" + Base58.encode(hb.data) + Console.WHITE)
             }
-            blocks.update(localSlot, blocks(localSlot) + (hb -> b))
+            blocks.add(new Block(hb,b))
             blocksForged += 1
             updateLocalState(data._1, Array((localSlot, hb))) match {
               case value: State => {
@@ -809,15 +809,15 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         value.s match {
           case s:Box => if (inbox.keySet.contains(s._2)) {
             s._1 match {
-              case bInfo: (Block,BlockId) => {
-                val bid:BlockId = bInfo._2
-                val foundBlock = blocks(bid._1).contains(bid._2)
+              case bInfo: (BlockHeader,SlotId) => {
+                val bid:SlotId = bInfo._2
+                val foundBlock = blocks.known(bid)
                 if (!foundBlock) {
-                  val b:Block = bInfo._1
+                  val b:BlockHeader = bInfo._1
                   val bHash = hash(b)
                   val bSlot = b._3
                   if (verifyBox(s) && verifyBlock(b) && bHash == bid._2 && bSlot == bid._1) {
-                    if (!foundBlock) blocks.update(bSlot, blocks(bSlot) + (bHash -> b))
+                    if (!foundBlock) blocks.add(new Block(bHash,b))
                     if (!foundBlock && bSlot <= globalSlot) {
                       if (holderIndex == sharedData.printingHolder && printFlag) {
                         println("Holder " + holderIndex.toString + " Got New Tine")
@@ -853,21 +853,21 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         value.s match {
           case s:Box => if (inbox.keySet.contains(s._2)) {
             s._1 match {
-              case returnedBlocks: (Int,List[(Block,BlockId)]) => {
+              case returnedBlocks: (Int,List[(BlockHeader,SlotId)]) => {
                 if (holderIndex == sharedData.printingHolder && printFlag) {
                   println("Holder " + holderIndex.toString + " Got Blocks")
                 }
                 val jobNumber:Int = returnedBlocks._1
                 val bList = returnedBlocks._2
                 for (bInfo <- bList) {
-                  val bid:BlockId = bInfo._2
-                  val foundBlock = blocks(bid._1).contains(bid._2)
+                  val bid:SlotId = bInfo._2
+                  val foundBlock = blocks.known(bid)
                   if (!foundBlock) {
-                    val b:Block = bInfo._1
+                    val b:BlockHeader = bInfo._1
                     val bHash = hash(b)
                     val bSlot = b._3
                     if (verifyBox(s) && verifyBlock(b) && bHash == bid._2 && bSlot == bid._1) {
-                      blocks.update(bSlot, blocks(bSlot) + (bHash -> b))
+                      blocks.add(new Block(bHash,b))
                     }
                   }
                 }
@@ -904,11 +904,11 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               val ref = inbox(s._2)._1
               s._1 match {
                 case request:BlockRequest => {
-                  val id:BlockId = request._1
+                  val id:SlotId = request._1
                   val job:Int = request._2
-                  if (blocks(id._1).contains(id._2)) {
+                  if (blocks.known(id)) {
                     if (verifyBox(s)) {
-                      val returnedBlock = blocks(id._1)(id._2)
+                      val returnedBlock:BlockHeader = getBlockHeader(id) match {case b:BlockHeader => b}
                       send(self,ref,ReturnBlock(signBox((job,List((returnedBlock,id))),sessionId,keys.sk_sig,keys.pk_sig)))
                       if (holderIndex == sharedData.printingHolder && printFlag) {
                         println("Holder " + holderIndex.toString + " Returned Block")
@@ -942,17 +942,17 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               val ref = inbox(s._2)._1
               s._1 match {
                 case request:ChainRequest => {
-                  val startId:BlockId = request._1
+                  val startId:SlotId = request._1
                   val depth:Int = request._2
                   val job:Int = request._3
-                  var parentFound = blocks(startId._1).contains(startId._2)
-                  var returnedBlockList:List[(Block,BlockId)] = List()
+                  var parentFound = blocks.known(startId)
+                  var returnedBlockList:List[(BlockHeader,SlotId)] = List()
                   if (depth <= tineMaxDepth && parentFound) {
                     if (verifyBox(s)) {
                       var id = startId
                       while (parentFound && returnedBlockList.length < k_s*depth) {
-                        parentFound = getBlock(id) match {
-                          case b:Block => {
+                        parentFound = getBlockHeader(id) match {
+                          case b:BlockHeader => {
                             returnedBlockList ::= (b,id)
                             id = getParentId(b)
                             true
@@ -1068,10 +1068,9 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     case value:Initialize => {
       println("Holder "+holderIndex.toString+" starting...")
       tMax = value.tMax
-      blocks = blocks++Array.fill(tMax){Map[ByteArrayWrapper,Block]()}
       localChain = Array((0,genBlockHash))++Array.fill(tMax){(-1,ByteArrayWrapper(Array()))}
       chainHistory = Array(List((0,genBlockHash)))++Array.fill(tMax){List((-1,ByteArrayWrapper(Array())))}
-      assert(genBlockHash == hash(blocks(0)(genBlockHash)))
+      assert(genBlockHash == hash(blocks.get(genBlockHash).header))
       updateLocalState(localState, Array(localChain(0))) match {
         case value:State => localState = value
         case _ => {
@@ -1121,9 +1120,9 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     case gb:GenBlock => {
       genBlock = gb.b
       genBlock match {
-        case b: Block => {
+        case b: BlockHeader => {
           genBlockHash = hash(b)
-          blocks = Array(Map(genBlockHash->b))
+          blocks.add(new Block(genBlockHash,b))
         }
         case _ => println("error")
       }
@@ -1163,8 +1162,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         + trueChain.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth)) {
-        getBlock(id) match {
-          case b:Block => chainBytes ++= FastCryptographicHash(serialize(b))
+        getBlockHeader(id) match {
+          case b:BlockHeader => chainBytes ++= FastCryptographicHash(serialize(b))
           case _ =>
         }
       }
@@ -1186,8 +1185,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString+", MemPool Size = "+memPool.size+" Num Gossipers = "+gossipers.length.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth)) {
-        getBlock(id) match {
-          case b:Block => {
+        getBlockHeader(id) match {
+          case b:BlockHeader => {
             chainBytes ++= FastCryptographicHash(serialize(b))
           }
           case _ =>
@@ -1201,8 +1200,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       var allTxSlots:List[Slot] = List()
       var holderTxOnChain:List[(Sid,Transaction)] = List()
       for (id <- subChain(localChain,0,localSlot)) {
-        getBlock(id) match {
-          case b:Block => {
+        getBlockHeader(id) match {
+          case b:BlockHeader => {
             val state = b._2
             for (entry<-state) {
               entry match {
@@ -1235,8 +1234,8 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         for (id <- localChain) {
           if (id._1 > -1) {
             println("S:" + id._1.toString)
-            getBlock(id) match {
-              case b:Block => {
+            getBlockHeader(id) match {
+              case b:BlockHeader => {
                 for (entry<-b._2) {
                   entry match {
                     case trans:Transaction => println(Base58.encode(trans._4.data)+":"+trans._3.toString)

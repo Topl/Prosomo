@@ -15,7 +15,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.primitives.{SystemLoadMonitor, sharedData}
 import prosomo._
-import prosomo.traits.Methods
+import prosomo.components.Methods
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -35,7 +35,7 @@ class Coordinator extends Actor
   val coordId = s"${self.path}"
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   var loadAverage = Array.fill(numAverageLoad){0.0}
-  var genBlock:Block = _
+  var genBlock:BlockHeader = _
   var roundDone = true
 
   private case object timerKey
@@ -676,8 +676,8 @@ class Coordinator extends Actor
           "data" -> (0 to tn).toArray.map{
             case i:Int => Map(
               "slot" -> i.asJson,
-              "blocks" -> blocks(i).map{
-                case value:(ByteArrayWrapper,Block) => {
+              "blocks" -> blocks.slotBlocks(i).map{
+                case value:(ByteArrayWrapper,BlockHeader) => {
                   val (pid:Hash,ledger:Ledger,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
                   val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Double,info:String) = cert
                   val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
@@ -728,7 +728,7 @@ class Coordinator extends Actor
                 }
               }.asJson,
               "history" -> chainHistory(i).map{
-                case value:BlockId => Map(
+                case value:SlotId => Map(
                   "id" -> Base58.encode(value._2.data).asJson
                 ).asJson
               }.asJson
@@ -749,7 +749,7 @@ class Coordinator extends Actor
   }
 
   /**creates genesis block to be sent to all stakeholders */
-  def forgeGenBlock: Block = {
+  def forgeGenBlock: BlockHeader = {
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0

@@ -2,7 +2,7 @@ package prosomo.primitives
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
-import prosomo.traits.Types
+import prosomo.components.Types
 
 object sharedData extends Types {
   var counter = 0

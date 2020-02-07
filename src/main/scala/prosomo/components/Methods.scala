@@ -1,4 +1,4 @@
-package prosomo.traits
+package prosomo.components
 
 import akka.actor.{ActorPath, ActorRef}
 import akka.util.Timeout
@@ -21,9 +21,9 @@ trait Methods
   extends Functions {
 
   //vars for chain, blocks, state, history, and locks
-  var localChain:Chain = Array()
-  var blocks:ChainData = Array()
-  var chainHistory:ChainHistory = Array()
+  var localChain:Tine = Array()
+  var blocks:BlockData = new BlockData
+  var chainHistory:ReorgHistory = Array()
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -42,14 +42,14 @@ trait Methods
   var routerRef:ActorRef = _
 
   /**
-    * retrieve a block from database
+    * retrieve a block header from database
     * @param bid
     * @return block if found, 0 otherwise
     */
-  def getBlock(bid:BlockId): Any = {
+  def getBlockHeader(bid:SlotId): Any = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
-      if (blocks(bid._1).contains(bid._2)) {
-        blocks(bid._1)(bid._2)
+      if (blocks.known(bid)) {
+        blocks.get(bid).header
       } else {
         0
       }
@@ -63,10 +63,10 @@ trait Methods
     * @param b
     * @return parent block if found, 0 otherwise
     */
-  def getParentBlock(b:Block): Any = {
+  def getParentBlockHeader(b:BlockHeader): Any = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
-      if (blocks(b._10).contains(b._1)) {
-        blocks(b._10)(b._1)
+      if (blocks.known(b._1)) {
+        blocks.get(b._1).header
       } else {
         0
       }
@@ -80,9 +80,9 @@ trait Methods
     * @param bid
     * @return parent id if found, 0 otherwise
     */
-  def getParentId(bid:BlockId): Any = {
-    getBlock(bid) match {
-      case b:Block => (b._10,b._1)
+  def getParentId(bid:SlotId): Any = {
+    getBlockHeader(bid) match {
+      case b:BlockHeader => (b._10,b._1)
       case _ => 0
     }
   }
@@ -93,10 +93,10 @@ trait Methods
     * @param ep epoch derived from time step
     * @return hash nonce
     */
-  def eta(c:Chain,ep:Int): Eta = {
+  def eta(c:Tine, ep:Int): Eta = {
     if(ep == 0) {
-      getBlock(c(0)) match {
-        case b:Block => b._1.data
+      getBlockHeader(c(0)) match {
+        case b:BlockHeader => b._1.data
         case _ => Array()
       }
     } else {
@@ -104,8 +104,8 @@ trait Methods
       val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
       val cnext = subChain(c,0,ep*epochLength-epochLength)
       for(id <- epcv) {
-        getBlock(id) match {
-          case b:Block => v = v++b._5
+        getBlockHeader(id) match {
+          case b:BlockHeader => v = v++b._5
           case _ =>
         }
       }
@@ -120,18 +120,18 @@ trait Methods
     * @param etaP previous eta
     * @return hash nonce
     */
-  def eta(c:Chain,ep:Int,etaP:Eta): Eta = {
+  def eta(c:Tine, ep:Int, etaP:Eta): Eta = {
     if(ep == 0) {
-      getBlock(c(0)) match {
-        case b:Block => b._1.data
+      getBlockHeader(c(0)) match {
+        case b:BlockHeader => b._1.data
         case _ => Array()
       }
     } else {
       var v: Array[Byte] = Array()
       val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
       for(id <- epcv) {
-        getBlock(id) match {
-          case b:Block => v = v++b._5
+        getBlockHeader(id) match {
+          case b:BlockHeader => v = v++b._5
           case _ =>
         }
       }
@@ -303,11 +303,11 @@ trait Methods
     result match {
       case value:GetBlockTree => {
         value.t match {
-          case t:ChainData => blocks = t
+          case t:BlockData => blocks = t
           case _ => println("error")
         }
         value.h match {
-          case h:ChainHistory => chainHistory = h
+          case h:ReorgHistory => chainHistory = h
           case _ => println("error")
         }
       }
@@ -375,7 +375,7 @@ trait Methods
     * @param b input block
     * @returnt true if signature is valid, false otherwise
     */
-  def verifyBlock(b:Block): Boolean = {
+  def verifyBlock(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
     val kesVer = kes.verify(pk_kes,hash.data++serialize(ledger)++serialize(slot)++serialize(cert)++rho++pi++serialize(bn)++serialize(ps),sig,slot)
     if (slot > 0) {
@@ -391,26 +391,26 @@ trait Methods
     * @param gh genesis block hash
     * @return true if chain is valid, false otherwise
     */
-  def verifyChain(c:Chain, gh:Hash): Boolean = {
+  def verifyChain(c:Tine, gh:Hash): Boolean = {
     var bool = true
     var ep = -1
     var alpha_Ep = 0.0
     var tr_Ep = 0.0
     var eta_Ep: Eta = eta(c, 0)
     var stakingState: State = Map()
-    var pid:BlockId = (0,gh)
+    var pid:SlotId = (0,gh)
     var i = 0
 
-    getBlock(c(0)) match {
-      case b:Block => bool &&= hash(b) == gh
+    getBlockHeader(c(0)) match {
+      case b:BlockHeader => bool &&= hash(b) == gh
       case _ => bool &&= false
     }
 
     for (id <- c.tail) {
-      getBlock(id) match {
-        case b:Block => {
-          getParentBlock(b) match {
-            case pb:Block => {
+      getBlockHeader(id) match {
+        case b:BlockHeader => {
+          getParentBlockHeader(b) match {
+            case pb:BlockHeader => {
               bool &&= getParentId(b) == pid
               if (getParentId(b) != pid) println("Holder "+holderIndex.toString+" pid mismatch")
               compareBlocks(pb,b)
@@ -423,7 +423,7 @@ trait Methods
       }
     }
 
-    def compareBlocks(parent: Block, block: Block) = {
+    def compareBlocks(parent: BlockHeader, block: BlockHeader) = {
       val (h0, _, slot, cert, rho, pi, _, pk_kes, bn, ps) = block
       val (pk_vrf, y, pi_y, pk_sig, tr_c,_) = cert
       while(i<=slot) {
@@ -476,7 +476,7 @@ trait Methods
     * @param tine chain to be verified
     * @return true if chain is valid, false otherwise
     */
-  def verifySubChain(tine:Chain,prefix:Slot): Boolean = {
+  def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
     val ep0 = prefix/epochLength
     var eta_Ep:Eta = Array()
@@ -518,12 +518,12 @@ trait Methods
     var ep = ep0
     var alpha_Ep = 0.0
     var tr_Ep = 0.0
-    var pid:BlockId = (0,ByteArrayWrapper(Array()))
+    var pid:SlotId = (0,ByteArrayWrapper(Array()))
     var i = prefix+1
     breakable{
       for (id<-tine) {
         if (!id._2.data.isEmpty) {
-          pid = getParentId(id) match {case value:BlockId => value}
+          pid = getParentId(id) match {case value:SlotId => value}
           break()
         }
       }
@@ -540,10 +540,10 @@ trait Methods
           println("Error: encountered invalid ledger in tine")
         }
       }
-      if (isValid) getBlock(id) match {
-        case b:Block => {
-          getParentBlock(b) match {
-            case pb:Block => {
+      if (isValid) getBlockHeader(id) match {
+        case b:BlockHeader => {
+          getParentBlockHeader(b) match {
+            case pb:BlockHeader => {
               isValid &&= getParentId(b) == pid
               if (isValid) {
                 compareBlocks(pb,b)
@@ -561,7 +561,7 @@ trait Methods
       if (isValid) history.add(id._2,ls,eta_Ep)
     }
 
-    def compareBlocks(parent:Block,block:Block) = {
+    def compareBlocks(parent:BlockHeader, block:BlockHeader) = {
       val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
       val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert
       while(i<=slot) {
@@ -651,12 +651,12 @@ trait Methods
     * @param c chain of block ids
     * @return updated localstate
     */
-  def updateLocalState(ls:State, c:Chain): Any = {
+  def updateLocalState(ls:State, c:Tine): Any = {
     var nls:State = ls
     var isValid = true
     for (id <- c) {
-      getBlock(id) match {
-        case b:Block => {
+      getBlockHeader(id) match {
+        case b:BlockHeader => {
           val (_,ledger:Ledger,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
           val (pk_vrf,_,_,pk_sig,_,_) = cert
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
@@ -769,10 +769,10 @@ trait Methods
     * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
     * @param c chain to collect transactions
     */
-  def collectLedger(c:Chain): Unit = {
+  def collectLedger(c:Tine): Unit = {
     for (id <- c) {
-      getBlock(id) match {
-        case b:Block => {
+      getBlockHeader(id) match {
+        case b:BlockHeader => {
           val ledger:Ledger = b._2
           for (entry <- ledger.tail) {
             entry match {

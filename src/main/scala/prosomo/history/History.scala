@@ -1,6 +1,6 @@
 package prosomo.history
 
-import prosomo.traits.Types
+import prosomo.components.Types
 
 class History extends Types {
 
