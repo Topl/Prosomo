@@ -21,7 +21,7 @@ trait Methods
   extends Functions {
 
   //vars for chain, blocks, state, history, and locks
-  var localChain:Tine = Array()
+  var localChain:Chain = _
   var blocks:BlockData = new BlockData
   var chainHistory:ReorgHistory = Array()
   var localState:State = Map()
@@ -93,9 +93,9 @@ trait Methods
     * @param ep epoch derived from time step
     * @return hash nonce
     */
-  def eta(c:Tine, ep:Int): Eta = {
+  def eta(c:Chain, ep:Int): Eta = {
     if(ep == 0) {
-      getBlockHeader(c(0)) match {
+      getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
         case _ => Array()
       }
@@ -103,7 +103,7 @@ trait Methods
       var v: Array[Byte] = Array()
       val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
       val cnext = subChain(c,0,ep*epochLength-epochLength)
-      for(id <- epcv) {
+      for(id <- epcv.ordered) {
         getBlockHeader(id) match {
           case b:BlockHeader => v = v++b._5
           case _ =>
@@ -120,22 +120,24 @@ trait Methods
     * @param etaP previous eta
     * @return hash nonce
     */
-  def eta(c:Tine, ep:Int, etaP:Eta): Eta = {
+  def eta(c:Chain, ep:Int, etaP:Eta): Eta = {
+    println("eta in:"+Base58.encode(etaP))
     if(ep == 0) {
-      getBlockHeader(c(0)) match {
+      getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
         case _ => Array()
       }
     } else {
       var v: Array[Byte] = Array()
       val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
-      for(id <- epcv) {
+      for(id <- epcv.ordered) {
         getBlockHeader(id) match {
           case b:BlockHeader => v = v++b._5
           case _ =>
         }
       }
       val eta_ep = FastCryptographicHash(etaP++serialize(ep)++v)
+      println("eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
   }
@@ -391,7 +393,7 @@ trait Methods
     * @param gh genesis block hash
     * @return true if chain is valid, false otherwise
     */
-  def verifyChain(c:Tine, gh:Hash): Boolean = {
+  def verifyChain(c:Chain, gh:Hash): Boolean = {
     var bool = true
     var ep = -1
     var alpha_Ep = 0.0
@@ -401,12 +403,12 @@ trait Methods
     var pid:SlotId = (0,gh)
     var i = 0
 
-    getBlockHeader(c(0)) match {
+    getBlockHeader(c.get(0)) match {
       case b:BlockHeader => bool &&= hash(b) == gh
       case _ => bool &&= false
     }
 
-    for (id <- c.tail) {
+    for (id <- c.ordered.tail) {
       getBlockHeader(id) match {
         case b:BlockHeader => {
           getParentBlockHeader(b) match {
@@ -476,13 +478,13 @@ trait Methods
     * @param tine chain to be verified
     * @return true if chain is valid, false otherwise
     */
-  def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
+  def verifySubChain(tine:Chain, prefix:Slot): Boolean = {
     var isValid = true
     val ep0 = prefix/epochLength
     var eta_Ep:Eta = Array()
     var ls:State = Map()
 
-    history.get(localChain(prefix)._2) match {
+    history.get(localChain.get(prefix)._2) match {
       case value:(State,Eta) => {
         ls = value._1
         eta_Ep = value._2
@@ -493,7 +495,7 @@ trait Methods
 
     var stakingState: State = {
       if (ep0 > 1) {
-        history.get(localChain((ep0-1)*epochLength)._2) match {
+        history.get(localChain.get((ep0-1)*epochLength)._2) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -503,7 +505,7 @@ trait Methods
           }
         }
       } else {
-        history.get(localChain(0)._2) match {
+        history.get(localChain.get(0)._2) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -521,7 +523,7 @@ trait Methods
     var pid:SlotId = (0,ByteArrayWrapper(Array()))
     var i = prefix+1
     breakable{
-      for (id<-tine) {
+      for (id<-tine.ordered) {
         if (!id._2.data.isEmpty) {
           pid = getParentId(id) match {case value:SlotId => value}
           break()
@@ -530,8 +532,8 @@ trait Methods
       isValid &&= false
     }
 
-    for (id <- tine) {
-      if (isValid) updateLocalState(ls,Array(id)) match {
+    for (id <- tine.ordered) {
+      if (isValid) updateLocalState(ls,Chain(id)) match {
         case value:State => {
           ls = value
         }
@@ -570,7 +572,7 @@ trait Methods
           if (ep0 + 1 == ep) {
             eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
             stakingState = {
-              history.get(localChain((ep - 1) * epochLength)._2) match {
+              history.get(localChain.get((ep - 1) * epochLength)._2) match {
                 case value:(State,Eta) => {
                   value._1
                 }
@@ -625,7 +627,7 @@ trait Methods
 
     if(!isValid) sharedData.throwError
     if (sharedData.error) {
-      for (id<-subChain(localChain,0,prefix)++tine) {
+      for (id<-(subChain(localChain,0,prefix)++tine).ordered) {
         if (id._1 > -1) println("H:"+holderIndex.toString+"S:"+id._1.toString+"ID:"+Base58.encode(id._2.data))
       }
     }
@@ -651,10 +653,10 @@ trait Methods
     * @param c chain of block ids
     * @return updated localstate
     */
-  def updateLocalState(ls:State, c:Tine): Any = {
+  def updateLocalState(ls:State, c:Chain): Any = {
     var nls:State = ls
     var isValid = true
-    for (id <- c) {
+    for (id <- c.ordered) {
       getBlockHeader(id) match {
         case b:BlockHeader => {
           val (_,ledger:Ledger,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
@@ -769,8 +771,8 @@ trait Methods
     * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
     * @param c chain to collect transactions
     */
-  def collectLedger(c:Tine): Unit = {
-    for (id <- c) {
+  def collectLedger(c:Chain): Unit = {
+    for (id <- c.ordered) {
       getBlockHeader(id) match {
         case b:BlockHeader => {
           val ledger:Ledger = b._2

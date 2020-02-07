@@ -27,10 +27,10 @@ trait Functions
     * @param s slot to start search
     * @return last active slot found on chain c starting at slot s
     */
-  def lastActiveSlot(c:Tine, s:Slot): Slot = {
-    var i = s
-    while (c(i)._2.data.isEmpty) {
-      i-=1
+  def lastActiveSlot(c:Chain, s:Slot): Slot = {
+    var i:Slot = -1
+    for (slot <- c.slots) {
+      if (slot > i && slot <= s) i = slot
     }
     i
   }
@@ -40,14 +40,8 @@ trait Functions
     * @param c chain of block ids
     * @return total active slots
     */
-  def getActiveSlots(c:Tine): Int = {
-    var i = 0
-    for (id<-c) {
-      if (!id._2.data.isEmpty) {
-        i+=1
-      }
-    }
-    i
+  def getActiveSlots(c:Chain): Int = {
+    c.slots.size
   }
 
   /**
@@ -66,7 +60,8 @@ trait Functions
     * @param t2 slot upper bound
     * @return all blocks in the interval t1 to t2, including blocks of t1 and t2
     */
-  def subChain(c:Tine, t1:Int, t2:Int): Tine = {
+
+  def subChain(c:Chain, t1:Int, t2:Int): Chain = {
     var t_lower:Int = 0
     var t_upper:Int = 0
     if (t1>0) t_lower = t1
@@ -74,20 +69,6 @@ trait Functions
     c.slice(t_lower,t_upper+1)
   }
 
-  /**
-    * expands a tine to have empty slots in between active slots
-    * @param c dense chain
-    * @param p prefix slot
-    * @return expanded tine
-    */
-  def expand(c:Tine, p:Slot, s:Slot): Tine ={
-    val out = Array.fill(s-p){(-1,ByteArrayWrapper(Array()))}
-    for (id <- c) {
-      out.update(id._1-p-1,id)
-    }
-    assert(out.length == s-p)
-    out
-  }
 
   /**
     * Aggregate staking function used for calculating threshold per epoch
