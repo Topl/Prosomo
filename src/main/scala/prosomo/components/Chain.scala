@@ -1,6 +1,8 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
+import scorex.crypto.encode.Base58
+
 import scala.collection.immutable.ListMap
 
 class Chain extends SimpleTypes {
@@ -15,6 +17,16 @@ class Chain extends SimpleTypes {
     (slot,data(slot))
   } else {
     (-1,ByteArrayWrapper(Array()))
+  }
+
+  def getLastActiveSlot(slot:Slot):SlotId = get(lastActiveSlot(slot))
+
+  def lastActiveSlot(s:Slot): Slot = {
+    var i:Slot = -1
+    for (slot <- this.slots) {
+      if (slot > i && slot <= s) i = slot
+    }
+    i
   }
 
   def last:SlotId = {
@@ -53,6 +65,12 @@ class Chain extends SimpleTypes {
 
   def length:Int = {
     data.keySet.size
+  }
+
+  def print:Unit = {
+    for (id<-this.ordered) {
+      if (id._1 > -1) println("Slot:"+id._1.toString+" id:"+Base58.encode(id._2.data))
+    }
   }
 
   def ++(that:Chain):Chain = {

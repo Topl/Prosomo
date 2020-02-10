@@ -65,18 +65,19 @@ trait Parameters extends Utils {
   } else {
     Map()
   }
+  val timeScale:Double = config.getDouble("params.timeScale")
   //use network delay parameterization if true
   val useDelayParam:Boolean = config.getBoolean("params.useDelayParam")
   //number of stakeholders
   val numHolders:Int = config.getInt("params.numHolders")
   //duration of slot in milliseconds
-  val slotT:Long = config.getInt("params.slotT")
+  val slotT:Long = (config.getInt("params.slotT")*timeScale).toLong
   //delay in milliseconds per kilometer in router model
-  val delay_ms_km:Double = config.getDouble("params.delay_ms_km")
+  val delay_ms_km:Double = config.getDouble("params.delay_ms_km")*timeScale
   //delay in milliseconds per bit in router model
-  val delay_ms_byte:Double = config.getDouble("params.delay_ms_byte")
+  val delay_ms_byte:Double = config.getDouble("params.delay_ms_byte")*timeScale
   //network random noise max
-  val delay_ms_noise:Double = config.getDouble("params.delay_ms_noise")
+  val delay_ms_noise:Double = config.getDouble("params.delay_ms_noise")*timeScale
   //communication method
   val useRouting:Boolean = config.getBoolean("params.useRouting")
   //delay in slots, calculated as maximum possible delay in random global network model

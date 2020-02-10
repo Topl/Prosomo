@@ -34,7 +34,8 @@ object sharedData extends Types {
     println(counter)
     out
   }
-  def throwError = {println("----------Error------------");errorFlag=true}
+  def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<");errorFlag=true}
+  def throwError = {println("<---------Error------------<<<<");errorFlag=true}
   def error:Boolean = {errorFlag}
 }
 

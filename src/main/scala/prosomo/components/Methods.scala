@@ -121,7 +121,7 @@ trait Methods
     * @return hash nonce
     */
   def eta(c:Chain, ep:Int, etaP:Eta): Eta = {
-    println("eta in:"+Base58.encode(etaP))
+    println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
@@ -137,7 +137,7 @@ trait Methods
         }
       }
       val eta_ep = FastCryptographicHash(etaP++serialize(ep)++v)
-      println("eta out:"+Base58.encode(eta_ep))
+      println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
   }
@@ -484,7 +484,7 @@ trait Methods
     var eta_Ep:Eta = Array()
     var ls:State = Map()
 
-    history.get(localChain.get(prefix)._2) match {
+    history.get(localChain.getLastActiveSlot(prefix)._2) match {
       case value:(State,Eta) => {
         ls = value._1
         eta_Ep = value._2
@@ -492,10 +492,9 @@ trait Methods
       case _ => isValid &&= false
     }
 
-
     var stakingState: State = {
       if (ep0 > 1) {
-        history.get(localChain.get((ep0-1)*epochLength)._2) match {
+        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)._2) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -572,7 +571,8 @@ trait Methods
           if (ep0 + 1 == ep) {
             eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
             stakingState = {
-              history.get(localChain.get((ep - 1) * epochLength)._2) match {
+              val eps = (ep - 1) * epochLength
+              history.get(localChain.getLastActiveSlot(eps)._2) match {
                 case value:(State,Eta) => {
                   value._1
                 }
@@ -625,15 +625,11 @@ trait Methods
       }
     }
 
-    if(!isValid) sharedData.throwError
+    if(!isValid) sharedData.throwError(holderIndex)
     if (sharedData.error) {
       for (id<-(subChain(localChain,0,prefix)++tine).ordered) {
         if (id._1 > -1) println("H:"+holderIndex.toString+"S:"+id._1.toString+"ID:"+Base58.encode(id._2.data))
       }
-    }
-    if (isValid) {
-      localState = ls
-      eta = eta_Ep
     }
     isValid
   }
