@@ -23,7 +23,7 @@ trait Methods
   //vars for chain, blocks, state, history, and locks
   var localChain:Chain = _
   var blocks:BlockData = new BlockData
-  var chainHistory:ReorgHistory = Array()
+  var chainHistory:SlotReorgHistory = new SlotReorgHistory
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -309,7 +309,7 @@ trait Methods
           case _ => println("error")
         }
         value.h match {
-          case h:ReorgHistory => chainHistory = h
+          case h:SlotReorgHistory => chainHistory = h
           case _ => println("error")
         }
       }
@@ -432,9 +432,14 @@ trait Methods
         if (i/epochLength > ep) {
           ep = i/epochLength
           eta_Ep = eta(c, ep, eta_Ep)
-          updateLocalState(stakingState,subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)) match {
+          updateLocalState(
+            if(ep ==1) {Map()} else {stakingState}
+            ,subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)) match {
             case value:State =>  stakingState = value
-            case _ => println("Error: encountered invalid ledger in local chain")
+            case _ => {
+              println("Error: encountered invalid ledger in local chain")
+              bool &&= false
+            }
           }
         }
         i+=1
@@ -499,6 +504,7 @@ trait Methods
             value._1
           }
           case _ => {
+            println("Error: staking state recovery failed")
             isValid &&= false
             Map()
           }
@@ -509,6 +515,7 @@ trait Methods
             value._1
           }
           case _ => {
+            println("Error: staking genesis state recovery failed")
             isValid &&= false
             Map()
           }
@@ -653,7 +660,7 @@ trait Methods
     var nls:State = ls
     var isValid = true
     for (id <- c.ordered) {
-      getBlockHeader(id) match {
+      if (isValid) getBlockHeader(id) match {
         case b:BlockHeader => {
           val (_,ledger:Ledger,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
           val (pk_vrf,_,_,pk_sig,_,_) = cert
@@ -738,6 +745,10 @@ trait Methods
           }
         }
         case _ =>
+      }
+      if (!isValid) {
+        println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
+        sharedData.throwError(holderIndex)
       }
     }
     if (isValid) {

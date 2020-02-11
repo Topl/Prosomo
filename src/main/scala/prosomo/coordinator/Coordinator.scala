@@ -727,9 +727,9 @@ class Coordinator extends Actor
                   ).asJson
                 }
               }.asJson,
-              "history" -> chainHistory(i).map{
-                case value:SlotId => Map(
-                  "id" -> Base58.encode(value._2.data).asJson
+              "history" -> chainHistory.get(i).map{
+                case value:BlockId => Map(
+                  "id" -> Base58.encode(value.data).asJson
                 ).asJson
               }.asJson
             ).asJson

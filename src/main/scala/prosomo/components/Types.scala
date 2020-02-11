@@ -11,7 +11,5 @@ trait Types extends SimpleTypes {
   type BlockRequest = (SlotId,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
   type MemPool = Map[Sid,(Transaction,Int)]
-  type Tine = Array[SlotId]
-  type ReorgHistory = Array[List[SlotId]]
 }
 
