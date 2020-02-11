@@ -121,7 +121,7 @@ trait Methods
     * @return hash nonce
     */
   def eta(c:Chain, ep:Int, etaP:Eta): Eta = {
-    println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
+    //println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
@@ -137,7 +137,7 @@ trait Methods
         }
       }
       val eta_ep = FastCryptographicHash(etaP++serialize(ep)++v)
-      println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
+      //println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
   }

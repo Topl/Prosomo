@@ -44,6 +44,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serialize(slot) ++ serialize("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
+      //println("Eta on forging:"+Base58.encode(eta))
       roundBlock = {
         val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(localSlot-1)) match {case b:BlockHeader => b}
         val bn:Int = pb._9 + 1
@@ -66,7 +67,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         val bn = b._9
         if (printFlag) {
           println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))
-          println(b._4._6)
+          //println(b._4._6)
         }
         blocks.add(new Block(hb,b))
         assert(localChain.getLastActiveSlot(localSlot)._2 == b._1)
@@ -311,10 +312,18 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         case reorgState:(State,Eta) => {
           localState = reorgState._1
           eta = reorgState._2
+          //println(s"Holder $holderIndex set eta to "+Base58.encode(eta))
         }
         case _ => {
           println("Error: invalid state and eta on adopted tine")
           sharedData.throwError(holderIndex)
+        }
+      }
+      var epoch = localChain.lastActiveSlot(localSlot) / epochLength
+      for (slot <- localChain.lastActiveSlot(localSlot) to localSlot) {
+        updateEpoch(slot,epoch) match {
+          case ep:Int if ep > epoch => epoch = ep
+          case _ =>
         }
       }
     } else {
@@ -370,7 +379,10 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
   /**slot routine, called every time currentSlot increments*/
   def updateSlot = {
-    updateEpoch
+    updateEpoch(localSlot,currentEpoch) match {
+      case ep:Int if ep > currentEpoch => currentEpoch = ep
+      case _ =>
+    }
     if (localSlot == globalSlot) {
       time(
         if (keys.sk_kes.time(kes) < localSlot) {
@@ -411,19 +423,20 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   }
 
   /**epoch routine, called every time currentEpoch increments*/
-  def updateEpoch = time{
-    if (localSlot / epochLength > currentEpoch) {
-      currentEpoch = localSlot / epochLength
+  def updateEpoch(slot:Slot,epochIn:Int):Int = {
+    var ep = epochIn
+    if (slot / epochLength > ep) {
+      ep = slot / epochLength
       stakingState = {
-        if (currentEpoch > 1) {
-          val eps:Slot = (currentEpoch-1)*epochLength
+        if (ep > 1) {
+          val eps:Slot = (ep-1)*epochLength
           history.get(localChain.getLastActiveSlot(eps)._2) match {
             case value:(State,Eta) => {
               value._1
             }
             case _ => {
               val thisSlot = lastActiveSlot(localChain,eps)
-              println(s"Could not recover staking state ep $currentEpoch slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(eps)._2.data))
+              println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(eps)._2.data))
               localChain.print
               sharedData.throwError(holderIndex)
               Map()
@@ -444,10 +457,12 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       }
       keys.alpha = relativeStake(keys.pkw, stakingState)
       keys.threshold = phi(keys.alpha, f_s)
-      if (currentEpoch > 0) {
-        eta = eta(localChain, currentEpoch, eta)
+      if (ep > 0) {
+        eta = eta(localChain, ep, eta)
+        //println(s"Holder $holderIndex set eta to "+Base58.encode(eta))
       }
     }
+    ep
   }
 
   def update = { if (sharedData.error) {actorStalled = true}
