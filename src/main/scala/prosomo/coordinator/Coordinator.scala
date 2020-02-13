@@ -2,7 +2,6 @@ package prosomo.coordinator
 
 import prosomo.router.Router
 import prosomo.stakeholder.Stakeholder
-
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -13,9 +12,10 @@ import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{SystemLoadMonitor, sharedData}
+import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf}
 import prosomo._
-import prosomo.components.Methods
+import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
+import prosomo.history.History
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -30,13 +30,72 @@ import scala.util.{Random, Try}
 
 class Coordinator extends Actor
   with Timers
-  with Methods
-  with CoordinatorVariables {
+  with Methods {
+  val serializer:Serializer = new Serializer
+  //vars for chain, blocks, state, history, and locks
+  var localChain:Chain = _
+  var blocks:BlockData = new BlockData
+  var chainHistory:SlotReorgHistory = new SlotReorgHistory
+  var localState:State = Map()
+  var eta:Eta = Array()
+  var stakingState:State = Map()
+  var memPool:MemPool = Map()
+  var holderIndex:Int = -1
+  var diffuseSent = false
+
+  //verification and signing objects
+  val vrf = new Vrf
+  val kes = new Kes
+  val sig = new Sig
+
+  val history:History = new History
+  //val mempool:Mempool = new Mempool
+  var rng:Random = new Random
+  var routerRef:ActorRef = _
+
   val coordId = s"${self.path}"
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   var loadAverage = Array.fill(numAverageLoad){0.0}
   var genBlock:BlockHeader = _
   var roundDone = true
+
+
+  //empty list of stake holders
+  var holders: List[ActorRef] = List()
+  //list of parties
+  var parties: List[List[ActorRef]] = List()
+  //holder keys for genesis block creation
+  var holderKeys:Map[ActorRef,PublicKeyW] = Map()
+  //slot
+  var t:Slot = 0
+  //initial system time
+  var t0:Long = 0
+  //system time paused offset
+  var tp:Long = 0
+  //lock for stalling coordinator
+  var actorStalled = false
+  //lock for pausing system
+  var actorPaused = false
+  //queue of commands to be processed in a given slot
+  var cmdQueue:Map[Slot,List[String]] = inputCommands
+  //set of keys so genesis block can be signed and verified by verifyBlock
+  val seed:Array[Byte] = FastCryptographicHash(inputSeed+"seed")
+  //initial nonce for genesis block
+  val eta0:Eta = FastCryptographicHash(inputSeed+"eta0")
+  val (sk_sig,pk_sig) = sig.createKeyPair(seed)
+  val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
+  var sk_kes = kes.generateKey(seed)
+  val pk_kes:PublicKey = kes.publicKey(sk_kes)
+
+  val coordData:String = bytes2hex(pk_sig)+":"+bytes2hex(pk_vrf)+":"+bytes2hex(pk_kes)
+  val coordKeys:PublicKeys = (pk_sig,pk_vrf,pk_kes)
+  //empty list of keys to be populated by stakeholders once they are instantiated
+  var genKeys:Map[String,String] = Map()
+  var fileWriter:Any = 0
+  var graphWriter:Any = 0
+  var gossipersMap:Map[ActorRef,List[ActorRef]] = Map()
+  var transactionCounter:Int = 0
+
 
   private case object timerKey
 
@@ -197,13 +256,13 @@ class Coordinator extends Actor
       s.trim match {
 
         case "status_all" => {
-          sharedData.txCounter = 0
-          sharedData.setOfTxs = Map()
+          SharedData.txCounter = 0
+          SharedData.setOfTxs = Map()
           sendAssertDone(holders,Status)
-          assert(sharedData.setOfTxs.keySet.size == sharedData.txCounter)
-          println("Total Transactions: "+sharedData.setOfTxs.keySet.size.toString)
+          assert(SharedData.setOfTxs.keySet.size == SharedData.txCounter)
+          println("Total Transactions: "+SharedData.setOfTxs.keySet.size.toString)
           println("Total Attempts to Issue Txs:"+transactionCounter.toString)
-          sharedData.txCounter = 0
+          SharedData.txCounter = 0
         }
 
         case "fence_step" => sendAssertDone(routerRef,"fence_step")
@@ -279,11 +338,11 @@ class Coordinator extends Actor
         }
 
         case "tree" => {
-         printTree(holders(sharedData.printingHolder))
+         printTree(holders(SharedData.printingHolder))
         }
 
         case "kill" => {
-          sharedData.killFlag = true
+          SharedData.killFlag = true
           timers.cancelAll
           fileWriter match {
             case fw:BufferedWriter => fw.close()
@@ -356,7 +415,7 @@ class Coordinator extends Actor
           val arg0 = "print_"
           if (value.slice(0,arg0.length) == arg0) {
             val index:Int = value.drop(arg0.length).toInt
-            sharedData.printingHolder = index
+            SharedData.printingHolder = index
           }
 
           val arg1 = "stall_"
@@ -582,11 +641,11 @@ class Coordinator extends Actor
       }
     }
 
-    if (!actorStalled && transactionFlag && !useFencing && t>1 && t<L_s && transactionCounter < txMax && !sharedData.errorFlag) {
+    if (!actorStalled && transactionFlag && !useFencing && t>1 && t<L_s && transactionCounter < txMax && !SharedData.errorFlag) {
       issueRandTx
     }
 
-    if (sharedData.killFlag || t>L_s+2*delta_s) {
+    if (SharedData.killFlag || t>L_s+2*delta_s) {
       timers.cancelAll
       fileWriter match {
         case fw:BufferedWriter => fw.close()
@@ -696,7 +755,7 @@ class Coordinator extends Actor
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
                     "ledger" -> ledger.toArray.map{
                       case box:Box => {
-                        box._1 match {
+                        box.data match {
                           case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
                             val delta = entry._3
                             val pk_g:PublicKeyW = entry._2
@@ -716,11 +775,11 @@ class Coordinator extends Actor
                       }
                       case trans:Transaction => {
                         Map(
-                          "txid" -> Base58.encode(trans._4.data).asJson,
-                          "count" -> trans._5.asJson,
-                          "sender" -> Base58.encode(trans._1.data).asJson,
-                          "recipient" -> Base58.encode(trans._2.data).asJson,
-                          "amount" -> trans._3.toLong.asJson
+                          "txid" -> Base58.encode(trans.sid.data).asJson,
+                          "count" -> trans.nonce.asJson,
+                          "sender" -> Base58.encode(trans.sender.data).asJson,
+                          "recipient" -> Base58.encode(trans.receiver.data).asJson,
+                          "amount" -> trans.delta.toLong.asJson
                         ).asJson
                       }
                     }.asJson

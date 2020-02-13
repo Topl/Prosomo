@@ -9,7 +9,7 @@ import prosomo.Prosomo
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-trait Parameters extends Utils {
+trait Parameters extends {
 
   //tags for identifying ledger entries
   val forgeBytes = ByteArrayWrapper("FORGER_REWARD".getBytes)
@@ -171,7 +171,7 @@ trait Parameters extends Utils {
   //seed for pseudo random runs
   val inputSeed:String = {
     if (randomFlag) {
-      uuid
+      java.util.UUID.randomUUID.toString
     } else {
       config.getString("params.inputSeed")
     }

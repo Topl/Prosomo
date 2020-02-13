@@ -1,15 +1,18 @@
 package prosomo.components
 
+import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 
-import scala.math.BigInt
-
 trait Types extends SimpleTypes {
-  type Box = (Any,Sid,Signature,PublicKey)
-  type Transaction = (PublicKeyW,PublicKeyW,BigInt,Sid,Int,Signature)
-  type ChainRequest = (SlotId,Int,Int)
-  type BlockRequest = (SlotId,Int)
-  type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
-  type MemPool = Map[Sid,(Transaction,Int)]
+  /**
+    * main hash routine used in prosomo
+    * @param input any bytes
+    * @return wrapped byte array
+    */
+  def hash(input:Any,serializer: Serializer): Hash = {
+    ByteArrayWrapper(FastCryptographicHash(serializer.getAnyBytes(input)))
+  }
+
 }
 
+object Types extends SimpleTypes

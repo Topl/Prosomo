@@ -7,7 +7,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GetBlockTree, GetGossipers, GetPositionData, GetState}
 import prosomo.history.History
-import prosomo.primitives.{Kes, Sig, Vrf, sharedData}
+import prosomo.primitives.{Kes, Sig, Vrf, SharedData,Parameters}
 import scorex.crypto.encode.Base58
 import prosomo.cases._
 
@@ -17,29 +17,175 @@ import scala.math.BigInt
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
-trait Methods
-  extends Functions {
+trait Methods extends Types with Parameters {
 
+  val serializer:Serializer
   //vars for chain, blocks, state, history, and locks
-  var localChain:Chain = _
-  var blocks:BlockData = new BlockData
-  var chainHistory:SlotReorgHistory = new SlotReorgHistory
-  var localState:State = Map()
-  var eta:Eta = Array()
-  var stakingState:State = Map()
-  var memPool:MemPool = Map()
-  var holderIndex:Int = -1
-  var diffuseSent = false
+  var localChain:Chain
+  var blocks:BlockData
+  var chainHistory:SlotReorgHistory
+  var localState:State
+  var eta:Eta
+  var stakingState:State
+  var memPool:MemPool
+  var holderIndex:Int
+  var diffuseSent:Boolean
 
   //verification and signing objects
-  val vrf = new Vrf
-  val kes = new Kes
-  val sig = new Sig
+  val vrf:Vrf
+  val kes:Kes
+  val sig:Sig
 
-  val history:History = new History
-  //val mempool:Mempool = new Mempool
-  var rng:Random = new Random
-  var routerRef:ActorRef = _
+  val history:History
+  //val mempool:Mempool
+  var rng:Random
+  var routerRef:ActorRef
+
+  /**
+    * retrieve parent block id from block
+    * @param b
+    * @return parent id
+    */
+  def getParentId(b:BlockHeader): SlotId = {
+    (b._10,b._1)
+  }
+
+  /**
+    * finds the last non-empty slot in a chain
+    * @param c chain of block ids
+    * @param s slot to start search
+    * @return last active slot found on chain c starting at slot s
+    */
+  def lastActiveSlot(c:Chain, s:Slot): Slot = {
+    var i:Slot = -1
+    for (slot <- c.slots) {
+      if (slot > i && slot <= s) i = slot
+    }
+    i
+  }
+
+  /**
+    * returns the total number of active slots on a chain
+    * @param c chain of block ids
+    * @return total active slots
+    */
+  def getActiveSlots(c:Chain): Int = {
+    c.slots.size
+  }
+
+  /**
+    * returns a sub-chain containing all blocks in a given time interval
+    * @param c input chain
+    * @param t1 slot lower bound
+    * @param t2 slot upper bound
+    * @return all blocks in the interval t1 to t2, including blocks of t1 and t2
+    */
+
+  def subChain(c:Chain, t1:Int, t2:Int): Chain = {
+    var t_lower:Int = 0
+    var t_upper:Int = 0
+    if (t1>0) t_lower = t1
+    if (t2>0) t_upper = t2
+    c.slice(t_lower,t_upper+1)
+  }
+
+
+  /**
+    * Aggregate staking function used for calculating threshold per epoch
+    * @param a relative stake
+    * @param f active slot coefficient
+    * @return probability of being elected slot leader
+    */
+  def phi(a:Double,f:Double): Double = {
+    1.0 - scala.math.pow(1.0 - f,a)
+  }
+
+  /**
+    * Compares the vrf output to the threshold
+    * @param y vrf output bytes
+    * @param t threshold between 0.0 and 1.0
+    * @return true if y mapped to double between 0.0 and 1.0 is less than threshold
+    */
+  def compare(y: Array[Byte],t: Double):Boolean = {
+    var net = 0.0
+    var i =0
+    for (byte<-y){
+      i+=1
+      val n = BigInt(byte & 0xff).toDouble
+      val norm = scala.math.pow(2.0,8.0*i)
+      net += n/norm
+    }
+    net<t
+  }
+
+  /**
+    * calculates alpha, the epoch relative stake, from the staking state
+    * @param holderKey
+    * @param ls
+    * @return
+    */
+  def relativeStake(holderKey:PublicKeyW,ls:State): Double = {
+    var netStake:BigInt = 0
+    var holderStake:BigInt = 0
+    for (member <- ls.keySet) {
+      val (balance,activityIndex,txC) = ls(member)
+      if (activityIndex) netStake += balance
+    }
+    if (ls.keySet.contains(holderKey)){
+      val (balance,activityIndex,txC) = ls(holderKey)
+      if (activityIndex) holderStake += balance
+    }
+    if (netStake > 0) {
+      holderStake.toDouble / netStake.toDouble
+    } else {
+      0.0
+    }
+  }
+
+  def uuid: String = java.util.UUID.randomUUID.toString
+
+  /**
+    * Byte serialization
+    * @param value any object to be serialized
+    * @return byte array
+    */
+  def serialize(value: Any): Array[Byte] = {
+    serializer.getAnyBytes(value)
+  }
+
+  /**
+    * Deserialize a byte array that was serialized with serialize
+    * @param input byte array processed with serialize
+    * @return original object
+    */
+  def deserialize[T:Manifest](input:Array[Byte]): Any = {
+    serializer.fromBytes[T](input)
+  }
+
+
+  def bytes2hex(b: Array[Byte]): String = {
+    b.map("%02x" format _).mkString
+  }
+
+  def hex2bytes(hex: String): Array[Byte] = {
+    if (hex.contains(" ")) {
+      hex.split(" ").map(Integer.parseInt(_, 16).toByte)
+    } else if (hex.contains("-")) {
+      hex.split("-").map(Integer.parseInt(_, 16).toByte)
+    } else {
+      hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
+    }
+  }
+
+  def containsDuplicates(s:Map[String,String]):Boolean = {
+    var s1:List[String] = List()
+    var s2:List[String] = List()
+    for (entry <- s) {
+      s1 ++= List(entry._1)
+      s2 ++= List(entry._2)
+    }
+    (s1.distinct.size != s1.size) && (s2.distinct.size != s2.size)
+  }
 
   /**
     * retrieve a block header from database
@@ -162,7 +308,7 @@ trait Methods
     * @return signed box
     */
   def signBox(data: Any, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Box = {
-    (data,id,sig.sign(sk_sig,serialize(data)++id.data),pk_sig)
+    new Box(data,id,sig.sign(sk_sig,serialize(data)++id.data),pk_sig)
   }
 
   /**
@@ -171,7 +317,7 @@ trait Methods
     * @return
     */
   def verifyBox(box:Box): Boolean = {
-    sig.verify(box._3,serialize(box._1)++box._2.data,box._4)
+    box.verify(sig,serializer)
   }
 
   /**
@@ -404,7 +550,7 @@ trait Methods
     var i = 0
 
     getBlockHeader(c.get(0)) match {
-      case b:BlockHeader => bool &&= hash(b) == gh
+      case b:BlockHeader => bool &&= hash(b,serializer) == gh
       case _ => bool &&= false
     }
 
@@ -447,7 +593,7 @@ trait Methods
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), stakingState)
       tr_Ep = phi(alpha_Ep, f_s)
       bool &&= (
-        hash(parent) == h0
+        hash(parent,serializer) == h0
           && verifyBlock(block)
           && parent._3 == ps
           && parent._9 + 1 == bn
@@ -462,7 +608,7 @@ trait Methods
         print(slot)
         print(" ")
         println(Seq(
-          hash(parent) == h0 //1
+          hash(parent,serializer) == h0 //1
           , verifyBlock(block) //2
           , parent._3 == ps //3
           , parent._9 + 1 == bn //4
@@ -602,7 +748,7 @@ trait Methods
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),stakingState)
       tr_Ep = phi(alpha_Ep, f_s)
       isValid &&= (
-             hash(parent) == h0
+             hash(parent,serializer) == h0
           && verifyBlock(block)
           && parent._3 == ps
           && parent._9+1 == bn
@@ -616,7 +762,7 @@ trait Methods
       if(!isValid){
         print("Error: Holder "+holderIndex.toString+" ");print(slot);print(" ")
         println(Seq(
-            hash(parent) == h0 //1
+            hash(parent,serializer) == h0 //1
           , verifyBlock(block) //2
           , parent._3 == ps //3
           , parent._9+1 == bn //4
@@ -632,8 +778,8 @@ trait Methods
       }
     }
 
-    if(!isValid) sharedData.throwError(holderIndex)
-    if (sharedData.error) {
+    if(!isValid) SharedData.throwError(holderIndex)
+    if (SharedData.error) {
       for (id<-(subChain(localChain,0,prefix)++tine).ordered) {
         if (id._1 > -1) println("H:"+holderIndex.toString+"S:"+id._1.toString+"ID:"+Base58.encode(id._2.data))
       }
@@ -647,7 +793,7 @@ trait Methods
     * @return true if valid, false otherwise
     */
   def verifyTransaction(t:Transaction):Boolean = {
-    sig.verify(t._6,t._2.data++t._3.toByteArray++t._4.data++serialize(t._5),t._1.data.take(sig.KeyLength))
+    t.verify(sig,serializer)
   }
 
   /**
@@ -671,7 +817,7 @@ trait Methods
               entry match {
                 case box:Box => {
                   if (verifyBox(box)) {
-                    box._1 match {
+                    box.data match {
                       case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
                         if (entry._1 == genesisBytes) {
                           val delta = entry._3
@@ -696,7 +842,7 @@ trait Methods
             ledger.head match {
               case box:Box => {
                 if (verifyBox(box)) {
-                  box._1 match {
+                  box.data match {
                     case entry:(ByteArrayWrapper,BigInt) => {
                       val delta = entry._2
                       if (entry._1 == forgeBytes && delta == BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt) {
@@ -726,7 +872,7 @@ trait Methods
                 entry match {
                   case trans:Transaction => {
                     if (verifyTransaction(trans)) {
-                      applyTransaction(nls,trans,pk_f) match {
+                      trans.applyTransaction(nls,pk_f) match {
                         case value:State => {
                           nls = value
                         }
@@ -748,7 +894,7 @@ trait Methods
       }
       if (!isValid) {
         println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
-        sharedData.throwError(holderIndex)
+        SharedData.throwError(holderIndex)
       }
     }
     if (isValid) {
@@ -768,7 +914,7 @@ trait Methods
       } else {
         memPool -= entry._1
       }
-      if (entry._2._1._5 < localState(entry._2._1._1)._3) {
+      if (entry._2._1.nonce < localState(entry._2._1.sender)._3) {
         memPool -= entry._1
       }
     }
@@ -786,8 +932,8 @@ trait Methods
           for (entry <- ledger.tail) {
             entry match {
               case trans:Transaction => {
-                if (!memPool.keySet.contains(trans._4)) {
-                  if (verifyTransaction(trans)) memPool += (trans._4->(trans,0))
+                if (!memPool.keySet.contains(trans.sid)) {
+                  if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
                 }
               }
               case _ =>
@@ -807,13 +953,13 @@ trait Methods
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): Ledger = {
     var ledger: Ledger = List()
     var ls: State = s
-    val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1._5 < _._2._1._5): _*)
+    val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1.nonce < _._2._1.nonce): _*)
     breakable {
       for (entry <- sortedBuffer) {
         val transaction:Transaction = entry._2._1
-        val transactionCount:Int = transaction._5
-        if (transactionCount == ls(transaction._1)._3 && verifyTransaction(transaction)) {
-          applyTransaction(ls, transaction, pkw) match {
+        val transactionCount:Int = transaction.nonce
+        if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
+          transaction.applyTransaction(ls, pkw) match {
             case value:State => {
               ledger ::= entry._2._1
               ls = value

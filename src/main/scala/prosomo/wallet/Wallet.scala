@@ -2,12 +2,13 @@ package prosomo.wallet
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.Sig
-import prosomo.components.Functions
+import prosomo.components.{Serializer, Types,Transaction}
 
 import scala.collection.immutable.ListMap
+import scala.math.BigInt
 import scala.util.Random
 
-class Wallet(pkw:ByteArrayWrapper) extends Functions {
+class Wallet(pkw:ByteArrayWrapper) extends Types {
   var pendingTxsOut:Map[Sid,Transaction] = Map()
   var availableBalance:BigInt = 0
   var totalBalance:BigInt = 0
@@ -19,17 +20,17 @@ class Wallet(pkw:ByteArrayWrapper) extends Functions {
   var confirmedState:State = Map()
 
   def addTx(transaction: Transaction) = {
-    if (transaction._1 == pkw) {
-      if (!pendingTxsOut.keySet.contains(transaction._4)) {
-        pendingTxsOut += (transaction._4 -> transaction)
+    if (transaction.sender == pkw) {
+      if (!pendingTxsOut.keySet.contains(transaction.sid)) {
+        pendingTxsOut += (transaction.sid -> transaction)
       }
     }
   }
 
   def removeTx(transaction: Transaction) = {
-    if (transaction._1 == pkw) {
-      if (pendingTxsOut.keySet.contains(transaction._4)) {
-        pendingTxsOut -= transaction._4
+    if (transaction.sender == pkw) {
+      if (pendingTxsOut.keySet.contains(transaction.sid)) {
+        pendingTxsOut -= transaction.sid
       }
     }
   }
@@ -58,13 +59,13 @@ class Wallet(pkw:ByteArrayWrapper) extends Functions {
     issueState = state
     confirmedState = state
     for (entry <- pendingTxsOut) {
-      if (entry._2._5 < issueState(pkw)._3) {
+      if (entry._2.nonce < issueState(pkw)._3) {
         removeTx(entry._2)
       }
     }
     for (entry <- sortPendingTx) {
       val trans = entry._2
-      applyTransaction(issueState,trans,ByteArrayWrapper(Array())) match {
+      trans.applyTransaction(issueState,ByteArrayWrapper(Array())) match {
         case value:State => {
           issueState = value
         }
@@ -79,7 +80,7 @@ class Wallet(pkw:ByteArrayWrapper) extends Functions {
   def getPending(state:State):List[Transaction] = {
     var out:List[Transaction] = List()
     for (entry <- pendingTxsOut) {
-      if (entry._2._5 >= state(pkw)._3) {
+      if (entry._2.nonce >= state(pkw)._3) {
         out ::= entry._2
       }
     }
@@ -109,19 +110,36 @@ class Wallet(pkw:ByteArrayWrapper) extends Functions {
   }
 
   def sortPendingTx = {
-    ListMap(pendingTxsOut.toSeq.sortWith(_._2._5 < _._2._5): _*)
+    ListMap(pendingTxsOut.toSeq.sortWith(_._2.nonce < _._2.nonce): _*)
   }
 
-  def issueTx(data:(ByteArrayWrapper,BigInt),sk_sig:Array[Byte],sig:Sig,rng:Random): Any = {
+
+  /**
+    * sign a transaction to be issued
+    * @param sk_s sig private key
+    * @param pk_s sig public key
+    * @param pk_r sig public key of recipient
+    * @param delta transfer amount
+    * @param txCounter transaction number
+    * @return signed transaction
+    */
+  def signTransaction(sk_s:PrivateKey, pk_s:PublicKeyW, pk_r:PublicKeyW, delta:BigInt, txCounter:Int,sig:Sig,rng:Random,serializer: Serializer): Transaction = {
+    val sid:Sid = hash(rng.nextString(64),serializer)
+    val trans:Transaction = new Transaction(pk_s,pk_r,delta,sid,txCounter,sig.sign(sk_s,pk_r.data++delta.toByteArray++sid.data++serializer.getBytes(txCounter)))
+    trans
+  }
+
+
+  def issueTx(data:(ByteArrayWrapper,BigInt),sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Any = {
     if (issueState.keySet.contains(pkw)) {
       val (pk_r,delta) = data
       val scaledDelta = BigDecimal(delta.toDouble*netStake.toDouble/netStake0.toDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
       val txC = issueState(pkw)._3
-      val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng)
-      applyTransaction(issueState,trans,ByteArrayWrapper(Array())) match {
+      val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
+      trans.applyTransaction(issueState,ByteArrayWrapper(Array())) match {
         case value:State => {
           issueState = value
-          pendingTxsOut += (trans._4->trans)
+          pendingTxsOut += (trans.sid->trans)
           trans
         }
         case _ => {

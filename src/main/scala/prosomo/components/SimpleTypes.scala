@@ -2,6 +2,8 @@ package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
 
+import scala.math.BigInt
+
 trait SimpleTypes {
   type Hash = ByteArrayWrapper
   type Eta = Array[Byte]
@@ -21,4 +23,8 @@ trait SimpleTypes {
   type Ledger = List[Any]
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
   type BlockHeader = (Hash,Ledger,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
+  type ChainRequest = (SlotId,Int,Int)
+  type BlockRequest = (SlotId,Int)
+  type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
+  type MemPool = Map[Sid,(Transaction,Int)]
 }

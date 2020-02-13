@@ -4,8 +4,8 @@ import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases._
-import prosomo.primitives.{Parameters, sharedData}
-import prosomo.components.Types
+import prosomo.primitives.{Parameters, SharedData}
+import prosomo.components.{Box, Serializer, Transaction, Types}
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
@@ -18,6 +18,7 @@ class Router(seed:Array[Byte]) extends Actor
   with Parameters
   with Types
   with Timers {
+  val serializer:Serializer = new Serializer
   var holders:List[ActorRef] = List()
   val rng = new Random(BigInt(seed).toLong)
   var holdersPosition:Map[ActorRef,(Double,Double)] = Map()
@@ -95,7 +96,7 @@ class Router(seed:Array[Byte]) extends Actor
         holdersPosition(recip)._2,
         "K")).toLong)
     }
-    val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong + (serialize(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((sender,recip))
+    val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((sender,recip))
     if (delay_ns/1.0e9 > maxDelay) {maxDelay = delay_ns/1.0e9}
     delay_ns.nano
   }
@@ -125,8 +126,8 @@ class Router(seed:Array[Byte]) extends Actor
             holders.indexOf(r),
             c.getClass,message._1,
             c match {
-              case value:SendBlock => Base58.encode(value.s match {case s:Box => {s._1 match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
-              case value:SendTx => Base58.encode(value.s match {case trans:Transaction => {trans._4.data}})
+              case value:SendBlock => Base58.encode(value.s match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+              case value:SendTx => Base58.encode(value.s match {case trans:Transaction => {trans.sid.data}})
               case _ => " "
             }
           )
@@ -156,7 +157,7 @@ class Router(seed:Array[Byte]) extends Actor
   }
 
   def update = {
-    if (globalSlot > L_s || sharedData.killFlag) {
+    if (globalSlot > L_s || SharedData.killFlag) {
       timers.cancelAll
       context.system.terminate
     } else {
