@@ -7,7 +7,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GetBlockTree, GetGossipers, GetPositionData, GetState}
 import prosomo.history.History
-import prosomo.primitives.{Kes, Sig, Vrf, SharedData,Parameters}
+import prosomo.primitives.{Kes, Sig, Vrf, SharedData,Parameters,Ratio}
 import scorex.crypto.encode.Base58
 import prosomo.cases._
 
@@ -93,11 +93,29 @@ trait Methods extends Types with Parameters {
   /**
     * Aggregate staking function used for calculating threshold per epoch
     * @param a relative stake
-    * @param f active slot coefficient
     * @return probability of being elected slot leader
     */
-  def phi(a:Double,f:Double): Double = {
-    1.0 - scala.math.pow(1.0 - f,a)
+  def phi(a:Ratio): Ratio = {
+    var out = Ratio(0)
+    val base = maclaurin_coefficient * a
+    for (n <- 1 to o_n) {
+      out = out - ( base.pow(n) / factorial(n) )
+    }
+//    if (holderIndex == 0) {
+      //val alpha = a.toBigDecimal.toDouble
+//      val phiDouble = 1.0 - scala.math.pow(1.0 - f_s,alpha)
+//      println(a.toString)
+//      println(maclaurin_coefficient.toString)
+//      println(s"alpha double:$alpha")
+//      println(s"phi double:$phiDouble")
+//      println(s"phi Ratio :${out.toBigDecimal.toDouble}")
+//    }
+    out
+  }
+
+  def factorial(n: Int): Int = n match {
+    case 0 => 1
+    case _ => n * factorial(n-1)
   }
 
   /**
@@ -106,16 +124,21 @@ trait Methods extends Types with Parameters {
     * @param t threshold between 0.0 and 1.0
     * @return true if y mapped to double between 0.0 and 1.0 is less than threshold
     */
-  def compare(y: Array[Byte],t: Double):Boolean = {
-    var net = 0.0
-    var i =0
-    for (byte<-y){
-      i+=1
-      val n = BigInt(byte & 0xff).toDouble
-      val norm = scala.math.pow(2.0,8.0*i)
-      net += n/norm
+  def compare(y: Array[Byte],t: Ratio):Boolean = {
+    var net:Ratio = Ratio(0)
+    var i:Int = 0
+    for (byte <- y){
+      i += 1
+      val n = BigInt(byte & 0xff)
+      val d = BigInt(2).pow(8*i)
+      net = net + new Ratio(n,d)
     }
-    net<t
+//    if (holderIndex == 0) {
+//      println(s"net:${net.toBigDecimal.toDouble}")
+//      println(s"thr:${t.toBigDecimal.toDouble}")
+//      println(net < t)
+//    }
+    net < t
   }
 
   /**
@@ -124,7 +147,7 @@ trait Methods extends Types with Parameters {
     * @param ls
     * @return
     */
-  def relativeStake(holderKey:PublicKeyW,ls:State): Double = {
+  def relativeStake(holderKey:PublicKeyW,ls:State): Ratio = {
     var netStake:BigInt = 0
     var holderStake:BigInt = 0
     for (member <- ls.keySet) {
@@ -136,32 +159,13 @@ trait Methods extends Types with Parameters {
       if (activityIndex) holderStake += balance
     }
     if (netStake > 0) {
-      holderStake.toDouble / netStake.toDouble
+      new Ratio(holderStake,netStake)
     } else {
-      0.0
+      new Ratio(BigInt(0),BigInt(1))
     }
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString
-
-  /**
-    * Byte serialization
-    * @param value any object to be serialized
-    * @return byte array
-    */
-  def serialize(value: Any): Array[Byte] = {
-    serializer.getAnyBytes(value)
-  }
-
-  /**
-    * Deserialize a byte array that was serialized with serialize
-    * @param input byte array processed with serialize
-    * @return original object
-    */
-  def deserialize[T:Manifest](input:Array[Byte]): Any = {
-    serializer.fromBytes[T](input)
-  }
-
 
   def bytes2hex(b: Array[Byte]): String = {
     b.map("%02x" format _).mkString
@@ -255,7 +259,7 @@ trait Methods extends Types with Parameters {
           case _ =>
         }
       }
-      FastCryptographicHash(eta(cnext,ep-1)++serialize(ep)++v)
+      FastCryptographicHash(eta(cnext,ep-1)++serializer.getBytes(ep)++v)
     }
   }
 
@@ -282,7 +286,7 @@ trait Methods extends Types with Parameters {
           case _ =>
         }
       }
-      val eta_ep = FastCryptographicHash(etaP++serialize(ep)++v)
+      val eta_ep = FastCryptographicHash(etaP++serializer.getBytes(ep)++v)
       //println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
@@ -296,7 +300,7 @@ trait Methods extends Types with Parameters {
     * @return string to be diffused
     */
   def diffuse(str: String,id: String,sk_sig: PrivateKey): String = {
-    str+";"+id+";"+bytes2hex(sig.sign(sk_sig,serialize(str+";"+id)))
+    str+";"+id+";"+bytes2hex(sig.sign(sk_sig,serializer.getBytes(str+";"+id)))
   }
 
   /**
@@ -308,7 +312,7 @@ trait Methods extends Types with Parameters {
     * @return signed box
     */
   def signBox(data: Any, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Box = {
-    new Box(data,id,sig.sign(sk_sig,serialize(data)++id.data),pk_sig)
+    new Box(data,id,sig.sign(sk_sig,serializer.getAnyBytes(data)++id.data),pk_sig)
   }
 
   /**
@@ -525,7 +529,16 @@ trait Methods extends Types with Parameters {
     */
   def verifyBlock(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
-    val kesVer = kes.verify(pk_kes,hash.data++serialize(ledger)++serialize(slot)++serialize(cert)++rho++pi++serialize(bn)++serialize(ps),sig,slot)
+    val kesVer = kes.verify(
+      pk_kes,
+      hash.data++serializer.getBytes(ledger)
+        ++serializer.getBytes(slot)
+        ++serializer.getBytes(cert)
+        ++rho++pi++serializer.getBytes(bn)
+        ++serializer.getBytes(ps),
+      sig,
+      slot
+    )
     if (slot > 0) {
       kesVer && ledger.length <= txPerBlock + 1
     } else {
@@ -542,8 +555,8 @@ trait Methods extends Types with Parameters {
   def verifyChain(c:Chain, gh:Hash): Boolean = {
     var bool = true
     var ep = -1
-    var alpha_Ep = 0.0
-    var tr_Ep = 0.0
+    var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
+    var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
     var eta_Ep: Eta = eta(c, 0)
     var stakingState: State = Map()
     var pid:SlotId = (0,gh)
@@ -591,15 +604,15 @@ trait Methods extends Types with Parameters {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), stakingState)
-      tr_Ep = phi(alpha_Ep, f_s)
+      tr_Ep = phi(alpha_Ep)
       bool &&= (
         hash(parent,serializer) == h0
           && verifyBlock(block)
           && parent._3 == ps
           && parent._9 + 1 == bn
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("NONCE"), pi)
+          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
           && vrf.vrfProofToHash(pi).deep == rho.deep
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("TEST"), pi_y)
+          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
           && vrf.vrfProofToHash(pi_y).deep == y.deep
           && tr_Ep == tr_c
           && compare(y, tr_Ep)
@@ -612,9 +625,9 @@ trait Methods extends Types with Parameters {
           , verifyBlock(block) //2
           , parent._3 == ps //3
           , parent._9 + 1 == bn //4
-          , vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("NONCE"), pi) //5
+          , vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi) //5
           , vrf.vrfProofToHash(pi).deep == rho.deep //6
-          , vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("TEST"), pi_y) //7
+          , vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y) //7
           , vrf.vrfProofToHash(pi_y).deep == y.deep //8
           , tr_Ep == tr_c //9
           , compare(y, tr_Ep) //10
@@ -670,8 +683,8 @@ trait Methods extends Types with Parameters {
     }
 
     var ep = ep0
-    var alpha_Ep = 0.0
-    var tr_Ep = 0.0
+    var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
+    var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
     var pid:SlotId = (0,ByteArrayWrapper(Array()))
     var i = prefix+1
     breakable{
@@ -746,15 +759,15 @@ trait Methods extends Types with Parameters {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),stakingState)
-      tr_Ep = phi(alpha_Ep, f_s)
+      tr_Ep = phi(alpha_Ep)
       isValid &&= (
              hash(parent,serializer) == h0
           && verifyBlock(block)
           && parent._3 == ps
           && parent._9+1 == bn
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("NONCE"), pi)
+          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
           && vrf.vrfProofToHash(pi).deep == rho.deep
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serialize(slot) ++ serialize("TEST"), pi_y)
+          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
           && vrf.vrfProofToHash(pi_y).deep == y.deep
           && tr_Ep == tr_c
           && compare(y, tr_Ep)
@@ -766,9 +779,9 @@ trait Methods extends Types with Parameters {
           , verifyBlock(block) //2
           , parent._3 == ps //3
           , parent._9+1 == bn //4
-          , vrf.vrfVerify(pk_vrf,eta_Ep++serialize(slot)++serialize("NONCE"),pi) //5
+          , vrf.vrfVerify(pk_vrf,eta_Ep++serializer.getBytes(slot)++serializer.getBytes("NONCE"),pi) //5
           , vrf.vrfProofToHash(pi).deep == rho.deep //6
-          , vrf.vrfVerify(pk_vrf,eta_Ep++serialize(slot)++serialize("TEST"),pi_y) //7
+          , vrf.vrfVerify(pk_vrf,eta_Ep++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
           , vrf.vrfProofToHash(pi_y).deep == y.deep //8
           , tr_Ep == tr_c //9
           , compare(y,tr_Ep) //10
@@ -872,7 +885,7 @@ trait Methods extends Types with Parameters {
                 entry match {
                   case trans:Transaction => {
                     if (verifyTransaction(trans)) {
-                      trans.applyTransaction(nls,pk_f) match {
+                      trans.applyTransaction(nls,pk_f,fee_r) match {
                         case value:State => {
                           nls = value
                         }
@@ -959,7 +972,7 @@ trait Methods extends Types with Parameters {
         val transaction:Transaction = entry._2._1
         val transactionCount:Int = transaction.nonce
         if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
-          transaction.applyTransaction(ls, pkw) match {
+          transaction.applyTransaction(ls, pkw,fee_r) match {
             case value:State => {
               ledger ::= entry._2._1
               ls = value
@@ -981,7 +994,7 @@ trait Methods extends Types with Parameters {
   def verifyStamp(value: String): Boolean = {
     val values: Array[String] = value.split(";")
     val m = values(0) + ";" + values(1) + ";" + values(2) + ";" + values(3)
-    sig.verify(hex2bytes(values(4)), serialize(m), hex2bytes(values(0)))
+    sig.verify(hex2bytes(values(4)), serializer.getBytes(m), hex2bytes(values(0)))
   }
 
   /**
@@ -990,7 +1003,7 @@ trait Methods extends Types with Parameters {
     * @tparam R
     * @return
     */
-  def time[R](block: => R): R = {
+  def timeFlag[R](block: => R): R = {
     if (timingFlag && holderIndex == 0) {
       val t0 = System.nanoTime()
       val result = block // call-by-name
@@ -1001,6 +1014,18 @@ trait Methods extends Types with Parameters {
       result
     } else {
       block
+    }
+  }
+
+  def time[R](block: => R): R = {
+     {
+      val t0 = System.nanoTime()
+      val result = block // call-by-name
+      val t1 = System.nanoTime()
+      val outTime = (t1 - t0)*1.0e-9
+      val tString = "%6.6f".format(outTime)
+      println("Elapsed time: " + tString + " s")
+      result
     }
   }
 }

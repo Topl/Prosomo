@@ -1,5 +1,6 @@
 package prosomo.components
 
+import prosomo.primitives.Ratio
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.math.BigInt
@@ -19,7 +20,7 @@ trait SimpleTypes {
   type Pi = Array[Byte]
   type BlockId = Hash
   type SlotId = (Slot,BlockId)
-  type Cert = (PublicKey,Rho,Pi,PublicKey,Double,String)
+  type Cert = (PublicKey,Rho,Pi,PublicKey,Ratio,String)
   type Ledger = List[Any]
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
   type BlockHeader = (Hash,Ledger,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)

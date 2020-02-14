@@ -96,6 +96,17 @@ trait Parameters extends {
   } else {
     config.getDouble("params.f_s")
   }
+  //order of accuracy for convergent series
+  val o_n:Int = config.getInt("params.o_n")
+  val maclaurin_coefficient:Ratio = {
+    val f_ratio:Ratio = Ratio(f_s,4)
+    //calculate log(1-f)
+    var out = Ratio(0)
+    for (n<- 1 to o_n) {
+      out = out - ( f_ratio.pow(n)  / n )
+    }
+    out
+  }
   // checkpoint depth in slots, k parameter in maxValid-bg, k > 192*delta/epsilon*beta
   val k_s:Int = if(useDelayParam) {
     (192.0*delta_s/(epsilon_s*beta_s)).floor.toInt + 1
@@ -126,6 +137,7 @@ trait Parameters extends {
   val forgerReward:Double = config.getDouble("params.forgerReward")
   //percent of transaction amount taken as fee by the forger
   val transactionFee:Double = config.getDouble("params.transactionFee")
+  val fee_r:Ratio = Ratio(transactionFee,8)
   //number of holders on gossip list for sending new blocks and transactions
   val numGossipers:Int = config.getInt("params.numGossipers")
   //use gossiper protocol

@@ -1,7 +1,7 @@
 package prosomo.components
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
-
+import prosomo.primitives.Ratio
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
 
@@ -17,6 +17,7 @@ class Serializer extends SimpleTypes {
       case box:Box => sBox(box)
       case transaction: Transaction => sTransaction(transaction)
       case blockHeader: BlockHeader => sBlockHeader(blockHeader)
+      case ratio: Ratio => sRatio(ratio)
       case _ => serialize(input)
     }
   }
@@ -25,7 +26,6 @@ class Serializer extends SimpleTypes {
   def getBytes(int:Int):Array[Byte] = Ints.toByteArray(int)
   def getBytes(long: Long):Array[Byte] = Longs.toByteArray(long)
   def getBytes(bw:ByteArrayWrapper):Array[Byte] = bw.data
-  def getBytes(double:Double):Array[Byte] = serialize(double)
   def getBytes(string: String):Array[Byte] = string.getBytes
   //def getBytes(hash:Hash):Array[Byte] = hash.data
   //def getBytes(eta:Eta):Array[Byte] = eta
@@ -40,6 +40,7 @@ class Serializer extends SimpleTypes {
   //def getBytes(publicKeys: PublicKeys):Array[Byte] = Bytes.concat(publicKeys._1,publicKeys._2,publicKeys._3)
   //def getBytes(pi:Pi):Array[Byte] = pi
   //def getBytes(blockId: BlockId):Array[Byte] = blockId.data
+  def getBytes(ratio:Ratio):Array[Byte] = sRatio(ratio)
   def getBytes(slotId: SlotId):Array[Byte] = Bytes.concat(getBytes(slotId._1),getBytes(slotId._2))
   def getBytes(cert:Cert):Array[Byte] = sCert(cert)
   def getBytes(kesSignature: KesSignature):Array[Byte] = sKesSignature(kesSignature)
@@ -144,6 +145,17 @@ class Serializer extends SimpleTypes {
 
   private def sState(state: State):Array[Byte] = {
     Bytes.concat(state.toSeq.map(getAnyBytes):_*)
+  }
+
+  private def sRatio(ratio: Ratio):Array[Byte] = {
+    val data1 = ratio.numer.toByteArray
+    val data2 = ratio.denom.toByteArray
+    Bytes.concat(
+      getBytes(data1.length),
+      data1,
+      getBytes(data2.length),
+      data2
+    )
   }
 
 

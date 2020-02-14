@@ -127,7 +127,7 @@ class Router(seed:Array[Byte]) extends Actor
             c.getClass,message._1,
             c match {
               case value:SendBlock => Base58.encode(value.s match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
-              case value:SendTx => Base58.encode(value.s match {case trans:Transaction => {trans.sid.data}})
+              case value:SendTx => Base58.encode(value.transaction.sid.data)
               case _ => " "
             }
           )
@@ -270,6 +270,17 @@ class Router(seed:Array[Byte]) extends Actor
     /** adds delay to routed message*/
     case newMessage:(ActorRef,ActorRef,Any) => {
       val (s,r,c) = newMessage
+//      c match {
+//        //case value:SendBlock => Base58.encode(value.s match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+//        case value:SendTx => println(
+//          holders.indexOf(s),
+//          holders.indexOf(r),
+//          c.getClass,
+//          Base58.encode(value.transaction.sid.data)
+//        )
+//        case _ =>
+//      }
+
       context.system.scheduler.scheduleOnce(delay(s,r,c),r,c)(context.system.dispatcher,sender())
     }
 

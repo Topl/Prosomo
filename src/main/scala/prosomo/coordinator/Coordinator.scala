@@ -12,7 +12,7 @@ import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf}
+import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf,Ratio}
 import prosomo._
 import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
@@ -738,7 +738,7 @@ class Coordinator extends Actor
               "blocks" -> blocks.slotBlocks(i).map{
                 case value:(ByteArrayWrapper,BlockHeader) => {
                   val (pid:Hash,ledger:Ledger,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
-                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Double,info:String) = cert
+                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
                   val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
                   Map(
                     "id" -> Base58.encode(value._1.data).asJson,
@@ -750,7 +750,7 @@ class Coordinator extends Actor
                     "npi" -> Base58.encode(noncePi).asJson,
                     "y" -> Base58.encode(y).asJson,
                     "ypi" -> Base58.encode(ypi).asJson,
-                    "thr" -> thr.asJson,
+                    "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
                     "ledger" -> ledger.toArray.map{
@@ -812,9 +812,9 @@ class Coordinator extends Actor
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0
-    val pi:Pi = vrf.vrfProof(sk_vrf,eta0++serialize(slot)++serialize("NONCE"))
+    val pi:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("NONCE"))
     val rho:Rho = vrf.vrfProofToHash(pi)
-    val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serialize(slot)++serialize("TEST"))
+    val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
     val ledger: Ledger = holders.map{
@@ -840,8 +840,8 @@ class Coordinator extends Actor
         signBox((genesisBytes, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
       }
     }
-    val cert:Cert = (pk_vrf,y,pi_y,pk_sig,1.0,"")
-    val sig:KesSignature = kes.sign(sk_kes, h.data++serialize(ledger)++serialize(slot)++serialize(cert)++rho++pi++serialize(bn)++serialize(ps))
+    val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"")
+    val sig:KesSignature = kes.sign(sk_kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
   }
 }

@@ -1,5 +1,7 @@
 package prosomo.cases
 
+import prosomo.components.Transaction
+import prosomo.components.Types._
 // case objects and classes for pattern matching messages between actors
 case object Diffuse
 case object Inbox
@@ -35,7 +37,7 @@ case class SendBlock(s:Any)
 case class RequestBlock(s:Any)
 case class RequestChain(s:Any)
 case class ReturnBlock(s:Any)
-case class SendTx(s:Any)
+case class SendTx(transaction:Transaction)
 case class IssueTx(s:Any)
 case class WriteFile(fw: Any)
 case class NewGraphFile(name:String)

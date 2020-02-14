@@ -9,8 +9,12 @@ trait Types extends SimpleTypes {
     * @param input any bytes
     * @return wrapped byte array
     */
-  def hash(input:Any,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(serializer.getAnyBytes(input)))
+  def hash(input:BlockHeader,serializer: Serializer): Hash = {
+    ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
+  }
+
+  def hash(input:String,serializer: Serializer): Hash = {
+    ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
   }
 
 }

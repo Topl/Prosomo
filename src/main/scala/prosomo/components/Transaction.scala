@@ -1,12 +1,11 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Parameters, Sig}
+import prosomo.primitives.{Parameters, Sig,Ratio}
 import prosomo.components.Types._
 import scala.math.BigInt
 
-case class Transaction(sender:PublicKeyW,receiver:PublicKeyW,delta:BigInt,sid:Sid,nonce:Int,signature: Signature //6
-) extends Parameters{
+case class Transaction(sender:PublicKeyW,receiver:PublicKeyW,delta:BigInt,sid:Sid,nonce:Int,signature: Signature) {
 
   def verify(sig:Sig,serializer: Serializer): Boolean = {
     sig.verify(signature,receiver.data++delta.toByteArray++sid.data++serializer.getBytes(nonce),sender.data.take(sig.KeyLength))
@@ -18,14 +17,15 @@ case class Transaction(sender:PublicKeyW,receiver:PublicKeyW,delta:BigInt,sid:Si
     * @param forger sig public key of the forger
     * @return updated localstate
     */
-  def applyTransaction(ls:State, forger:PublicKeyW): Any = {
+  def applyTransaction(ls:State, forger:PublicKeyW, fee_r:Ratio): Any = {
     {
       var nls:State = ls
       val validSender = nls.keySet.contains(sender)
       val txC_s:Int = nls(sender)._3
       if (nonce != txC_s) println(nonce,txC_s)
       if (validSender && nonce == txC_s) {
-        val fee = BigDecimal(delta.toDouble*transactionFee).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+        //val fee = BigDecimal(delta.toDouble*transactionFee).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+        val fee:BigInt = (Ratio(delta)*fee_r).round
         val validRecip = nls.keySet.contains(receiver)
         val validFunds = nls(sender)._1 >= delta
         if (validRecip && validFunds) {

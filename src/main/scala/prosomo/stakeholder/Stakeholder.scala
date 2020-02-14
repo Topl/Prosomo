@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorPath, ActorRef, Props, Timers}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{Kes, Keys, SharedData, Sig, Vrf}
+import prosomo.primitives.{Kes, Keys, SharedData, Sig, Vrf,Ratio}
 import prosomo.components.{Block, BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
 import prosomo.wallet.Wallet
@@ -53,7 +53,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val phase:Double = rng.nextDouble
   var chainUpdateLock = false
   val keys:Keys = Keys(seed,sig,vrf,kes,0)
-  val wallet:Wallet = new Wallet(keys.pkw)
+  val wallet:Wallet = new Wallet(keys.pkw,fee_r)
 
   //list of all or some of the stakeholders, including self, that the stakeholder is aware of
   var holders: List[ActorRef] = List()
@@ -115,7 +115,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
   def forgeBlock(forgerKeys:Keys) = {
     val slot = localSlot
-    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serialize(slot) ++ serialize("TEST"))
+    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
       //println("Eta on forging:"+Base58.encode(eta))
@@ -124,12 +124,12 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         val bn:Int = pb._9 + 1
         val ps:Slot = pb._3
         val blockBox: Box = signBox((forgeBytes,BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
-        val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serialize(slot) ++ serialize("NONCE"))
+        val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"))
         val rho: Rho = vrf.vrfProofToHash(pi)
         val h: Hash = hash(pb,serializer)
         val ledger = blockBox::chooseLedger(forgerKeys.pkw,memPool,localState)
         val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, forgerKeys.threshold,blockInfo)
-        val kes_sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serialize(ledger)++serialize(slot)++serialize(cert)++rho++pi++serialize(bn)++serialize(ps))
+        val kes_sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
         (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       }
     } else {
@@ -472,11 +472,11 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       case _ =>
     }
     if (localSlot == globalSlot) {
-      time(
+      timeFlag(
         if (keys.sk_kes.time(kes) < localSlot) {
           if (holderIndex == SharedData.printingHolder && printFlag && localSlot%epochLength == 0) {
             println("Current Epoch = " + currentEpoch.toString)
-            println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toString+"\nEta:"+Base58.encode(eta))
+            println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
           }
           roundBlock = 0
           if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
@@ -554,7 +554,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       }
     }
     keys.alpha = relativeStake(keys.pkw, stakingState)
-    keys.threshold = phi(keys.alpha, f_s)
+    keys.threshold = phi(keys.alpha)
   }
 
   def update = { if (SharedData.error) {actorStalled = true}
@@ -577,7 +577,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Checking Tine")
             }
-            time(maxValidBG)
+            timeFlag(maxValidBG)
           } else if (useFencing && chainUpdateLock) {
             if (candidateTines.isEmpty) {
               chainUpdateLock = false
@@ -585,7 +585,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               if (holderIndex == SharedData.printingHolder && printFlag) {
                 println("Holder " + holderIndex.toString + " Checking Tine")
               }
-              time(maxValidBG)
+              timeFlag(maxValidBG)
             }
           }
         }
@@ -604,19 +604,15 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val maxCovertLength = 10
 
   def leaderTest(forgerKeys:Keys,slot:Int,etaIn:Eta):Boolean = {
-    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serialize(slot) ++ serialize("TEST"))
+    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     compare(y, forgerKeys.threshold)
   }
 
-  def factorial(n: Int): Int = n match {
-    case 0 => 1
-    case _ => n * factorial(n-1)
-  }
-
   // probability of no blocks forged by honest parties
   def theta = {
-    math.pow(1.0-f_s,1.0-keys.alpha)
+    val a = keys.alpha.numer.toDouble / keys.alpha.denom.toDouble
+    math.pow(1.0-f_s,1.0-a)
   }
 
   def bernoulli_probability(p:Double,n:Int,m:Int):Double = {
@@ -682,17 +678,17 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   }
 
   def forgeBlock(forgerKeys:Keys, pb:BlockHeader, slot:Int, stateIn:State, etaIn:Eta):BlockHeader = {
-    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serialize(slot) ++ serialize("TEST"))
+    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     val bn:Int = pb._9 + 1
     val ps:Slot = pb._3
     val blockBox: Box = signBox((forgeBytes,BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
-    val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serialize(slot) ++ serialize("NONCE"))
+    val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, etaIn ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"))
     val rho: Rho = vrf.vrfProofToHash(pi)
     val h: Hash = hash(pb,serializer)
     val ledger = blockBox::chooseLedger(forgerKeys.pkw,memPool,stateIn)
     val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, forgerKeys.threshold,blockInfo+",tag:covert")
-    val sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serialize(ledger)++serialize(slot)++serialize(cert)++rho++pi++serialize(bn)++serialize(ps))
+    val sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     (h, ledger, slot, cert, rho, pi, sig, forgerKeys.pk_kes,bn,ps)
   }
 
@@ -829,7 +825,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               }
             })
             if (forgeAll) allTines ++= Set(candidateTines.last._1.last)
-            time(maxValidBG)
+            timeFlag(maxValidBG)
             while (globalSlot > localSlot) {
               localSlot += 1
               updateSlot
@@ -841,7 +837,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               if (holderIndex == SharedData.printingHolder && printFlag) {
                 println("Holder " + holderIndex.toString + " Checking Tine")
               }
-              time(maxValidBG)
+              timeFlag(maxValidBG)
             }
           }
         }
@@ -921,18 +917,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**adds confirmed transactions to buffer and sends new ones to gossipers*/
     case value:SendTx => {
       if (!actorStalled) {
-        value.s match {
-          case trans:Transaction => {
-            if (!memPool.keySet.contains(trans.sid) && localState.keySet.contains(trans.sender)) {
-              if (localState(trans.sender)._3 <= trans.nonce) {
-                if (verifyTransaction(trans)) {
-                  memPool += (trans.sid->(trans,0))
-                  send(self,gossipers, SendTx(value.s))
-                }
-              }
+        if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
+          if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
+            if (verifyTransaction(value.transaction)) {
+              memPool += (value.transaction.sid->(value.transaction,0))
+              send(self,gossipers, SendTx(value.transaction))
             }
           }
-          case _ =>
         }
       }
       if (useFencing) {
@@ -1294,13 +1285,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**prints stats */
     case Verify => {
       val trueChain = verifyChain(localChain, genBlockHash)
-      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toString + ", blocks forged = "
+      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDoubleString + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString + ", Valid chain = "
         + trueChain.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
-          case b:BlockHeader => chainBytes ++= FastCryptographicHash(serialize(b))
+          case b:BlockHeader => chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
           case _ =>
         }
       }
@@ -1318,13 +1309,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
       /**prints stats */
     case Status => {
-      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toString + ", blocks forged = "
+      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDoubleString + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString+", MemPool Size = "+memPool.size+" Num Gossipers = "+gossipers.length.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
           case b:BlockHeader => {
-            chainBytes ++= FastCryptographicHash(serialize(b))
+            chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
           }
           case _ =>
         }
@@ -1395,7 +1386,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           val fileString = (
             holderIndex.toString + " "
               + globalSlot.toString + " "
-              + keys.alpha.toString + " "
+              + keys.alpha.toDoubleString + " "
               + blocksForged.toString + " "
               + getActiveSlots(localChain).toString + " "
               + "\n"
