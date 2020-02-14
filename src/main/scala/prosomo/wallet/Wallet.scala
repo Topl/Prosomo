@@ -2,14 +2,14 @@ package prosomo.wallet
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.Sig
-import prosomo.components.{Serializer, Types,Transaction}
+import prosomo.components.{Serializer, Transaction, TransactionFunctions, Types}
 import prosomo.primitives.Ratio
 
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
 import scala.util.Random
 
-class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types {
+class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with TransactionFunctions {
   var pendingTxsOut:Map[Sid,Transaction] = Map()
   var availableBalance:BigInt = 0
   var totalBalance:BigInt = 0
@@ -66,7 +66,7 @@ class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types {
     }
     for (entry <- sortPendingTx) {
       val trans = entry._2
-      trans.applyTransaction(issueState,ByteArrayWrapper(Array()),fee_r) match {
+      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
         case value:State => {
           issueState = value
         }
@@ -137,7 +137,7 @@ class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types {
       val scaledDelta = BigDecimal(delta.toDouble*netStake.toDouble/netStake0.toDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
       val txC = issueState(pkw)._3
       val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
-      trans.applyTransaction(issueState,ByteArrayWrapper(Array()),fee_r) match {
+      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
         case value:State => {
           issueState = value
           pendingTxsOut += (trans.sid->trans)

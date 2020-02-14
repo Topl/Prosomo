@@ -7,7 +7,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GetBlockTree, GetGossipers, GetPositionData, GetState}
 import prosomo.history.History
-import prosomo.primitives.{Kes, Sig, Vrf, SharedData,Parameters,Ratio}
+import prosomo.primitives.{Kes, Sig, Vrf, SharedData, Ratio, Parameters}
 import scorex.crypto.encode.Base58
 import prosomo.cases._
 
@@ -17,8 +17,8 @@ import scala.math.BigInt
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
-trait Methods extends Types with Parameters {
-
+trait Methods extends Types with TransactionFunctions {
+  import Parameters._
   val serializer:Serializer
   //vars for chain, blocks, state, history, and locks
   var localChain:Chain
@@ -806,7 +806,7 @@ trait Methods extends Types with Parameters {
     * @return true if valid, false otherwise
     */
   def verifyTransaction(t:Transaction):Boolean = {
-    t.verify(sig,serializer)
+    verifyTX(t,sig,serializer)
   }
 
   /**
@@ -885,7 +885,7 @@ trait Methods extends Types with Parameters {
                 entry match {
                   case trans:Transaction => {
                     if (verifyTransaction(trans)) {
-                      trans.applyTransaction(nls,pk_f,fee_r) match {
+                      applyTransaction(trans,nls,pk_f,fee_r) match {
                         case value:State => {
                           nls = value
                         }
@@ -972,7 +972,7 @@ trait Methods extends Types with Parameters {
         val transaction:Transaction = entry._2._1
         val transactionCount:Int = transaction.nonce
         if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
-          transaction.applyTransaction(ls, pkw,fee_r) match {
+          applyTransaction(transaction,ls, pkw,fee_r) match {
             case value:State => {
               ledger ::= entry._2._1
               ls = value

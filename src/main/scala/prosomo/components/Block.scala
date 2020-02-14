@@ -2,11 +2,11 @@ package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
 
-class Block(identifier:ByteArrayWrapper,block:Any) extends SimpleTypes {
+class Block(identifier:ByteArrayWrapper, blockHeader:Any, blockBody:Any) extends SimpleTypes {
   def id:BlockId = identifier
-  def data:Any = block
-  def header:BlockHeader = block match {
-    case b:BlockHeader => b
+  def data:Any = blockHeader
+  def header:BlockHeader = blockHeader match {
+    case h:BlockHeader => h
   }
   def pid:BlockId = header._1
   def ledger:Ledger = header._2

@@ -15,9 +15,9 @@ import scala.math.BigInt
 import scala.util.Random
 
 class Router(seed:Array[Byte]) extends Actor
-  with Parameters
   with Types
   with Timers {
+  import Parameters._
   val serializer:Serializer = new Serializer
   var holders:List[ActorRef] = List()
   val rng = new Random(BigInt(seed).toLong)

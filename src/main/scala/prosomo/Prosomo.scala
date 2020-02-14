@@ -7,7 +7,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.StdIn
 import bifrost.BifrostApp
-import prosomo.primitives.ParameterConfig
+import prosomo.primitives.Parameters
 import prosomo.coordinator.Coordinator
 
 
@@ -51,7 +51,6 @@ class Prosomo {
 
 object Prosomo extends App {
   val input = args
-  val config = new ParameterConfig
-  //new ProsomoBifrost(config.settingsFilename).run()
+  //new ProsomoBifrost(Parameters.settingsFilename).run()
   new Prosomo
 }

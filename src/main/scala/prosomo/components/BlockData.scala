@@ -1,8 +1,34 @@
 package prosomo.components
 
-import io.iohk.iodb.ByteArrayWrapper
+import java.io.File
 
-class BlockData extends SimpleTypes {
+import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+
+class BlockData(dir:String) extends SimpleTypes {
+
+  val blockBodyStore:LSMStore = {
+    val iFile = new File(s"$dir/blocks/body")
+    iFile.mkdirs()
+    val store = new LSMStore(iFile)
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        store.close()
+      }
+    })
+    store
+  }
+
+  val blockHeaderStore:LSMStore = {
+    val iFile = new File(s"$dir/blocks/header")
+    iFile.mkdirs()
+    val store = new LSMStore(iFile)
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        store.close()
+      }
+    })
+    store
+  }
 
   private var data:Map[ByteArrayWrapper,Block] = Map()
 

@@ -9,7 +9,7 @@ import prosomo.Prosomo
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-trait Parameters extends {
+object Parameters extends {
 
   //tags for identifying ledger entries
   val forgeBytes = ByteArrayWrapper("FORGER_REWARD".getBytes)
@@ -176,8 +176,6 @@ trait Parameters extends {
   val timingFlag:Boolean = config.getBoolean("params.timingFlag")
   //Record data if true, plot data points with ./cmd.sh and enter command: plot
   val dataOutFlag:Boolean = config.getBoolean("params.dataOutFlag")
-  //path for data output files
-  val dataFileDir:String = config.getString("params.dataFileDir")
   //toggle for action based round execution
   val useFencing:Boolean = config.getBoolean("params.useFencing")
   //seed for pseudo random runs
@@ -188,10 +186,10 @@ trait Parameters extends {
       config.getString("params.inputSeed")
     }
   }
+  //path for data output files
+  val dataFileDir:String = config.getString("params.dataFileDir")+"/seed:"+inputSeed
   val stakeDistribution:String = config.getString("params.stakeDistribution")
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val settingsFilename:String = config.getString("params.settingsFilename")
 }
-
-class ParameterConfig extends Parameters {}

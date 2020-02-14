@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorPath, ActorRef, Props, Timers}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{Kes, Keys, SharedData, Sig, Vrf,Ratio}
+import prosomo.primitives.{Kes, Keys, SharedData, Sig, Vrf, Ratio, Parameters}
 import prosomo.components.{Block, BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
 import prosomo.wallet.Wallet
@@ -24,11 +24,12 @@ import scala.util.control.Breaks._
 class Stakeholder(seed:Array[Byte]) extends Actor
   with Timers
   with Methods {
-
+  import Parameters._
   val serializer:Serializer = new Serializer
   //vars for chain, blocks, state, history, and locks
+  val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
   var localChain:Chain = _
-  var blocks:BlockData = new BlockData
+  var blocks:BlockData = new BlockData(storageDir)
   var chainHistory:SlotReorgHistory = new SlotReorgHistory
   var localState:State = Map()
   var eta:Eta = Array()
@@ -143,7 +144,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))
           //println(b._4._6)
         }
-        blocks.add(new Block(hb,b))
+        blocks.add(new Block(hb,b,0))
         assert(localChain.getLastActiveSlot(localSlot)._2 == b._1)
         localChain.update((localSlot, hb))
         chainHistory.update((localSlot,hb))
@@ -711,7 +712,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           if (printFlag) {
             println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))
           }
-          blocks.add(new Block(hb,b))
+          blocks.add(new Block(hb,b,0))
           blocksForged += 1
           updateLocalState(data._1, Chain((localSlot,hb))) match {
             case value:State => {
@@ -749,7 +750,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
             if (printFlag) {
               println(Console.RED + "Holder " + holderIndex.toString + s" forged block $bn with id:" + Base58.encode(hb.data) + Console.WHITE)
             }
-            blocks.add(new Block(hb,b))
+            blocks.add(new Block(hb,b,0))
             blocksForged += 1
             updateLocalState(data._1, Chain((localSlot, hb))) match {
               case value: State => {
@@ -945,7 +946,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
                   val bHash = hash(b,serializer)
                   val bSlot = b._3
                   if (verifyBox(box) && verifyBlock(b) && bHash == bid._2 && bSlot == bid._1) {
-                    if (!foundBlock) blocks.add(new Block(bHash,b))
+                    if (!foundBlock) blocks.add(new Block(bHash,b,0))
                     if (!foundBlock && bSlot <= globalSlot) {
                       if (holderIndex == SharedData.printingHolder && printFlag) {
                         println("Holder " + holderIndex.toString + " Got New Tine")
@@ -995,7 +996,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
                     val bHash = hash(b,serializer)
                     val bSlot = b._3
                     if (verifyBox(box) && verifyBlock(b) && bHash == bid._2 && bSlot == bid._1) {
-                      blocks.add(new Block(bHash,b))
+                      blocks.add(new Block(bHash,b,0))
                     }
                   }
                 }
@@ -1250,7 +1251,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         case b: BlockHeader => {
           genBlock = b
           genBlockHash = hash(b,serializer)
-          blocks.add(new Block(genBlockHash,b))
+          blocks.add(new Block(genBlockHash,b,0))
         }
         case _ => println("error")
       }

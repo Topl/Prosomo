@@ -12,7 +12,7 @@ import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf,Ratio}
+import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf, Ratio, Parameters}
 import prosomo._
 import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
@@ -31,10 +31,12 @@ import scala.util.{Random, Try}
 class Coordinator extends Actor
   with Timers
   with Methods {
+  import Parameters._
   val serializer:Serializer = new Serializer
+  val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
   //vars for chain, blocks, state, history, and locks
   var localChain:Chain = _
-  var blocks:BlockData = new BlockData
+  var blocks:BlockData = new BlockData(storageDir)
   var chainHistory:SlotReorgHistory = new SlotReorgHistory
   var localState:State = Map()
   var eta:Eta = Array()
