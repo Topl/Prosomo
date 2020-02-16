@@ -50,16 +50,23 @@ class BlockData(dir:String) extends SimpleTypes {
   }
 
   def get(id:BlockId):Block = data(id)
-
   def get(id:SlotId):Block = data(id._2)
 
-  def known(id:BlockId):Boolean = data.keySet.contains(id)
+  def getBody(id:BlockId):Any = data(id).body
+  def getBody(id:SlotId):Any = data(id._2).body
 
+  def getTxs(id:BlockId):TransactionSet = getBody(id) match {case txs:TransactionSet => txs}
+  def getTxs(id:SlotId):TransactionSet = getBody(id) match {case txs:TransactionSet => txs}
+
+  def getGenSet(id:BlockId):GenesisSet = getBody(id) match {case txs:GenesisSet => txs}
+  def getGenSet(id:SlotId):GenesisSet = getBody(id) match {case txs:GenesisSet => txs}
+
+  def known(id:BlockId):Boolean = data.keySet.contains(id)
   def known(id:SlotId):Boolean = data.keySet.contains(id._2)
 
   def slotBlocks(slot:Slot):Map[ByteArrayWrapper,BlockHeader] = {
     var out:Map[ByteArrayWrapper,BlockHeader] = Map()
-    if (slotIds.keySet.contains(slot)) for (id <- slotIds(slot)) {out += (id -> get(id).header)}
+    if (slotIds.keySet.contains(slot)) for (id <- slotIds(slot)) {out += (id -> get(id).prosomoHeader)}
     out
   }
 

@@ -13,7 +13,7 @@ class Serializer extends SimpleTypes {
 
   def getAnyBytes(input:Any):Array[Byte] = {
     input match {
-      case ledger: Ledger => sLedger(ledger)
+      case block:Block => sBlock(block)
       case box:Box => sBox(box)
       case transaction: Transaction => sTransaction(transaction)
       case blockHeader: BlockHeader => sBlockHeader(blockHeader)
@@ -49,7 +49,6 @@ class Serializer extends SimpleTypes {
   def getBytes(state: State):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(box:Box):Array[Byte] = sBox(box)
-  def getBytes(ledger: Ledger):Array[Byte] = sLedger(ledger)
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
 
   def fromBytes[T:Manifest](input:Array[Byte]):Any = {
@@ -105,10 +104,6 @@ class Serializer extends SimpleTypes {
     )
   }
 
-  private def sLedger(ledger: Ledger):Array[Byte] = {
-    Bytes.concat(ledger.map(getAnyBytes):_*)
-  }
-
   private def sBlockHeader(bh:BlockHeader):Array[Byte] = {
     Bytes.concat(
       bh._1.data,
@@ -156,6 +151,15 @@ class Serializer extends SimpleTypes {
       getBytes(data2.length),
       data2
     )
+  }
+
+  private def sBlock(block:Block):Array[Byte] = {
+    val bodyBytes = block.body match {
+      case sequence:Seq[Transaction] => Bytes.concat(sequence.map(getBytes):_*)
+      case sequence:Seq[Box] => Bytes.concat(sequence.map(getBytes):_*)
+    }
+    val headerBytes = getBytes(block.prosomoHeader)
+    headerBytes ++ bodyBytes
   }
 
 

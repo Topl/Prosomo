@@ -199,7 +199,7 @@ trait Methods extends Types with TransactionFunctions {
   def getBlockHeader(bid:SlotId): Any = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
       if (blocks.known(bid)) {
-        blocks.get(bid).header
+        blocks.get(bid).prosomoHeader
       } else {
         0
       }
@@ -216,7 +216,7 @@ trait Methods extends Types with TransactionFunctions {
   def getParentBlockHeader(b:BlockHeader): Any = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
       if (blocks.known(b._1)) {
-        blocks.get(b._1).header
+        blocks.get(b._1).prosomoHeader
       } else {
         0
       }
@@ -527,7 +527,7 @@ trait Methods extends Types with TransactionFunctions {
     * @param b input block
     * @returnt true if signature is valid, false otherwise
     */
-  def verifyBlock(b:BlockHeader): Boolean = {
+  def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
     val kesVer = kes.verify(
       pk_kes,
@@ -539,11 +539,34 @@ trait Methods extends Types with TransactionFunctions {
       sig,
       slot
     )
-    if (slot > 0) {
-      kesVer && ledger.length <= txPerBlock + 1
-    } else {
-      kesVer
+    verifyBox(ledger)
+    kesVer
+  }
+
+  def verifyBlock(b:Block): Boolean = {
+    val header = b.prosomoHeader
+    val headerVer = verifyBlockHeader(header)
+    val ledgerVer = b.body match {
+      case txs:TransactionSet => {
+        if (txs.length <= txPerBlock){
+          if (txs.nonEmpty) {
+            hash(txs,serializer) == header._2.data && txs.map(verifyTransaction).reduceLeft(_ && _)
+          } else {
+            hash(txs,serializer) == header._2.data
+          }
+        } else {
+          false
+        }
+      }
+      case txs:GenesisSet => {
+        if (txs.nonEmpty) {
+          hashGen(txs,serializer) == header._2.data && txs.map(verifyBox).reduceLeft(_ && _)
+        } else {
+          false
+        }
+      }
     }
+    headerVer && b.id == hash(header,serializer) && ledgerVer
   }
 
   /**
@@ -607,7 +630,7 @@ trait Methods extends Types with TransactionFunctions {
       tr_Ep = phi(alpha_Ep)
       bool &&= (
         hash(parent,serializer) == h0
-          && verifyBlock(block)
+          && verifyBlockHeader(block)
           && parent._3 == ps
           && parent._9 + 1 == bn
           && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
@@ -622,7 +645,7 @@ trait Methods extends Types with TransactionFunctions {
         print(" ")
         println(Seq(
           hash(parent,serializer) == h0 //1
-          , verifyBlock(block) //2
+          , verifyBlockHeader(block) //2
           , parent._3 == ps //3
           , parent._9 + 1 == bn //4
           , vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi) //5
@@ -762,7 +785,7 @@ trait Methods extends Types with TransactionFunctions {
       tr_Ep = phi(alpha_Ep)
       isValid &&= (
              hash(parent,serializer) == h0
-          && verifyBlock(block)
+          && verifyBlockHeader(block)
           && parent._3 == ps
           && parent._9+1 == bn
           && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
@@ -776,7 +799,7 @@ trait Methods extends Types with TransactionFunctions {
         print("Error: Holder "+holderIndex.toString+" ");print(slot);print(" ")
         println(Seq(
             hash(parent,serializer) == h0 //1
-          , verifyBlock(block) //2
+          , verifyBlockHeader(block) //2
           , parent._3 == ps //3
           , parent._9+1 == bn //4
           , vrf.vrfVerify(pk_vrf,eta_Ep++serializer.getBytes(slot)++serializer.getBytes("NONCE"),pi) //5
@@ -821,81 +844,53 @@ trait Methods extends Types with TransactionFunctions {
     for (id <- c.ordered) {
       if (isValid) getBlockHeader(id) match {
         case b:BlockHeader => {
-          val (_,ledger:Ledger,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
+          val (_,ledger:Box,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
           val (pk_vrf,_,_,pk_sig,_,_) = cert
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
           var validForger = true
           if (slot == 0) {
-            for (entry <- ledger) {
-              entry match {
-                case box:Box => {
-                  if (verifyBox(box)) {
-                    box.data match {
-                      case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
-                        if (entry._1 == genesisBytes) {
-                          val delta = entry._3
-                          val netStake:BigInt = 0
-                          val newStake:BigInt = netStake + delta
-                          val pk_g:PublicKeyW = entry._2
-                          if(nls.keySet.contains(pk_g)) {
-                            isValid = false
-                            nls -= pk_g
-                          }
-                          nls += (pk_g -> (newStake,true,0))
-                        }
-                      }
-                      case _ => isValid = false
+            if (blocks.getGenSet(id).isEmpty) isValid = false
+            if (isValid) for (box <- blocks.getGenSet(id)) {
+              box.data match {
+                case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
+                  if (entry._1 == genesisBytes) {
+                    val delta = entry._3
+                    val netStake:BigInt = 0
+                    val newStake:BigInt = netStake + delta
+                    val pk_g:PublicKeyW = entry._2
+                    if(nls.keySet.contains(pk_g)) {
+                      isValid = false
+                      nls -= pk_g
                     }
+                    nls += (pk_g -> (newStake,true,0))
                   }
                 }
-                case _ =>
+                case _ => isValid = false
               }
             }
           } else {
-            ledger.head match {
-              case box:Box => {
-                if (verifyBox(box)) {
-                  box.data match {
-                    case entry:(ByteArrayWrapper,BigInt) => {
-                      val delta = entry._2
-                      if (entry._1 == forgeBytes && delta == BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt) {
-                        if (nls.keySet.contains(pk_f)) {
-                          val netStake: BigInt = nls(pk_f)._1
-                          val txC:Int = nls(pk_f)._3
-                          val newStake: BigInt = netStake + BigDecimal(forgerReward).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
-                          nls -= pk_f
-                          nls += (pk_f -> (newStake,true,txC))
-                        } else {
-                          validForger = false
-                        }
-                      } else {
-                        validForger = false
-                      }
+            //apply forger reward
+            if (nls.keySet.contains(pk_f)) {
+              val netStake: BigInt = nls(pk_f)._1
+              val txC:Int = nls(pk_f)._3
+              val newStake: BigInt = netStake + forgerReward
+              nls -= pk_f
+              nls += (pk_f -> (newStake,true,txC))
+            } else {
+              validForger = false
+            }
+            //apply transactions
+            if (validForger) {
+              for (trans <- blocks.getTxs(id)) {
+                if (verifyTransaction(trans)) {
+                  applyTransaction(trans, nls, pk_f, fee_r) match {
+                    case value: State => {
+                      nls = value
                     }
-                    case _ => validForger = false
+                    case _ => isValid = false
                   }
                 } else {
-                  validForger = false
-                }
-              }
-              case _ => validForger = false
-            }
-            if (validForger) {
-              for (entry <- ledger.tail) {
-                entry match {
-                  case trans:Transaction => {
-                    if (verifyTransaction(trans)) {
-                      applyTransaction(trans,nls,pk_f,fee_r) match {
-                        case value:State => {
-                          nls = value
-                        }
-                        case _ => isValid = false
-                      }
-                    } else {
-                      isValid = false
-                    }
-                  }
-                  case _ => isValid = false
+                  isValid = false
                 }
               }
             } else {
@@ -939,21 +934,10 @@ trait Methods extends Types with TransactionFunctions {
     */
   def collectLedger(c:Chain): Unit = {
     for (id <- c.ordered) {
-      getBlockHeader(id) match {
-        case b:BlockHeader => {
-          val ledger:Ledger = b._2
-          for (entry <- ledger.tail) {
-            entry match {
-              case trans:Transaction => {
-                if (!memPool.keySet.contains(trans.sid)) {
-                  if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
-                }
-              }
-              case _ =>
-            }
-          }
+      for (trans <- blocks.getTxs(id)) {
+        if (!memPool.keySet.contains(trans.sid)) {
+          if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
         }
-        case _ =>
       }
     }
   }
@@ -963,8 +947,8 @@ trait Methods extends Types with TransactionFunctions {
     * @param pkw public key triad of forger
     * @return list of transactions
     */
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): Ledger = {
-    var ledger: Ledger = List()
+  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSet = {
+    var ledger: List[Transaction] = List()
     var ls: State = s
     val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1.nonce < _._2._1.nonce): _*)
     breakable {

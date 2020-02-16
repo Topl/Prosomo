@@ -8,8 +8,10 @@ import prosomo.Prosomo
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import prosomo.components.Block
+import scala.math.BigInt
 
-object Parameters extends {
+object Parameters {
 
   //tags for identifying ledger entries
   val forgeBytes = ByteArrayWrapper("FORGER_REWARD".getBytes)
@@ -134,7 +136,7 @@ object Parameters extends {
   //max random transaction delta
   val maxTransfer:Double = config.getDouble("params.maxTransfer")
   //reward for forging blocks
-  val forgerReward:Double = config.getDouble("params.forgerReward")
+  val forgerReward:BigInt = BigInt(config.getLong("params.forgerReward"))
   //percent of transaction amount taken as fee by the forger
   val transactionFee:Double = config.getDouble("params.transactionFee")
   val fee_r:Ratio = Ratio(transactionFee,8)
@@ -192,4 +194,5 @@ object Parameters extends {
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val settingsFilename:String = config.getString("params.settingsFilename")
+
 }

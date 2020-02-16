@@ -21,9 +21,10 @@ trait SimpleTypes {
   type BlockId = Hash
   type SlotId = (Slot,BlockId)
   type Cert = (PublicKey,Rho,Pi,PublicKey,Ratio,String)
-  type Ledger = List[Any]
+  type TransactionSet = Seq[Transaction]
+  type GenesisSet = Seq[Box]
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
-  type BlockHeader = (Hash,Ledger,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
+  type BlockHeader = (Hash,Box,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
   type ChainRequest = (SlotId,Int,Int)
   type BlockRequest = (SlotId,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]

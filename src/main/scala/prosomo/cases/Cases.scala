@@ -1,6 +1,6 @@
 package prosomo.cases
 
-import prosomo.components.Transaction
+import prosomo.components.{Transaction,Block}
 import prosomo.components.Types._
 // case objects and classes for pattern matching messages between actors
 case object Diffuse
@@ -32,11 +32,11 @@ case class RouterRef(ref: Any)
 case class GetTime(t1:Long)
 case class Initialize(tMax:Int)
 case class SetClock(t0:Long)
-case class GenBlock(b: Any)
-case class SendBlock(s:Any)
+case class GenBlock(b: Block)
+case class SendBlock(block:Block,box:Any)
 case class RequestBlock(s:Any)
 case class RequestChain(s:Any)
-case class ReturnBlock(s:Any)
+case class ReturnBlock(blocks:List[Block],box:Any)
 case class SendTx(transaction:Transaction)
 case class IssueTx(s:Any)
 case class WriteFile(fw: Any)

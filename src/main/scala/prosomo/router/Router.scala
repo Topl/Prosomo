@@ -126,7 +126,7 @@ class Router(seed:Array[Byte]) extends Actor
             holders.indexOf(r),
             c.getClass,message._1,
             c match {
-              case value:SendBlock => Base58.encode(value.s match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+              case value:SendBlock => Base58.encode(value.box match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
               case value:SendTx => Base58.encode(value.transaction.sid.data)
               case _ => " "
             }
@@ -249,6 +249,7 @@ class Router(seed:Array[Byte]) extends Actor
       holders = list
       for (holder<-holders) {
         if (!holdersPosition.keySet.contains(holder)) {
+          println("router adding holder")
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
         }
       }
@@ -259,6 +260,7 @@ class Router(seed:Array[Byte]) extends Actor
           }
         }
       }
+      assert(holdersPosition.nonEmpty)
       sender() ! "done"
     }
 
@@ -270,16 +272,16 @@ class Router(seed:Array[Byte]) extends Actor
     /** adds delay to routed message*/
     case newMessage:(ActorRef,ActorRef,Any) => {
       val (s,r,c) = newMessage
-//      c match {
-//        //case value:SendBlock => Base58.encode(value.s match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
-//        case value:SendTx => println(
-//          holders.indexOf(s),
-//          holders.indexOf(r),
-//          c.getClass,
-//          Base58.encode(value.transaction.sid.data)
-//        )
-//        case _ =>
-//      }
+      if (false) c match {
+        case value:SendBlock => Base58.encode(value.box match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+        case value:SendTx => println(
+          holders.indexOf(s),
+          holders.indexOf(r),
+          c.getClass,
+          Base58.encode(value.transaction.sid.data)
+        )
+        case _ =>
+      }
 
       context.system.scheduler.scheduleOnce(delay(s,r,c),r,c)(context.system.dispatcher,sender())
     }

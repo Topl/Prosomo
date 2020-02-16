@@ -88,7 +88,7 @@ class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with TransactionFun
     out
   }
 
-  def add(ledger:Ledger) = {
+  def add(ledger:TransactionSet) = {
     for (entry <- ledger) {
       entry match {
         case transaction: Transaction => {
@@ -99,7 +99,7 @@ class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with TransactionFun
     }
   }
 
-  def remove(ledger:Ledger) = {
+  def remove(ledger:TransactionSet) = {
     for (entry <- ledger) {
       entry match {
         case transaction: Transaction => {

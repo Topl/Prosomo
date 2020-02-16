@@ -14,7 +14,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf, Ratio, Parameters}
 import prosomo._
-import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
+import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction, Block}
 import prosomo.history.History
 import scorex.crypto.encode.Base58
 
@@ -58,7 +58,7 @@ class Coordinator extends Actor
   val coordId = s"${self.path}"
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   var loadAverage = Array.fill(numAverageLoad){0.0}
-  var genBlock:BlockHeader = _
+  var genBlock:Block = _
   var roundDone = true
 
 
@@ -739,7 +739,7 @@ class Coordinator extends Actor
               "slot" -> i.asJson,
               "blocks" -> blocks.slotBlocks(i).map{
                 case value:(ByteArrayWrapper,BlockHeader) => {
-                  val (pid:Hash,ledger:Ledger,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
+                  val (pid:Hash,ledger:Box,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
                   val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
                   val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
                   Map(
@@ -755,7 +755,7 @@ class Coordinator extends Actor
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> ledger.toArray.map{
+                    "ledger" -> {blocks.getBody(value._1) match {case txs:Seq[Any]=>Seq(ledger)++txs}}.toArray.map{
                       case box:Box => {
                         box.data match {
                           case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
@@ -809,8 +809,7 @@ class Coordinator extends Actor
     }
   }
 
-  /**creates genesis block to be sent to all stakeholders */
-  def forgeGenBlock: BlockHeader = {
+  def forgeGenBlock: Block = {
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0
@@ -819,7 +818,7 @@ class Coordinator extends Actor
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    val ledger: Ledger = holders.map{
+    val genesisEntries: GenesisSet = holders.map{
       case ref:ActorRef => {
         val initStake = {
           val out = stakeDistribution match {
@@ -842,9 +841,11 @@ class Coordinator extends Actor
         signBox((genesisBytes, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
       }
     }
+    val ledger:Box = signBox(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"")
     val sig:KesSignature = kes.sign(sk_kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
-    (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
+    val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
+    new Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries)
   }
 }
 
