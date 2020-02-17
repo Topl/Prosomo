@@ -139,7 +139,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         assert(localChain.getLastActiveSlot(localSlot)._2 == b._1)
         localChain.update((localSlot, hb))
         chainHistory.update((localSlot,hb))
-        send(self,gossipers, SendBlock(block,signBox((b,(localSlot, hb)), sessionId, keys.sk_sig, keys.pk_sig)))
+        send(self,gossipers, SendBlock(block,signBox(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
         blocksForged += 1
         updateLocalState(localState, Chain(localChain.get(localSlot))) match {
           case value:State => localState = value
@@ -230,7 +230,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     }
     for (trans:Transaction <- wallet.getPending(localState)) {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(self,gossipers, SendTx(trans))
+      send(self,gossipers, SendTx(trans,signBox(hash(trans,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
     }
   }
 
@@ -285,12 +285,12 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           } else {
             tineMaxDepth
           }
-          val request:ChainRequest = (tine.head,depth,job._1)
-          send(self,ref, RequestChain(signBox(request,sessionId,keys.sk_sig,keys.pk_sig)))
+          val request:Request = (List(tine.head._2),depth,job._1)
+          send(self,ref, RequestChain(tine.head._2,depth,signBox(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
-          val request:BlockRequest = (tine.head,job._1)
-          send(self,ref, RequestBlock(signBox(request,sessionId,keys.sk_sig,keys.pk_sig)))
+          val request:Request = (List(tine.head._2),0,job._1)
+          send(self,ref, RequestBlock(tine.head._2,signBox(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }
       }
     }
@@ -458,7 +458,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
               gOff = newOff
             }
             if (gossipers.length < numGossipers + gOff && numHello < 1) {
-              send(self,rng.shuffle(holders.filter(_!=self)),Hello(signBox(self, sessionId, keys.sk_sig, keys.pk_sig)))
+              send(self,rng.shuffle(holders.filter(_!=self)),Hello(self,signBox(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
               numHello += 1
             } else if (gossipers.length > numGossipers + gOff) {
               gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)
@@ -638,7 +638,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
               memPool += (value.transaction.sid->(value.transaction,0))
-              send(self,gossipers, SendTx(value.transaction))
+              send(self,gossipers, SendTx(value.transaction,signBox(hash(value.transaction,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
             }
           }
         }
@@ -651,44 +651,31 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**block passing, new blocks delivered are added to list of tines and then sent to gossipers*/
     case value:SendBlock => {
       if (!actorStalled) {
-        value.box match {
-          case box:Box => if (inbox.keySet.contains(box.sid)) {
-            box.data match {
-              case bInfo: (BlockHeader,SlotId) => {
-                val bid:SlotId = bInfo._2
-                val foundBlock = blocks.known(bid)
-                if (!foundBlock) {
-                  val b:BlockHeader = bInfo._1
-                  val bHash = hash(b,serializer)
-                  val bSlot = b._3
-                  if (verifyBox(box)
-                    && verifyBlock(value.block)
-                    && bHash == bid._2
-                    && bSlot == bid._1
-                    && bHash == value.block.id) {
-                    blocks.add(value.block)
-                    if (bSlot <= globalSlot) {
-                      if (holderIndex == SharedData.printingHolder && printFlag) {
-                        println("Holder " + holderIndex.toString + " Got New Tine")
-                      }
-                      val newId = (bSlot, bHash)
-                      send(self,gossipers, SendBlock(value.block,signBox((b,newId), sessionId, keys.sk_sig, keys.pk_sig)))
-                      val jobNumber = tineCounter
-                      tines += (jobNumber -> (Chain(newId),0,0,0,inbox(box.sid)._1))
-                      buildTine((jobNumber,tines(jobNumber)))
-                      tineCounter += 1
-                    }
-                  } else {
-                    println("invalid block")
-                  }
+        if (inbox.keySet.contains(value.box.sid)) {
+          val foundBlock = blocks.known(value.block.id)
+          if (!foundBlock) {
+            val b:BlockHeader = value.block.prosomoHeader
+            val bHash = hash(b,serializer)
+            val bSlot = b._3
+            if (verifyBlock(value.block) && verifyBox(value.block.id,value.box)) {
+              blocks.add(value.block)
+              if (bSlot <= globalSlot) {
+                if (holderIndex == SharedData.printingHolder && printFlag) {
+                  println("Holder " + holderIndex.toString + " Got New Tine")
                 }
+                val newId = (bSlot, bHash)
+                send(self,gossipers, SendBlock(value.block,signBox(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+                val jobNumber = tineCounter
+                tines += (jobNumber -> (Chain(newId),0,0,0,inbox(value.box.sid)._1))
+                buildTine((jobNumber,tines(jobNumber)))
+                tineCounter += 1
               }
-              case _ =>{println("error: invalid block info");SharedData.throwError(holderIndex)}
+            } else {
+              println("invalid block")
             }
-          } else {
-            //println("error: unknown sender")
           }
-          case _ =>
+        } else {
+          println("error: invalid block info")
         }
       }
       if (useFencing) {
@@ -703,43 +690,20 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**block passing, returned blocks are added to block database*/
     case value:ReturnBlock => {
       if (!actorStalled) {
-        value.box match {
-          case box:Box => if (inbox.keySet.contains(box.sid)) {
-            if (verifyBox(box)) box.data match {
-              case returnedBlocks: (Int,List[SlotId]) => if (returnedBlocks._2.length == value.blocks.length) {
-                def compare(in:(BlockId,BlockId)):Boolean = {in._1 == in._2}
-                if (returnedBlocks._2.map(_._2).zip(value.blocks.map(_.id)).map(compare).reduceLeft(_ && _)) {
+        if (inbox.keySet.contains(value.box.sid)) {
+          if (verifyBox(hash((value.blocks.map(_.id),0,value.job),serializer),value.box)) {
+            for (block <- value.blocks) {
+              if (!blocks.known(block.id)) {
+                if (verifyBlock(block)) {
                   if (holderIndex == SharedData.printingHolder && printFlag) {
-                    println("Holder " + holderIndex.toString + " Got Blocks")
+                    println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
                   }
-                  val jobNumber:Int = returnedBlocks._1
-                  for (binfo <- value.blocks.zip(returnedBlocks._2)) {
-                    val block = binfo._1
-                    val bid = binfo._2
-
-                    val foundBlock = blocks.known(block.id)
-                    if (!foundBlock) {
-                      val b:BlockHeader = block.prosomoHeader
-                      val bHash = hash(b,serializer)
-                      val bSlot = b._3
-                      if (verifyBlock(block)
-                        && bHash == bid._2
-                        && bSlot == bid._1
-                        && bHash == block.id) {blocks.add(block)}
-                    }
-                  }
-                  if (tines.keySet.contains(jobNumber)) buildTine((jobNumber,tines(jobNumber)))
-                }
-              } else {println("error: invalid block list")}
-              case nullBlock:NullBlock => {
-                val jobNumber = nullBlock.job
-                println("error: null block return")
-                if (tines.keySet.contains(jobNumber)) buildTine((jobNumber,tines(jobNumber)))
+                  blocks.add(block)
+                } else {"error: invalid returned block"}
+                if (tines.keySet.contains(value.job)) buildTine((value.job,tines(value.job)))
               }
-              case _ =>
             }
-          }
-          case _ => println("error: return block box invalid")
+          } else {println("error: invalid block list")}
         }
       }
       if (useFencing) {
@@ -754,36 +718,23 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**block passing, parent ids that are not found are requested*/
     case value:RequestBlock => {
       if (!actorStalled) {
-        value.s match {
-          case box:Box => {
-            if (inbox.keySet.contains(box.sid)) {
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Was Requested Block")
-              }
-              val ref = inbox(box.sid)._1
-              box.data match {
-                case request:BlockRequest => {
-                  val id:SlotId = request._1
-                  val job:Int = request._2
-                  if (blocks.known(id)) {
-                    if (verifyBox(box)) {
-                      val returnedBlock:Block = blocks.get(id)
-                      send(self,ref,ReturnBlock(List(returnedBlock),signBox((job,List(id)),sessionId,keys.sk_sig,keys.pk_sig)))
-                      if (holderIndex == SharedData.printingHolder && printFlag) {
-                        println("Holder " + holderIndex.toString + " Returned Block")
-                      }
-                    } else {
-                      println("error: request block invalid box")
-                    }
-                  } else {
-                    send(self,ref,ReturnBlock(List(),signBox(NullBlock(job),sessionId,keys.sk_sig,keys.pk_sig)))
-                  }
-                }
-                case _ =>
-              }
-            }
+        if (inbox.keySet.contains(value.box.sid)) {
+          if (holderIndex == SharedData.printingHolder && printFlag) {
+            println("Holder " + holderIndex.toString + " Was Requested Block")
           }
-          case _ =>
+          if (verifyBox(hash((List(value.id),0,value.job),serializer),value.box)) {
+            val ref = inbox(value.box.sid)._1
+            if (blocks.known(value.id)) {
+              val returnedBlock:List[Block] = List(blocks.get(value.id))
+              send(self,ref,ReturnBlock(returnedBlock,signBox(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              if (holderIndex == SharedData.printingHolder && printFlag) {
+                println("Holder " + holderIndex.toString + " Returned Block")
+              }
+            } else {
+              val returnedBlock:List[Block] = List()
+              send(self,ref,ReturnBlock(returnedBlock,signBox(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+            }
+          } else {println("error: request block invalid box")}
         }
       }
       if (useFencing) {
@@ -794,53 +745,27 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       /**block passing, parent ids are requested with increasing depth of chain upto a finite number of attempts*/
     case value:RequestChain => {
       if (!actorStalled) {
-        value.s match {
-          case box:Box => {
-            if (inbox.keySet.contains(box.sid)) {
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Was Requested Blocks")
-              }
-              val ref = inbox(box.sid)._1
-              box.data match {
-                case request:ChainRequest => {
-                  val startId:SlotId = request._1
-                  val depth:Int = request._2
-                  val job:Int = request._3
-                  var parentFound = blocks.known(startId)
-                  var returnedBlockIdList:List[SlotId] = List()
-                  var returnedBlockList:List[Block] = List()
-                  if (depth <= tineMaxDepth && parentFound) {
-                    if (verifyBox(box)) {
-                      var id:SlotId = startId
-                      while (parentFound && returnedBlockList.length < k_s*depth && blocks.known(id)) {
-                        parentFound = blocks.get(id) match {
-                          case b:Block => {
-                            returnedBlockIdList ::= id
-                            returnedBlockList ::= b
-                            getParentId(id) match {
-                              case pid:SlotId => {id = pid;true}
-                              case _ => false
-                            }
-                          }
-                          case _ => false
-                        }
-                      }
-                      if (holderIndex == SharedData.printingHolder && printFlag) {
-                        println("Holder " + holderIndex.toString + " Returned Blocks")
-                      }
-                    } else {println("error:chain request box invalid")}
-                  } else {println("error: chain request parent not found")}
-                  if (returnedBlockList.nonEmpty) {
-                    send(self,ref,ReturnBlock(returnedBlockList,signBox((job,returnedBlockIdList),sessionId,keys.sk_sig,keys.pk_sig)))
-                  } else {
-                    send(self,ref,ReturnBlock(List(),signBox(NullBlock(job),sessionId,keys.sk_sig,keys.pk_sig)))
-                  }
-                }
-                case _ => println("error: invalid chain request")
-              }
+        if (inbox.keySet.contains(value.box.sid)) {
+          val request:Request = (List(value.id),value.depth,value.job)
+          if (verifyBox(hash(request,serializer),value.box) && value.depth <= tineMaxDepth) {
+            if (holderIndex == SharedData.printingHolder && printFlag) {
+              println("Holder " + holderIndex.toString + " Was Requested Blocks")
             }
-          }
-          case _ =>
+            val ref = inbox(value.box.sid)._1
+            val startId:BlockId = value.id
+            val depth:Int = value.depth
+            val job:Int = value.job
+            var returnedBlockList:List[Block] = List()
+            var id:BlockId = startId
+            while (returnedBlockList.length < k_s*depth && blocks.known(id)) {
+              returnedBlockList ::= blocks.get(id)
+              id = returnedBlockList.head.pid
+            }
+            if (holderIndex == SharedData.printingHolder && printFlag) {
+              println("Holder " + holderIndex.toString + " Returned Blocks")
+            }
+            send(self,ref,ReturnBlock(returnedBlockList,signBox(hash((returnedBlockList.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+          } else {println("error:chain request box invalid")}
         }
       }
       if (useFencing) {
@@ -859,7 +784,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
                 txCounter += 1
                 setOfTxs += (trans.sid->trans.nonce)
                 memPool += (trans.sid->(trans,0))
-                send(self,gossipers, SendTx(trans))
+                send(self,gossipers, SendTx(trans,signBox(hash(trans,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
               }
               case _ => //{println("Holder "+holderIndex.toString+" tx issue failed")}
             }
@@ -878,25 +803,14 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     case value:Hello => {
       if (!actorStalled) {
         if (gossipers.length < numGossipers + gOff) {
-          value.id match {
-            case box:Box => {
-              box.data match {
-                case ref:ActorRef => {
-                  if (verifyBox(box)) {
-                    if (!gossipers.contains(ref) && inbox.keySet.contains(box.sid)) {
-                      if (holderIndex == SharedData.printingHolder && printFlag) {
-                        println("Holder " + holderIndex.toString + " Adding Gossiper")
-                      }
-                      if (inbox(box.sid)._1 == ref) gossipers = gossipers ++ List(ref)
-                      send(self,ref,Hello(signBox(self, sessionId, keys.sk_sig, keys.pk_sig)))
-                    }
-                  }
-                }
-                case _ =>
+          if (verifyBox(hash(value.id,serializer),value.box)) {
+            if (!gossipers.contains(value.id) && inbox.keySet.contains(value.box.sid)) {
+              if (holderIndex == SharedData.printingHolder && printFlag) {
+                println("Holder " + holderIndex.toString + " Adding Gossiper")
               }
-
+              if (inbox(value.box.sid)._1 == value.id) gossipers = gossipers ++ List(value.id)
+              send(self,value.id,Hello(self,signBox(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
-            case _ =>
           }
         }
       }
@@ -910,18 +824,14 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
-      sendDiffuse(holderId, holders, signBox((self,keys.publicKeys), sessionId, keys.sk_sig, keys.pk_sig))
+      sendDiffuse(holderId, holders, DiffuseData(self,keys.publicKeys,signBox(hash((self,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
       sender() ! "done"
     }
 
     /**validates diffused string from other holders and stores in inbox */
-    case box:Box => {
-      if (verifyBox(box) && !inbox.keySet.contains(box.sid)) {
-        val sid = box.sid
-        box.data match {
-          case d:(ActorRef,PublicKeys) => inbox += (sid->d)
-          case _ =>
-        }
+    case value:DiffuseData => {
+      if (verifyBox(hash((value.ref,value.pks),serializer),value.box) && !inbox.keySet.contains(value.box.sid)) {
+        inbox += (value.box.sid->(value.ref,value.pks))
       }
       sender() ! "done"
     }
@@ -987,6 +897,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     case gb:GenBlock => {
       genBlockHash = hash(gb.b.prosomoHeader,serializer)
       assert(genBlockHash == gb.b.id)
+      assert(verifyBlock(gb.b))
       blocks.add(gb.b)
       sender() ! "done"
     }
@@ -1104,19 +1015,13 @@ class Stakeholder(seed:Array[Byte]) extends Actor
 
       /**accepts coordinator ref*/
     case value:CoordRef => {
-      value.ref match {
-        case r: ActorRef => coordinatorRef = r
-        case _ =>
-      }
+      coordinatorRef = value.ref
       sender() ! "done"
     }
 
       /**accepts router ref*/
     case value:RouterRef => {
-      value.ref match {
-        case r: ActorRef => routerRef = r
-        case _ =>
-      }
+      routerRef = value.ref
       sender() ! "done"
     }
 

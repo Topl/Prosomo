@@ -2,6 +2,7 @@ package prosomo.primitives
 
 import java.io.File
 
+import bifrost.crypto.hash.FastCryptographicHash
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
@@ -9,13 +10,13 @@ import prosomo.Prosomo
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import prosomo.components.Block
+
 import scala.math.BigInt
 
 object Parameters {
 
   //tags for identifying ledger entries
-  val forgeBytes = ByteArrayWrapper("FORGER_REWARD".getBytes)
-  val genesisBytes = ByteArrayWrapper("GENESIS".getBytes)
+  val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
 
   def getConfig:Config = {
     import Prosomo.input

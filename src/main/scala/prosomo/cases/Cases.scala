@@ -1,7 +1,9 @@
 package prosomo.cases
 
-import prosomo.components.{Transaction,Block}
+import akka.actor.ActorRef
+import prosomo.components.{Block, Box, Transaction}
 import prosomo.components.Types._
+
 // case objects and classes for pattern matching messages between actors
 case object Diffuse
 case object Inbox
@@ -24,20 +26,24 @@ case object NextSlot
 case object EndStep
 case object RequestPositionData
 case object GetBalance
-case class NullBlock(job:Int)
+
+//signed messages between holders, messages from remote
+case class Hello(id:ActorRef, box:Box)
+case class SendBlock(block:Block,box:Box)
+case class RequestBlock(id:BlockId,box:Box,job:Int)
+case class RequestChain(id:BlockId,depth:Int,box:Box,job:Int)
+case class ReturnBlock(blocks:List[Block],box:Box,job:Int)
+case class DiffuseData(ref:ActorRef,pks:PublicKeys,box:Box)
+case class SendTx(transaction:Transaction,box:Box)
+
+//messages between coordinator and holders
 case class GetSlot(s:Int)
-case class Hello(id: Any)
-case class CoordRef(ref: Any)
-case class RouterRef(ref: Any)
+case class CoordRef(ref: ActorRef)
+case class RouterRef(ref:ActorRef)
 case class GetTime(t1:Long)
 case class Initialize(tMax:Int)
 case class SetClock(t0:Long)
 case class GenBlock(b: Block)
-case class SendBlock(block:Block,box:Any)
-case class RequestBlock(s:Any)
-case class RequestChain(s:Any)
-case class ReturnBlock(blocks:List[Block],box:Any)
-case class SendTx(transaction:Transaction)
 case class IssueTx(s:Any)
 case class WriteFile(fw: Any)
 case class NewGraphFile(name:String)

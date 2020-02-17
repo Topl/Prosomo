@@ -311,8 +311,8 @@ trait Methods extends Types with TransactionFunctions {
     * @param pk_sig sig public key
     * @return signed box
     */
-  def signBox(data: Any, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Box = {
-    new Box(data,id,sig.sign(sk_sig,serializer.getAnyBytes(data)++id.data),pk_sig)
+  def signBox(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Box = {
+    new Box(data,id,sig.sign(sk_sig,data.data++id.data),pk_sig)
   }
 
   /**
@@ -320,8 +320,8 @@ trait Methods extends Types with TransactionFunctions {
     * @param box
     * @return
     */
-  def verifyBox(box:Box): Boolean = {
-    box.verify(sig,serializer)
+  def verifyBox(input:Hash,box:Box): Boolean = {
+    box.verify(input,sig,serializer)
   }
 
   /**
@@ -510,7 +510,7 @@ trait Methods extends Types with TransactionFunctions {
     * @param holders
     * @param command
     */
-  def sendDiffuse(holderId:ActorPath, holders:List[ActorRef], command: Box) = {
+  def sendDiffuse(holderId:ActorPath, holders:List[ActorRef], command: DiffuseData) = {
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
       if (holder.path != holderId) {
@@ -539,8 +539,7 @@ trait Methods extends Types with TransactionFunctions {
       sig,
       slot
     )
-    verifyBox(ledger)
-    kesVer
+    verifyBox(ledger.dataHash,ledger) && kesVer
   }
 
   def verifyBlock(b:Block): Boolean = {
@@ -550,9 +549,9 @@ trait Methods extends Types with TransactionFunctions {
       case txs:TransactionSet => {
         if (txs.length <= txPerBlock){
           if (txs.nonEmpty) {
-            hash(txs,serializer) == header._2.data && txs.map(verifyTransaction).reduceLeft(_ && _)
+            hash(txs,serializer) == header._2.dataHash && txs.map(verifyTransaction).reduceLeft(_ && _)
           } else {
-            hash(txs,serializer) == header._2.data
+            hash(txs,serializer) == header._2.dataHash
           }
         } else {
           false
@@ -560,7 +559,11 @@ trait Methods extends Types with TransactionFunctions {
       }
       case txs:GenesisSet => {
         if (txs.nonEmpty) {
-          hashGen(txs,serializer) == header._2.data && txs.map(verifyBox).reduceLeft(_ && _)
+          hashGen(txs,serializer) == header._2.dataHash && txs.map(
+            _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
+              verifyBox(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
+            }}
+          ).reduceLeft(_ && _)
         } else {
           false
         }
@@ -850,22 +853,17 @@ trait Methods extends Types with TransactionFunctions {
           var validForger = true
           if (slot == 0) {
             if (blocks.getGenSet(id).isEmpty) isValid = false
-            if (isValid) for (box <- blocks.getGenSet(id)) {
-              box.data match {
-                case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
-                  if (entry._1 == genesisBytes) {
-                    val delta = entry._3
-                    val netStake:BigInt = 0
-                    val newStake:BigInt = netStake + delta
-                    val pk_g:PublicKeyW = entry._2
-                    if(nls.keySet.contains(pk_g)) {
-                      isValid = false
-                      nls -= pk_g
-                    }
-                    nls += (pk_g -> (newStake,true,0))
-                  }
+            if (isValid) for (entry <- blocks.getGenSet(id)) {
+              if (ByteArrayWrapper(entry._1) == genesisBytes && verifyBox(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
+                val delta = entry._3
+                val netStake:BigInt = 0
+                val newStake:BigInt = netStake + delta
+                val pk_g:PublicKeyW = entry._2
+                if(nls.keySet.contains(pk_g)) {
+                  isValid = false
+                  nls -= pk_g
                 }
-                case _ => isValid = false
+                nls += (pk_g -> (newStake,true,0))
               }
             }
           } else {

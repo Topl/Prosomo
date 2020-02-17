@@ -755,25 +755,14 @@ class Coordinator extends Actor
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {blocks.getBody(value._1) match {case txs:Seq[Any]=>Seq(ledger)++txs}}.toArray.map{
-                      case box:Box => {
-                        box.data match {
-                          case entry:(ByteArrayWrapper,PublicKeyW,BigInt) => {
-                            val delta = entry._3
-                            val pk_g:PublicKeyW = entry._2
-                            Map(
-                              "genesis" -> Base58.encode(pk_g.data).asJson,
-                              "amount" -> delta.toLong.asJson
-                            ).asJson
-                          }
-                          case entry:(ByteArrayWrapper,BigInt) => {
-                            val delta = entry._2
-                            Map(
-                              "forger" -> Base58.encode(pk_f.data).asJson,
-                              "amount" -> delta.toLong.asJson
-                            ).asJson
-                          }
-                        }
+                    "ledger" -> {blocks.getBody(value._1) match {case txs:Seq[Any]=>txs}}.toArray.map{
+                      case entry:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
+                        val delta = entry._3
+                        val pk_g:PublicKeyW = entry._2
+                        Map(
+                          "genesis" -> Base58.encode(pk_g.data).asJson,
+                          "amount" -> delta.toLong.asJson
+                        ).asJson
                       }
                       case trans:Transaction => {
                         Map(
@@ -838,7 +827,7 @@ class Coordinator extends Actor
         }
         val pkw = ByteArrayWrapper(hex2bytes(genKeys(s"${ref.path}").split(";")(0))++hex2bytes(genKeys(s"${ref.path}").split(";")(1))++hex2bytes(genKeys(s"${ref.path}").split(";")(2)))
         holderKeys += (ref-> pkw)
-        signBox((genesisBytes, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
+        (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signBox(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
       }
     }
     val ledger:Box = signBox(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)

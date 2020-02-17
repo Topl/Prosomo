@@ -126,7 +126,7 @@ class Router(seed:Array[Byte]) extends Actor
             holders.indexOf(r),
             c.getClass,message._1,
             c match {
-              case value:SendBlock => Base58.encode(value.box match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+              case value:SendBlock => Base58.encode(value.block.id.data)
               case value:SendTx => Base58.encode(value.transaction.sid.data)
               case _ => " "
             }
@@ -273,7 +273,7 @@ class Router(seed:Array[Byte]) extends Actor
     case newMessage:(ActorRef,ActorRef,Any) => {
       val (s,r,c) = newMessage
       if (false) c match {
-        case value:SendBlock => Base58.encode(value.box match {case box:Box => {box.data match {case bInfo: (BlockHeader,SlotId) => {bInfo._2._2.data}}}})
+        case value:SendBlock => Base58.encode(value.block.id.data)
         case value:SendTx => println(
           holders.indexOf(s),
           holders.indexOf(r),
@@ -325,10 +325,7 @@ class Router(seed:Array[Byte]) extends Actor
     }
 
     case value:CoordRef => {
-      value.ref match {
-        case r: ActorRef => coordinatorRef = r
-        case _ =>
-      }
+      coordinatorRef = value.ref
       sender() ! "done"
     }
 
