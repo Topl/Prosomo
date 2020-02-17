@@ -14,8 +14,8 @@ trait SimpleTypes {
   val int_length = 4
   val long_length = 8
   val sid_length = 32
-  val pi_length = 32
-  val rho_length = 32
+  val pi_length = 80
+  val rho_length = 64
   val id_length = hash_length
   val box_length = 2*hash_length + sig_length + pk_length
   val slot_length = int_length

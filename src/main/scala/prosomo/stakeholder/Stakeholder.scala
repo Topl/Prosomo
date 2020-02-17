@@ -671,11 +671,9 @@ class Stakeholder(seed:Array[Byte]) extends Actor
                 tineCounter += 1
               }
             } else {
-              println("invalid block")
+              println("error: invalid block info")
             }
           }
-        } else {
-          println("error: invalid block info")
         }
       }
       if (useFencing) {

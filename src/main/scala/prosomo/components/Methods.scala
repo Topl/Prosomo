@@ -19,6 +19,7 @@ import scala.util.control.Breaks.{break, breakable}
 
 trait Methods extends Types with TransactionFunctions {
   import Parameters._
+  import Serializer._
   val serializer:Serializer
   //vars for chain, blocks, state, history, and locks
   var localChain:Chain
@@ -545,30 +546,38 @@ trait Methods extends Types with TransactionFunctions {
   def verifyBlock(b:Block): Boolean = {
     val header = b.prosomoHeader
     val headerVer = verifyBlockHeader(header)
-    val ledgerVer = b.body match {
-      case txs:TransactionSet => {
-        if (txs.length <= txPerBlock){
+    val ledgerVer = if (header._3 == 0) {
+      b.body match {
+        case txs:GenesisSet => {
           if (txs.nonEmpty) {
-            hash(txs,serializer) == header._2.dataHash && txs.map(verifyTransaction).reduceLeft(_ && _)
+            hashGen(txs,serializer) == header._2.dataHash && txs.map(
+              _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
+                verifyBox(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
+              }}
+            ).reduceLeft(_ && _)
           } else {
-            hash(txs,serializer) == header._2.dataHash
+            false
           }
-        } else {
-          false
         }
+        case _ => {println("error: tx set match in block verify");false}
       }
-      case txs:GenesisSet => {
-        if (txs.nonEmpty) {
-          hashGen(txs,serializer) == header._2.dataHash && txs.map(
-            _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
-              verifyBox(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
-            }}
-          ).reduceLeft(_ && _)
-        } else {
-          false
+    } else {
+      b.body match {
+        case txs:TransactionSet => {
+          if (txs.length <= txPerBlock){
+            if (txs.nonEmpty) {
+              hash(txs,serializer) == header._2.dataHash && txs.map(verifyTransaction).reduceLeft(_ && _)
+            } else {
+              hash(txs,serializer) == header._2.dataHash
+            }
+          } else {
+            false
+          }
         }
+        case _ => {println("error: tx set match in block verify");false}
       }
     }
+
     headerVer && b.id == hash(header,serializer) && ledgerVer
   }
 

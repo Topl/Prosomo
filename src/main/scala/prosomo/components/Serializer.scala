@@ -5,6 +5,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, 
 import prosomo.primitives.Ratio
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
+import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
 
@@ -15,6 +16,7 @@ class Serializer extends SimpleTypes {
 
    */
 
+  //not to be used for serialization and deserialization, only use for router to calculate message length
   def getAnyBytes(input:Any):Array[Byte] = {
     input match {
       case block:Block => sBlock(block)
@@ -26,30 +28,17 @@ class Serializer extends SimpleTypes {
     }
   }
 
+  //byte serializers for all types and classes
   def getBytes(bytes:Array[Byte]):Array[Byte] = bytes
+  def getBytes(int:BigInt):Array[Byte] = sBigInt(int)
   def getBytes(int:Int):Array[Byte] = Ints.toByteArray(int)
   def getBytes(long: Long):Array[Byte] = Longs.toByteArray(long)
   def getBytes(bw:ByteArrayWrapper):Array[Byte] = bw.data
-  def getBytes(string: String):Array[Byte] = string.getBytes
-  //def getBytes(hash:Hash):Array[Byte] = hash.data
-  //def getBytes(eta:Eta):Array[Byte] = eta
-  //def getBytes(signature: Signature):Array[Byte] = signature
-  //def getBytes(slot:Slot):Array[Byte] = Ints.toByteArray(slot)
-  //def getBytes(blockNumber: BlockNumber):Array[Byte] = Ints.toByteArray(blockNumber)
-  //def getBytes(rho:Rho):Array[Byte] = rho
-  //def getBytes(publicKey: PublicKey):Array[Byte] = publicKey
-  //def getBytes(privateKey: PrivateKey):Array[Byte] = privateKey
-  //def getBytes(sid:Sid):Array[Byte] = sid.data
-  //def getBytes(publicKeyW: PublicKeyW):Array[Byte] = publicKeyW.data
-  //def getBytes(publicKeys: PublicKeys):Array[Byte] = Bytes.concat(publicKeys._1,publicKeys._2,publicKeys._3)
-  //def getBytes(pi:Pi):Array[Byte] = pi
-  //def getBytes(blockId: BlockId):Array[Byte] = blockId.data
+  def getBytes(string: String):Array[Byte] = sString(string)
   def getBytes(ratio:Ratio):Array[Byte] = sRatio(ratio)
   def getBytes(slotId: SlotId):Array[Byte] = Bytes.concat(getBytes(slotId._1),getBytes(slotId._2))
   def getBytes(cert:Cert):Array[Byte] = sCert(cert)
   def getBytes(kesSignature: KesSignature):Array[Byte] = sKesSignature(kesSignature)
-//  def getBytes(chainRequest: ChainRequest):Array[Byte] = Bytes.concat(getBytes(chainRequest._1),getBytes(chainRequest._2),getBytes(chainRequest._3))
-//  def getBytes(blockRequest: BlockRequest):Array[Byte] = Bytes.concat(getBytes(blockRequest._1),getBytes(blockRequest._2))
   def getBytes(state: State):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(box:Box):Array[Byte] = sBox(box)
@@ -58,15 +47,8 @@ class Serializer extends SimpleTypes {
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
-  def fromBytes[T:Manifest](input:Array[Byte]):Any = {
-    val obj = manifest[T].runtimeClass.newInstance().asInstanceOf[T]
-    obj match {
-      case _ => obj
-    }
-  }
-
   def fromBytes(input:ByteStream): Any = {
-    input.co match {
+    input.caseObject match {
       case DeserializeBlockHeader => dBlockHeader(input)
       case DeserializeBox => dBox(input)
       case DeserializeTransaction => dTransaction(input)
@@ -98,13 +80,59 @@ class Serializer extends SimpleTypes {
     value
   }
 
+  private def sBigInt(int:BigInt):Array[Byte] = {
+    val output = int.toByteArray
+    Ints.toByteArray(output.length) ++ output
+  }
+
+  private def dBigInt(stream: ByteStream):BigInt = {
+    val out = BigInt(stream.getAll)
+    assert(stream.empty)
+    out
+  }
+
+  private def sRatio(ratio: Ratio):Array[Byte] = {
+    val out1 = sBigInt(ratio.numer)
+    val out2 = sBigInt(ratio.denom)
+    val output = Bytes.concat(out1,out2)
+    Ints.toByteArray(output.length) ++ output
+  }
+
+  private def dRatio(stream: ByteStream):Ratio = {
+    val out1len = stream.getInt
+    val out1Bytes = stream.get(out1len)
+    val out1 = dBigInt(new ByteStream(out1Bytes,Deserialize))
+    val out2len = stream.getInt
+    val out2Bytes = stream.get(out2len)
+    val out2 = dBigInt(new ByteStream(out2Bytes,Deserialize))
+    val out = new Ratio(
+      out1,
+      out2
+    )
+    assert(stream.empty)
+    out
+  }
+
+
+  private def sString(string:String):Array[Byte] = {
+    val output = string.getBytes
+    Ints.toByteArray(output.length) ++ output
+  }
+
+  private def dString(stream: ByteStream):String = {
+    val out = new String(stream.getAll)
+    assert(stream.empty)
+    out
+  }
+
   private def sBox(box: Box):Array[Byte] = {
-    Bytes.concat(
+    val output = Bytes.concat(
       box.dataHash.data,
       box.sid.data,
       box.signature,
       box.publicKey
     )
+    output
   }
 
   private def dBox(stream:ByteStream):Box = {
@@ -160,25 +188,21 @@ class Serializer extends SimpleTypes {
       stream.get(hash_length),
       ByteArrayWrapper(stream.get(pkw_length)),
       BigInt(stream.get(stream.getInt)),
-      dBox(ByteStream(stream.get(box_length),DeserializeBox))
+      dBox(new ByteStream(stream.get(box_length),DeserializeBox))
     )
     assert(stream.empty)
     out
   }
 
   private def sBlockHeader(bh:BlockHeader):Array[Byte] = {
-    val certBytes = getBytes(bh._4)
-    val kesSigBytes = getBytes(bh._7)
     Bytes.concat(
       bh._1.data,
       getBytes(bh._2),
       getBytes(bh._3),
-      Ints.toByteArray(certBytes.length),
-      certBytes,
+      getBytes(bh._4),
       bh._5,
       bh._6,
-      Ints.toByteArray(kesSigBytes.length),
-      kesSigBytes,
+      getBytes(bh._7),
       bh._8,
       getBytes(bh._9),
       getBytes(bh._10)
@@ -186,46 +210,66 @@ class Serializer extends SimpleTypes {
   }
 
   private def dBlockHeader(stream:ByteStream):BlockHeader = {
+    val out1 = ByteArrayWrapper(stream.get(hash_length))
+    val out2 = dBox(new ByteStream(stream.get(box_length),DeserializeBox))
+    val out3 = stream.getInt
+    val out4len = stream.getInt
+    val out4Bytes = stream.get(out4len)
+    val out4 = dCert(new ByteStream(out4Bytes,DeserializeBlockHeader))
+    val out5 = stream.get(rho_length)
+    val out6 = stream.get(pi_length)
+    val out7len = stream.getInt
+    val out7Bytes = stream.get(out7len)
+    val out7 = dKesSignature(new ByteStream(out7Bytes,DeserializeBlockHeader))
+    val out8 = stream.get(pk_length)
+    val out9 = stream.getInt
+    val out10 = stream.getInt
     val out = (
-      ByteArrayWrapper(stream.get(hash_length)),
-      dBox(ByteStream(stream.get(box_length),DeserializeBox)),
-      stream.getInt,
-      dCert(ByteStream(stream.get(stream.getInt),DeserializeBlockHeader)),
-      stream.get(rho_length),
-      stream.get(pi_length),
-      dKesSignature(ByteStream(stream.get(stream.getInt),DeserializeBlockHeader)),
-      stream.get(pk_length),
-      stream.getInt,
-      stream.getInt
+        out1,
+        out2,
+        out3,
+        out4,
+        out5,
+        out6,
+        out7,
+        out8,
+        out9,
+        out10
     )
     assert(stream.empty)
     out
   }
 
   private def sCert(cert: Cert):Array[Byte] = {
-    val len5 = Ints.toByteArray(getBytes(cert._5).length)
-    val len6 = Ints.toByteArray(getBytes(cert._6).length)
     val output = Bytes.concat(
       getBytes(cert._1),
       getBytes(cert._2),
       getBytes(cert._3),
       getBytes(cert._4),
-      len5,
       getBytes(cert._5),
-      len6,
       getBytes(cert._6)
     )
     Ints.toByteArray(output.length) ++ output
   }
 
   private def dCert(stream:ByteStream):Cert = {
+    val out1 = stream.get(pk_length)
+    val out2 = stream.get(rho_length)
+    val out3 = stream.get(pi_length)
+    val out4 = stream.get(pk_length)
+    val lenRatio = stream.getInt
+    val ratioBytes = stream.get(lenRatio)
+    val out5 = dRatio(new ByteStream(ratioBytes,DeserializeBlockHeader))
+    val lenString = stream.getInt
+    val stringBytes = stream.get(lenString)
+    val out6 = dString(new ByteStream(stringBytes,DeserializeBlockHeader))
     val out = (
-      stream.get(pk_length),
-      stream.get(rho_length),
-      stream.get(pi_length),
-      stream.get(pk_length),
-      dRatio(ByteStream(stream.get(stream.getInt),DeserializeBlockHeader)),
-      new String(stream.get(stream.getInt))
+      out1,
+      out2,
+      out3,
+      out4,
+      out5,
+      out6
     )
     assert(stream.empty)
     out
@@ -244,10 +288,16 @@ class Serializer extends SimpleTypes {
   }
 
   private def dKesSignature(stream: ByteStream): KesSignature = {
+    val out1len = stream.getInt
+    val out1 = stream.get(out1len)
+    val out2len = stream.getInt
+    val out2 = stream.get(out2len)
+    val out3len = stream.getInt
+    val out3 = stream.get(out3len)
     val out = (
-      stream.get(stream.getInt),
-      stream.get(stream.getInt),
-      stream.get(stream.getInt)
+      out1,
+      out2,
+      out3
     )
     assert(stream.empty)
     out
@@ -255,26 +305,6 @@ class Serializer extends SimpleTypes {
 
   private def sState(state: State):Array[Byte] = {
     Bytes.concat(state.toSeq.map(getAnyBytes):_*)
-  }
-
-  private def sRatio(ratio: Ratio):Array[Byte] = {
-    val data1 = ratio.numer.toByteArray
-    val data2 = ratio.denom.toByteArray
-    Bytes.concat(
-      getBytes(data1.length),
-      data1,
-      getBytes(data2.length),
-      data2
-    )
-  }
-
-  private def dRatio(stream: ByteStream):Ratio = {
-    val out = new Ratio(
-      BigInt(stream.get(stream.getInt)),
-      BigInt(stream.get(stream.getInt))
-    )
-    assert(stream.empty)
-    out
   }
 
   private def sTransactionSet(sequence:TransactionSet):Array[Byte] = {
@@ -287,7 +317,7 @@ class Serializer extends SimpleTypes {
     var out:TransactionSet = Seq()
     var i = 0
     while (i < numTx) {
-      out = out ++ Seq(dTransaction(ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
+      out = out ++ Seq(dTransaction(new ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
       i += 1
     }
     assert(out.length == numTx)
@@ -305,7 +335,7 @@ class Serializer extends SimpleTypes {
     var out:GenesisSet = Seq()
     var i = 0
     while (i < numTx) {
-      out = out ++ Seq(dGen(ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
+      out = out ++ Seq(dGen(new ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
       i += 1
     }
     assert(out.length == numTx)
@@ -328,4 +358,5 @@ object Serializer {
   case object DeserializeBlockHeader
   case object DeserializeTransaction
   case object DeserializeBox
+  case object Deserialize
 }

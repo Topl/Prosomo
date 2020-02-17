@@ -831,7 +831,7 @@ class Coordinator extends Actor
       }
     }
     val ledger:Box = signBox(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
-    val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"")
+    val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:KesSignature = kes.sign(sk_kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     new Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries)

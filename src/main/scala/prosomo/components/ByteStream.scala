@@ -2,10 +2,16 @@ package prosomo.components
 
 import com.google.common.primitives.{Ints, Longs}
 
-case class ByteStream(var data:Array[Byte],co:Any) {
+class ByteStream(var data:Array[Byte],co:Any) {
   def get(n:Int):Array[Byte] = {
     val out = data.take(n)
     data = data.drop(n)
+    out
+  }
+
+  def getAll:Array[Byte] = {
+    val out = data
+    data = Array()
     out
   }
 
@@ -18,4 +24,8 @@ case class ByteStream(var data:Array[Byte],co:Any) {
   }
 
   def empty:Boolean = data.isEmpty
+
+  def length:Int = data.length
+
+  def caseObject:Any = co
 }

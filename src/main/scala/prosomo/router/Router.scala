@@ -249,7 +249,6 @@ class Router(seed:Array[Byte]) extends Actor
       holders = list
       for (holder<-holders) {
         if (!holdersPosition.keySet.contains(holder)) {
-          println("router adding holder")
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
         }
       }
