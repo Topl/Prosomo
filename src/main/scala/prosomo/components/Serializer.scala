@@ -52,6 +52,8 @@ class Serializer extends SimpleTypes {
       case DeserializeBlockHeader => dBlockHeader(input)
       case DeserializeBox => dBox(input)
       case DeserializeTransaction => dTransaction(input)
+      case DeserializeGenesisSet => dGenesisSet(input)
+      case DeserializeTransactionSet => dTransactionSet(input)
     }
   }
 
@@ -113,7 +115,6 @@ class Serializer extends SimpleTypes {
     out
   }
 
-
   private def sString(string:String):Array[Byte] = {
     val output = string.getBytes
     Ints.toByteArray(output.length) ++ output
@@ -150,8 +151,7 @@ class Serializer extends SimpleTypes {
     val output = Bytes.concat(
       t.sender.data,
       t.receiver.data,
-      Ints.toByteArray(t.delta.toByteArray.length),
-      t.delta.toByteArray,
+      sBigInt(t.delta),
       t.sid.data,
       Ints.toByteArray(t.nonce),
       t.signature
@@ -160,13 +160,21 @@ class Serializer extends SimpleTypes {
   }
 
   private def dTransaction(stream: ByteStream):Transaction = {
+    val out1 = ByteArrayWrapper(stream.get(pkw_length))
+    val out2 = ByteArrayWrapper(stream.get(pkw_length))
+    val out3len = stream.getInt
+    val out3Bytes = stream.get(out3len)
+    val out3 = dBigInt(new ByteStream(out3Bytes,stream.caseObject))
+    val out4 = ByteArrayWrapper(stream.get(sid_length))
+    val out5 = stream.getInt
+    val out6 = stream.get(sig_length)
     val out = new Transaction(
-      ByteArrayWrapper(stream.get(pkw_length)),
-      ByteArrayWrapper(stream.get(pkw_length)),
-      BigInt(stream.get(stream.getInt)),
-      ByteArrayWrapper(stream.get(sid_length)),
-      stream.getInt,
-      stream.get(sig_length)
+      out1,
+      out2,
+      out3,
+      out4,
+      out5,
+      out6
     )
     assert(stream.empty)
     out
@@ -176,19 +184,24 @@ class Serializer extends SimpleTypes {
     val output = Bytes.concat(
       gen._1,
       gen._2.data,
-      Ints.toByteArray(gen._3.toByteArray.length),
-      gen._3.toByteArray,
+      sBigInt(gen._3),
       sBox(gen._4)
     )
     Ints.toByteArray(output.length) ++ output
   }
 
   private def dGen(stream: ByteStream):(Array[Byte], ByteArrayWrapper, BigInt,Box) = {
+    val out1 = stream.get(hash_length)
+    val out2 = ByteArrayWrapper(stream.get(pkw_length))
+    val out3len = stream.getInt
+    val out3Bytes = stream.get(out3len)
+    val out3 = dBigInt(new ByteStream(out3Bytes,stream.caseObject))
+    val out4 = dBox(new ByteStream(stream.get(box_length),stream.caseObject))
     val out = (
-      stream.get(hash_length),
-      ByteArrayWrapper(stream.get(pkw_length)),
-      BigInt(stream.get(stream.getInt)),
-      dBox(new ByteStream(stream.get(box_length),DeserializeBox))
+      out1,
+      out2,
+      out3,
+      out4
     )
     assert(stream.empty)
     out
@@ -317,7 +330,9 @@ class Serializer extends SimpleTypes {
     var out:TransactionSet = Seq()
     var i = 0
     while (i < numTx) {
-      out = out ++ Seq(dTransaction(new ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
+      val outLen = stream.getInt
+      val outBytes = stream.get(outLen)
+      out = out ++ Seq(dTransaction(new ByteStream(outBytes,stream.caseObject)))
       i += 1
     }
     assert(out.length == numTx)
@@ -326,8 +341,8 @@ class Serializer extends SimpleTypes {
   }
 
   private def sGenesisSet(sequence: GenesisSet): Array[Byte] = {
-    val bodyBytes = Bytes.concat(sequence.map(getBytes):_*)
-    Ints.toByteArray(sequence.length) ++ bodyBytes
+    val output = Bytes.concat(sequence.map(getBytes):_*)
+    Ints.toByteArray(sequence.length) ++ output
   }
 
   private def dGenesisSet(stream:ByteStream): GenesisSet = {
@@ -335,7 +350,9 @@ class Serializer extends SimpleTypes {
     var out:GenesisSet = Seq()
     var i = 0
     while (i < numTx) {
-      out = out ++ Seq(dGen(new ByteStream(stream.get(stream.getInt),DeserializeTransaction)))
+      val outLen = stream.getInt
+      val outBytes = stream.get(outLen)
+      out = out ++ Seq(dGen(new ByteStream(outBytes,stream.caseObject)))
       i += 1
     }
     assert(out.length == numTx)
@@ -358,5 +375,7 @@ object Serializer {
   case object DeserializeBlockHeader
   case object DeserializeTransaction
   case object DeserializeBox
+  case object DeserializeGenesisSet
+  case object DeserializeTransactionSet
   case object Deserialize
 }

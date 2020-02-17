@@ -577,7 +577,6 @@ trait Methods extends Types with TransactionFunctions {
         case _ => {println("error: tx set match in block verify");false}
       }
     }
-
     headerVer && b.id == hash(header,serializer) && ledgerVer
   }
 

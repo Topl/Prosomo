@@ -4,6 +4,7 @@ import com.google.common.primitives.{Ints, Longs}
 
 class ByteStream(var data:Array[Byte],co:Any) {
   def get(n:Int):Array[Byte] = {
+    assert(n<=data.length)
     val out = data.take(n)
     data = data.drop(n)
     out
