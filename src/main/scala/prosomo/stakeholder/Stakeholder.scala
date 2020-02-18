@@ -30,7 +30,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
   var localChain:Chain = _
   var blocks:BlockData = new BlockData(storageDir)
-  var chainHistory:SlotReorgHistory = new SlotReorgHistory
+  var chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -43,7 +43,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   val kes = new Kes
   val sig = new Sig
 
-  val history:History = new History
+  val history:History = new History(storageDir)
   //val mempool:Mempool = new Mempool
   var rng:Random = new Random
   var routerRef:ActorRef = _
@@ -138,7 +138,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         blocks.add(block,serializer)
         assert(localChain.getLastActiveSlot(localSlot)._2 == b._1)
         localChain.update((localSlot, hb))
-        chainHistory.update((localSlot,hb))
+        chainHistory.update((localSlot,hb),serializer)
         send(self,gossipers, SendBlock(block,signBox(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
         blocksForged += 1
         updateLocalState(localState, Chain(localChain.get(localSlot))) match {
@@ -148,7 +148,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
             println("error: invalid ledger in forged block")
           }
         }
-        history.add(hb,localState,eta)
+        history.add(hb,localState,eta,serializer)
         updateWallet
         trimMemPool
         validateChainIds(localChain)
@@ -201,7 +201,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       getBlockHeader(id) match {
         case b:BlockHeader => {
           val bni = b._9
-          history.get(id._2) match {
+          history.get(id._2,serializer) match {
             case value:(State,Eta) => {
               wallet.update(value._1)
             }
@@ -216,7 +216,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
             case b:BlockHeader => {
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
-                history.get(id._2) match {
+                history.get(id._2,serializer) match {
                   case value:(State,Eta) => {
                     wallet.update(value._1)
                   }
@@ -318,7 +318,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
         val id = tine.get(i)
         if (id._1 > -1) {
           assert(id._1 == i)
-          chainHistory.update(id)
+          chainHistory.update(id,serializer)
           assert(
             getParentId(id) match {
               case pid:SlotId => {
@@ -335,7 +335,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
             }
           }
         } else {
-          chainHistory.update((-1,ByteArrayWrapper(Array())))
+          chainHistory.update((-1,ByteArrayWrapper(Array())),serializer)
         }
       }
       candidateTines = candidateTines.dropRight(1)
@@ -349,7 +349,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       candidateTines = newCandidateTines
       updateWallet
       trimMemPool
-      history.get(localChain.getLastActiveSlot(localSlot)._2) match {
+      history.get(localChain.getLastActiveSlot(localSlot)._2,serializer) match {
         case reorgState:(State,Eta) => {
           localState = reorgState._1
           eta = reorgState._2
@@ -497,7 +497,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
     stakingState = {
       if (ep > 1) {
         val eps:Slot = (ep-1)*epochLength
-        history.get(localChain.getLastActiveSlot(eps)._2) match {
+        history.get(localChain.getLastActiveSlot(eps)._2,serializer) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -510,7 +510,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
           }
         }
       } else {
-        history.get(localChain.get(0)._2) match {
+        history.get(localChain.get(0)._2,serializer) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -842,7 +842,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       println("Holder "+holderIndex.toString+" starting...")
       tMax = value.tMax
       localChain = Chain((0,genBlockHash))
-      chainHistory.update((0,genBlockHash))
+      chainHistory.update((0,genBlockHash),serializer)
       println(Base58.encode(genBlockHash.data))
       val genesisBlock = blocks.get(genBlockHash,serializer)
       assert(genBlockHash == hash(genesisBlock.prosomoHeader,serializer))
@@ -857,7 +857,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
       println("local state balance:"   +   localState(keys.pkw)._1.toString)
       assert(localState(keys.pkw)._1 > 0)
       eta = eta(localChain, 0, Array())
-      history.add(genBlockHash,localState,eta)
+      history.add(genBlockHash,localState,eta,serializer)
       updateWallet
       sender() ! "done"
     }

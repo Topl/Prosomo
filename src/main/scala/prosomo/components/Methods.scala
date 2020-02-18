@@ -682,7 +682,7 @@ trait Methods extends Types with TransactionFunctions {
     var eta_Ep:Eta = Array()
     var ls:State = Map()
 
-    history.get(localChain.getLastActiveSlot(prefix)._2) match {
+    history.get(localChain.getLastActiveSlot(prefix)._2,serializer) match {
       case value:(State,Eta) => {
         ls = value._1
         eta_Ep = value._2
@@ -692,7 +692,7 @@ trait Methods extends Types with TransactionFunctions {
 
     var stakingState: State = {
       if (ep0 > 1) {
-        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)._2) match {
+        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)._2,serializer) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -703,7 +703,7 @@ trait Methods extends Types with TransactionFunctions {
           }
         }
       } else {
-        history.get(localChain.get(0)._2) match {
+        history.get(localChain.get(0)._2,serializer) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -759,7 +759,7 @@ trait Methods extends Types with TransactionFunctions {
         }
         case _ =>
       }
-      if (isValid) history.add(id._2,ls,eta_Ep)
+      if (isValid) history.add(id._2,ls,eta_Ep,serializer)
     }
 
     def compareBlocks(parent:BlockHeader, block:BlockHeader) = {
@@ -772,7 +772,7 @@ trait Methods extends Types with TransactionFunctions {
             eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
             stakingState = {
               val eps = (ep - 1) * epochLength
-              history.get(localChain.getLastActiveSlot(eps)._2) match {
+              history.get(localChain.getLastActiveSlot(eps)._2,serializer) match {
                 case value:(State,Eta) => {
                   value._1
                 }

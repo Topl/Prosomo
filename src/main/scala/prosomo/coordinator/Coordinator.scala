@@ -37,7 +37,7 @@ class Coordinator extends Actor
   //vars for chain, blocks, state, history, and locks
   var localChain:Chain = _
   var blocks:BlockData = new BlockData(storageDir)
-  var chainHistory:SlotReorgHistory = new SlotReorgHistory
+  var chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -50,7 +50,7 @@ class Coordinator extends Actor
   val kes = new Kes
   val sig = new Sig
 
-  val history:History = new History
+  val history:History = new History(storageDir)
   //val mempool:Mempool = new Mempool
   var rng:Random = new Random
   var routerRef:ActorRef = _
@@ -777,7 +777,7 @@ class Coordinator extends Actor
                   ).asJson
                 }
               }.asJson,
-              "history" -> chainHistory.get(i).map{
+              "history" -> chainHistory.get(i,serializer).map{
                 case value:BlockId => Map(
                   "id" -> Base58.encode(value.data).asJson
                 ).asJson

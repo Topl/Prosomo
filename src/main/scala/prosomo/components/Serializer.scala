@@ -45,6 +45,8 @@ class Serializer extends SimpleTypes {
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
   def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt,Box)):Array[Byte] = sGen(gen)
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
+  def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
+  def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
   def fromBytes(input:ByteStream): Any = {
@@ -54,6 +56,8 @@ class Serializer extends SimpleTypes {
       case DeserializeTransaction => dTransaction(input)
       case DeserializeGenesisSet => dGenesisSet(input)
       case DeserializeTransactionSet => dTransactionSet(input)
+      case DeserializeIdList => dIdList(input)
+      case DeserializeState => dState(input)
     }
   }
 
@@ -70,16 +74,47 @@ class Serializer extends SimpleTypes {
     stream.toByteArray
   }
 
-  /**
-    * Deserialize a byte array that was serialized with serialize
-    * @param bytes byte array processed with serialize
-    * @return original object
-    */
-  private def deserialize(bytes: Array[Byte]): Any = {
-    val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
-    val value = ois.readObject
-    ois.close()
-    value
+  private def sBoolean(bool:Boolean):Array[Byte] = {
+    if (bool) {
+      Ints.toByteArray(1)
+    } else {
+      Ints.toByteArray(0)
+    }
+  }
+
+  private def dBoolean(stream:ByteStream): Boolean = {
+    val boolInt = stream.getInt
+    assert(stream.empty && boolInt == 0 || boolInt == 1)
+    boolInt match {
+      case 0 => false
+      case 1 => true
+    }
+  }
+
+  private def sIdList(input:List[BlockId]):Array[Byte] ={
+    def mapId(input:ByteArrayWrapper):Array[Byte] = if (input.data.isEmpty) {
+      Array.fill[Byte](hash_length)(0.toByte)
+    } else {input.data}
+    Ints.toByteArray(input.length) ++ Bytes.concat(input.map(mapId):_*)
+  }
+
+  private def dIdList(stream:ByteStream):List[BlockId] = {
+    val numEntries = stream.getInt
+    var out:List[BlockId] = List()
+    var i = 0
+    val nullBytes = ByteArrayWrapper(Array.fill[Byte](hash_length)(0.toByte))
+    while (i < numEntries) {
+      val nextBytes = ByteArrayWrapper(stream.get(hash_length))
+      if (nextBytes == nullBytes) {
+        out = out ++ List(ByteArrayWrapper(Array()))
+      } else {
+        out = out ++ List(nextBytes)
+      }
+      i += 1
+    }
+    assert(out.length == numEntries)
+    assert (stream.empty)
+    out
   }
 
   private def sBigInt(int:BigInt):Array[Byte] = {
@@ -317,7 +352,28 @@ class Serializer extends SimpleTypes {
   }
 
   private def sState(state: State):Array[Byte] = {
-    Bytes.concat(state.toSeq.map(getAnyBytes):_*)
+    def mapToBytes(in:(PublicKeyW,(BigInt,Boolean,Int))):Array[Byte] = {
+      in._1.data ++ getBytes(in._2._1) ++ getBytes(in._2._2) ++ getBytes(in._2._3)
+    }
+    Ints.toByteArray(state.keySet.size) ++ Bytes.concat(state.toSeq.map(mapToBytes):_*)
+  }
+
+  private def dState(stream:ByteStream):State = {
+    val numEntry = stream.getInt
+    var out:State = Map()
+    var i = 0
+    while (i < numEntry) {
+      val pkw = ByteArrayWrapper(stream.get(pkw_length))
+      val biLen = stream.getInt
+      val bi = dBigInt(new ByteStream(stream.get(biLen),stream.caseObject))
+      val bool = dBoolean(new ByteStream(stream.get(4),stream.caseObject))
+      val int = stream.getInt
+      out += (pkw -> (bi,bool,int))
+      i += 1
+    }
+    assert(out.keySet.size == numEntry)
+    assert (stream.empty)
+    out
   }
 
   private def sTransactionSet(sequence:TransactionSet):Array[Byte] = {
@@ -377,5 +433,8 @@ object Serializer {
   case object DeserializeBox
   case object DeserializeGenesisSet
   case object DeserializeTransactionSet
+  case object DeserializeIdList
+  case object DeserializeState
+  case object DeserializeBoolean
   case object Deserialize
 }

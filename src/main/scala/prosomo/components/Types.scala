@@ -16,6 +16,10 @@ trait Types extends SimpleTypes {
     hash(input.path.toString,serializer)
   }
 
+  def hash(input:Slot,serializer: Serializer): Hash = {
+    hash(input.toString+"SLOT_HASH",serializer)
+  }
+
   def hash(input:(ActorRef,PublicKeys),serializer: Serializer): Hash = {
     ByteArrayWrapper(
       FastCryptographicHash(

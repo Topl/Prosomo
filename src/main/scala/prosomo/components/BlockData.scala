@@ -117,10 +117,7 @@ class BlockData(dir:String) extends SimpleTypes {
   }
 
   def checkHeaderStore(id:BlockId):Boolean = {
-    blockHeaderStore.get(id) match {
-      case Some(bytes: ByteArrayWrapper) => true
-      case None => false
-    }
+    blockHeaderStore.versionIDExists(id)
   }
 
   def slotBlocks(slot:Slot,serializer: Serializer):Map[ByteArrayWrapper,BlockHeader] = {
