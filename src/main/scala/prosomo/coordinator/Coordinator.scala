@@ -737,7 +737,7 @@ class Coordinator extends Actor
           "data" -> (0 to tn).toArray.map{
             case i:Int => Map(
               "slot" -> i.asJson,
-              "blocks" -> blocks.slotBlocks(i).map{
+              "blocks" -> blocks.slotBlocks(i,serializer).map{
                 case value:(ByteArrayWrapper,BlockHeader) => {
                   val (pid:Hash,ledger:Box,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
                   val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
@@ -755,7 +755,7 @@ class Coordinator extends Actor
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {blocks.getBody(value._1) match {case txs:Seq[Any]=>txs}}.toArray.map{
+                    "ledger" -> {blocks.getBody(value._1,serializer) match {case txs:Seq[Any]=>txs}}.toArray.map{
                       case entry:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
                         val delta = entry._3
                         val pk_g:PublicKeyW = entry._2

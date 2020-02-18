@@ -200,7 +200,7 @@ trait Methods extends Types with TransactionFunctions {
   def getBlockHeader(bid:SlotId): Any = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
       if (blocks.known(bid)) {
-        blocks.get(bid).prosomoHeader
+        blocks.get(bid,serializer).prosomoHeader
       } else {
         0
       }
@@ -217,7 +217,7 @@ trait Methods extends Types with TransactionFunctions {
   def getParentBlockHeader(b:BlockHeader): Any = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
       if (blocks.known(b._1)) {
-        blocks.get(b._1).prosomoHeader
+        blocks.get(b._1,serializer).prosomoHeader
       } else {
         0
       }
@@ -855,13 +855,14 @@ trait Methods extends Types with TransactionFunctions {
     for (id <- c.ordered) {
       if (isValid) getBlockHeader(id) match {
         case b:BlockHeader => {
-          val (_,ledger:Box,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
+          val (_,_,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
           val (pk_vrf,_,_,pk_sig,_,_) = cert
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
           var validForger = true
           if (slot == 0) {
-            if (blocks.getGenSet(id).isEmpty) isValid = false
-            if (isValid) for (entry <- blocks.getGenSet(id)) {
+            val genesisSet:GenesisSet = blocks.getGenSet(id,serializer)
+            if (genesisSet.isEmpty) isValid = false
+            if (isValid) for (entry <- genesisSet) {
               if (ByteArrayWrapper(entry._1) == genesisBytes && verifyBox(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
                 val delta = entry._3
                 val netStake:BigInt = 0
@@ -887,7 +888,7 @@ trait Methods extends Types with TransactionFunctions {
             }
             //apply transactions
             if (validForger) {
-              for (trans <- blocks.getTxs(id)) {
+              for (trans <- blocks.getTxs(id,serializer)) {
                 if (verifyTransaction(trans)) {
                   applyTransaction(trans, nls, pk_f, fee_r) match {
                     case value: State => {
@@ -940,7 +941,7 @@ trait Methods extends Types with TransactionFunctions {
     */
   def collectLedger(c:Chain): Unit = {
     for (id <- c.ordered) {
-      for (trans <- blocks.getTxs(id)) {
+      for (trans <- blocks.getTxs(id,serializer)) {
         if (!memPool.keySet.contains(trans.sid)) {
           if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
         }
