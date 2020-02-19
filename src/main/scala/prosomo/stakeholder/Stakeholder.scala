@@ -6,8 +6,8 @@ import akka.actor.{Actor, ActorPath, ActorRef, Props, Timers}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.primitives.{Kes, Keys, SharedData, Sig, Vrf, Ratio, Parameters}
-import prosomo.components.{Block, BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction}
+import prosomo.primitives.{Kes, Keys, Parameters, Ratio, SharedData, Sig, Vrf}
+import prosomo.components.{Block, BlockData, Box, Chain, ChainStorage, Methods, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
 import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
@@ -55,6 +55,7 @@ class Stakeholder(seed:Array[Byte]) extends Actor
   var chainUpdateLock = false
   val keys:Keys = Keys(seed,sig,vrf,kes,0)
   val wallet:Wallet = new Wallet(keys.pkw,fee_r)
+  val chainStorage = new ChainStorage(storageDir)
 
   //list of all or some of the stakeholders, including self, that the stakeholder is aware of
   var holders: List[ActorRef] = List()

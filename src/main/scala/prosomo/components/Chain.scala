@@ -19,6 +19,8 @@ class Chain extends SimpleTypes {
     (-1,ByteArrayWrapper(Array()))
   }
 
+  def getData = data.toSeq
+
   def getLastActiveSlot(slot:Slot):SlotId = get(lastActiveSlot(slot))
 
   def lastActiveSlot(s:Slot): Slot = {
@@ -57,6 +59,10 @@ class Chain extends SimpleTypes {
     for (slot <- c.slots) {
       update(c.get(slot))
     }
+  }
+
+  private def setData(ids:Map[Slot,BlockId]):Unit = {
+    data = ids
   }
 
   def isEmpty:Boolean = {
@@ -99,6 +105,12 @@ object Chain extends SimpleTypes {
   def apply(ids:Array[SlotId]):Chain = {
     val out = new Chain
     for (id<-ids) out.update(id)
+    out
+  }
+
+  def apply(ids:Map[Slot,BlockId]):Chain = {
+    val out = new Chain
+    out.setData(ids)
     out
   }
 

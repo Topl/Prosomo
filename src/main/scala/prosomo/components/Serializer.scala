@@ -47,6 +47,7 @@ class Serializer extends SimpleTypes {
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
+  def getBytes(chain:Chain):Array[Byte] = sChain(chain)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
   def fromBytes(input:ByteStream): Any = {
@@ -58,6 +59,7 @@ class Serializer extends SimpleTypes {
       case DeserializeTransactionSet => dTransactionSet(input)
       case DeserializeIdList => dIdList(input)
       case DeserializeState => dState(input)
+      case DeserializeChain => dChain(input)
     }
   }
 
@@ -416,6 +418,25 @@ class Serializer extends SimpleTypes {
     out
   }
 
+  private def sChain(chain:Chain):Array[Byte] = {
+    Ints.toByteArray(chain.length) ++ Bytes.concat(chain.getData.map(getBytes):_*)
+  }
+
+  private def dChain(stream: ByteStream):Chain = {
+    val numEntries = stream.getInt
+    var out:Map[Slot,BlockId] = Map()
+    var i = 0
+    while (i < numEntries) {
+      val slot = stream.getInt
+      val id = ByteArrayWrapper(stream.get(hash_length))
+      out += (slot->id)
+      i += 1
+    }
+    assert(out.keySet.size == numEntries)
+    assert(stream.empty)
+    Chain(out)
+  }
+
   private def sBlock(block:Block):Array[Byte] = {
     val bodyBytes = block.body match {
       case txs:TransactionSet => getBytes(txs)
@@ -436,5 +457,6 @@ object Serializer {
   case object DeserializeIdList
   case object DeserializeState
   case object DeserializeBoolean
+  case object DeserializeChain
   case object Deserialize
 }
