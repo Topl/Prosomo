@@ -8,7 +8,7 @@ class BlockData(dir:String) extends SimpleTypes {
   import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
 
-  val blockBodyStore:LSMStore = {
+  private var blockBodyStore:LSMStore = {
     val iFile = new File(s"$dir/blocks/body")
     iFile.mkdirs()
     val store = new LSMStore(iFile)
@@ -20,7 +20,7 @@ class BlockData(dir:String) extends SimpleTypes {
     store
   }
 
-  val blockHeaderStore:LSMStore = {
+  private var blockHeaderStore:LSMStore = {
     val iFile = new File(s"$dir/blocks/header")
     iFile.mkdirs()
     val store = new LSMStore(iFile)
@@ -139,6 +139,13 @@ class BlockData(dir:String) extends SimpleTypes {
       slotIds += (slot->slotIdSet)
       data -= id
     }
+  }
+
+  def copy(bd:BlockData):Unit = {
+    this.data = bd.data
+    this.slotIds = bd.slotIds
+    this.blockBodyStore = bd.blockBodyStore
+    this.blockHeaderStore = bd.blockHeaderStore
   }
 
 }

@@ -7,14 +7,15 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.StdIn
 import bifrost.BifrostApp
-import prosomo.primitives.Parameters
-import prosomo.coordinator.Coordinator
+import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.Parameters.inputSeed
+import prosomo.stakeholder.Coordinator
 
 
 class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
 
   val system = actorSystem
-  val coordinator = system.actorOf(Coordinator.props, "Coordinator")
+  val coordinator = system.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
   coordinator ! Run
@@ -33,7 +34,7 @@ class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(s
 class Prosomo {
 
   val system = ActorSystem("prosomo")
-  val coordinator = system.actorOf(Coordinator.props, "Coordinator")
+  val coordinator = system.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
   coordinator ! Run

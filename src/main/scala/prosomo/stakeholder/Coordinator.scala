@@ -1,21 +1,20 @@
-package prosomo.coordinator
+package prosomo.stakeholder
 
-import prosomo.router.Router
-import prosomo.stakeholder.Stakeholder
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{Actor, ActorRef, Props, Timers}
+import akka.actor.{ActorPath, ActorRef, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.Prosomo
 import prosomo.cases._
-import prosomo.primitives.{Kes, SharedData, Sig, SystemLoadMonitor, Vrf, Ratio, Parameters}
-import prosomo._
-import prosomo.components.{BlockData, Box, Chain, Methods, Serializer, SlotReorgHistory, Transaction, Block}
+import prosomo.components._
 import prosomo.history.History
+import prosomo.primitives._
+import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -28,84 +27,99 @@ import scala.util.{Random, Try}
   * sends messages to participants to execute a round
   */
 
-class Coordinator extends Actor
-  with Timers
-  with Methods {
+class Coordinator(inputSeed:Array[Byte])
+  extends ChainSelection
+    with Forging
+    with Ledger
+    with Messages
+    with Operations
+    with Receive
+    with Staking
+    with Transactions
+    with Update
+    with Utilities
+    with Validation
+{
   import Parameters._
+  val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
-  //vars for chain, blocks, state, history, and locks
-  var localChain:Chain = _
-  var blocks:BlockData = new BlockData(storageDir)
-  var chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
+  val localChain:Chain = new Chain
+  val blocks:BlockData = new BlockData(storageDir)
+  val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
+  val chainStorage = new ChainStorage(storageDir)
+  val vrf = new Vrf
+  val kes = new Kes
+  val sig = new Sig
+  val keys:Keys = Keys(seed,sig,vrf,kes,0)
+  val wallet:Wallet = new Wallet(keys.pkw,fee_r)
+  val history:History = new History(storageDir)
+  val rng:Random = new Random(BigInt(seed).toLong)
+  val holderId:ActorPath = self.path
+  val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
+  val phase:Double = rng.nextDouble
+
+  var chainUpdateLock = false
+  var routerRef:ActorRef = _
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
   var memPool:MemPool = Map()
   var holderIndex:Int = -1
   var diffuseSent = false
-
-  //verification and signing objects
-  val vrf = new Vrf
-  val kes = new Kes
-  val sig = new Sig
-
-  val history:History = new History(storageDir)
-  //val mempool:Mempool = new Mempool
-  var rng:Random = new Random
-  var routerRef:ActorRef = _
-
-  val coordId = s"${self.path}"
-  val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
-  var loadAverage = Array.fill(numAverageLoad){0.0}
-  var genBlock:Block = _
-  var roundDone = true
-
-
-  //empty list of stake holders
   var holders: List[ActorRef] = List()
-  //list of parties
-  var parties: List[List[ActorRef]] = List()
-  //holder keys for genesis block creation
-  var holderKeys:Map[ActorRef,PublicKeyW] = Map()
-  //slot
-  var t:Slot = 0
-  //initial system time
+  var gossipers: List[ActorRef] = List()
+  var gOff = 0
+  var numHello = 0
+  var inbox:Map[Sid,(ActorRef,PublicKeys)] = Map()
+  var blocksForged = 0
+  var globalSlot = 0
+  var tines:Map[Int,(Chain,Int,Int,Int,ActorRef)] = Map()
+  var tineCounter = 0
+  var candidateTines:Array[(Chain,Slot,Int)] = Array()
+  var genBlockHeader: BlockHeader = _
+  var genBlockHash: Hash = ByteArrayWrapper(Array())
+  var roundBlock: Any = 0
+  var tMax = 0
   var t0:Long = 0
-  //system time paused offset
-  var tp:Long = 0
-  //lock for stalling coordinator
+  var localSlot = 0
+  var currentEpoch = -1
+  var updating = false
   var actorStalled = false
-  //lock for pausing system
-  var actorPaused = false
-  //queue of commands to be processed in a given slot
-  var cmdQueue:Map[Slot,List[String]] = inputCommands
-  //set of keys so genesis block can be signed and verified by verifyBlock
-  val seed:Array[Byte] = FastCryptographicHash(inputSeed+"seed")
-  //initial nonce for genesis block
+  var coordinatorRef:ActorRef = _
+  var txCounter = 0
+  var setOfTxs:Map[Sid,Int] = Map()
+  var adversary:Boolean = false
+  var covert:Boolean = false
+  var forgeAll:Boolean = false
+
+  val coordId:String = s"${self.path}"
+  val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   val eta0:Eta = FastCryptographicHash(inputSeed+"eta0")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
-  var sk_kes = kes.generateKey(seed)
-  val pk_kes:PublicKey = kes.publicKey(sk_kes)
-
+  val sk_kes:MalkinKey = MalkinKey(kes,seed,0)
+  val pk_kes:PublicKey = sk_kes.getPublic(kes)
   val coordData:String = bytes2hex(pk_sig)+":"+bytes2hex(pk_vrf)+":"+bytes2hex(pk_kes)
   val coordKeys:PublicKeys = (pk_sig,pk_vrf,pk_kes)
-  //empty list of keys to be populated by stakeholders once they are instantiated
+
+  var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
+  var genBlock:Block = _
+  var roundDone = true
+  var parties: List[List[ActorRef]] = List()
+  var holderKeys:Map[ActorRef,PublicKeyW] = Map()
+  var t:Slot = 0
+  var tp:Long = 0
+  var actorPaused = false
+  var cmdQueue:Map[Slot,List[String]] = inputCommands
   var genKeys:Map[String,String] = Map()
   var fileWriter:Any = 0
   var graphWriter:Any = 0
   var gossipersMap:Map[ActorRef,List[ActorRef]] = Map()
   var transactionCounter:Int = 0
 
-
-  private case object timerKey
-
-  rng = new Random(BigInt(FastCryptographicHash(inputSeed+"coord")).toLong)
-
-  def receive: Receive = {
-
-      /**populates the holder list with stakeholder actor refs, the F_init functionality */
+  def populate: Receive ={
+    /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
@@ -126,17 +140,17 @@ class Coordinator extends Actor
       genKeys = collectKeys(holders,RequestKeys,genKeys)
       assert(!containsDuplicates(genKeys))
       println("Forge Genesis Block")
-      genBlock = forgeGenBlock
+      forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+        case out:(Block,Map[ActorRef,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}}
       println("Send GenBlock")
       sendAssertDone(holders,GenBlock(genBlock))
       println("Send Router Keys")
       sendAssertDone(routerRef,holderKeys)
     }
+  }
 
-      /**tells actors to print their inbox */
-    case Inbox => sendAssertDone(holders,Inbox)
-
-      /**sends start command to each stakeholder*/
+  def run:Receive = {
+    /**sends start command to each stakeholder*/
     case Run => {
       println("Diffuse Holder Info")
       sendAssertDone(holders,Diffuse)
@@ -153,8 +167,10 @@ class Coordinator extends Actor
       }
       if (!useFencing) timers.startPeriodicTimer(timerKey, ReadCommand, commandUpdateTime)
     }
+  }
 
-      /**returns offset time to stakeholder that issues GetTime to coordinator*/
+  def giveTime:Receive = {
+    /**returns offset time to stakeholder that issues GetTime to coordinator*/
     case GetTime => {
       if (!actorStalled) {
         val t1 = System.currentTimeMillis()-tp
@@ -163,8 +179,10 @@ class Coordinator extends Actor
         sender() ! GetTime(tp)
       }
     }
+  }
 
-      /**coordinator creates a file writer object that is passed to stakeholders if data is being written*/
+  def dataFile:Receive = {
+    /**coordinator creates a file writer object that is passed to stakeholders if data is being written*/
     case NewDataFile => {
       if(dataOutFlag) {
         val dataPath = Path(dataFileDir)
@@ -186,20 +204,9 @@ class Coordinator extends Actor
         }
       }
     }
+  }
 
-      /**passes fileWriter to actor who requests it with WriteFile*/
-    case WriteFile => {
-      sender() ! WriteFile(fileWriter)
-    }
-
-      /**closes the writer object to make sure data is written from buffer*/
-    case CloseDataFile => if(dataOutFlag) {
-      fileWriter match {
-        case fw:BufferedWriter => fw.close()
-        case _ => println("error: file writer close on non writer object")
-      }
-    }
-
+  def nextSlot:Receive = {
     case NextSlot => {
       if (!actorPaused && !actorStalled) {
         if (roundDone) {
@@ -209,31 +216,10 @@ class Coordinator extends Actor
         }
       }
     }
-
-    case EndStep => {
-      readCommand
-      roundDone = true
-    }
-
-      /**command interpretation from config and cmd script*/
-    case ReadCommand => {
-      readCommand
-    }
-
-    case unknown:Any => if (!actorStalled) {
-      print("received unknown message ")
-      if (sender() == routerRef) {
-        print("from router")
-      }
-      if (holders.contains(sender())) {
-        print("from holder "+holders.indexOf(sender()).toString)
-      }
-      println(": "+unknown.getClass.toString+" "+unknown.toString)
-    }
   }
 
   /**randomly picks two holders and creates a transaction between the two*/
-  def issueRandTx = {
+  def issueRandTx:Unit = {
     for (i <- 0 to txProbability.floor.toInt) {
       val holder1 = rng.shuffle(holders).head
       val r = rng.nextDouble
@@ -247,13 +233,13 @@ class Coordinator extends Actor
     }
   }
 
-  def issueTx(holder1:ActorRef,holder2:ActorRef,delta:BigInt) = {
+  def issueTx(holder1:ActorRef,holder2:ActorRef,delta:BigInt):Unit = {
     holder1 ! IssueTx((holderKeys(holder2),delta))
     transactionCounter += 1
   }
 
   /**command string interpreter*/
-  def command(sl:List[String]): Unit = {
+  def command(sl:List[String]):Unit = {
     for (s<-sl.reverse){
       s.trim match {
 
@@ -575,7 +561,7 @@ class Coordinator extends Actor
     }
   }
 
-  def readCommand = {
+  def readCommand:Unit = {
     if (!useFencing) {
       if (!actorStalled) {
         val t1 = System.currentTimeMillis()-tp
@@ -798,46 +784,35 @@ class Coordinator extends Actor
     }
   }
 
-  def forgeGenBlock: Block = {
-    val bn:Int = 0
-    val ps:Slot = -1
-    val slot:Slot = 0
-    val pi:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("NONCE"))
-    val rho:Rho = vrf.vrfProofToHash(pi)
-    val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
-    val y:Rho = vrf.vrfProofToHash(pi_y)
-    val h:Hash = ByteArrayWrapper(eta0)
-    val genesisEntries: GenesisSet = holders.map{
-      case ref:ActorRef => {
-        val initStake = {
-          val out = stakeDistribution match {
-            case "random" => {initStakeMax*rng.nextDouble}
-            case "exp" => {initStakeMax*math.exp(-stakeScale*holders.indexOf(ref).toDouble)}
-            case "flat" => {initStakeMax}
-          }
-          if (initStakeMax > initStakeMin && out > initStakeMin) {
-            out
-          } else {
-            if (initStakeMin > 1.0) {
-              initStakeMin
-            } else {
-              1.0
-            }
-          }
-        }
-        val pkw = ByteArrayWrapper(hex2bytes(genKeys(s"${ref.path}").split(";")(0))++hex2bytes(genKeys(s"${ref.path}").split(";")(1))++hex2bytes(genKeys(s"${ref.path}").split(";")(2)))
-        holderKeys += (ref-> pkw)
-        (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signBox(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
+  override def receive:Receive = giveTime orElse
+    run orElse
+    populate orElse
+    nextSlot orElse
+    dataFile orElse {
+    /**tells actors to print their inbox */
+    case Inbox => sendAssertDone(holders,Inbox)
+    /**passes fileWriter to actor who requests it with WriteFile*/
+    case WriteFile => {sender() ! WriteFile(fileWriter)}
+    /**closes the writer object to make sure data is written from buffer*/
+    case CloseDataFile => if(dataOutFlag) {fileWriter match {
+      case fw:BufferedWriter => fw.close()
+      case _ => println("error: file writer close on non writer object")}}
+    case EndStep => {readCommand;roundDone = true}
+    /**command interpretation from config and cmd script*/
+    case ReadCommand => {readCommand}
+
+    case unknown:Any => if (!actorStalled) {print("received unknown message ")
+      if (sender() == routerRef) {
+        print("from router")
       }
+      if (holders.contains(sender())) {
+        print("from holder "+holders.indexOf(sender()).toString)
+      }
+      println(": "+unknown.getClass.toString+" "+unknown.toString)
     }
-    val ledger:Box = signBox(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
-    val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
-    val sig:KesSignature = kes.sign(sk_kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
-    val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
-    new Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries)
   }
 }
 
 object Coordinator {
-  def props: Props = Props(new Coordinator)
+  def props(inputSeed:Array[Byte]): Props = Props(new Coordinator(inputSeed))
 }

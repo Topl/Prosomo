@@ -1,11 +1,11 @@
-package prosomo.router
+package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases._
-import prosomo.primitives.{Parameters, SharedData}
-import prosomo.components.{Box, Serializer, Transaction, Types}
+import prosomo.components.{Serializer, Types}
+import prosomo.primitives.{Parameters, SharedData, Distance}
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
@@ -89,7 +89,7 @@ class Router(seed:Array[Byte]) extends Actor
 
   def delay(sender:ActorRef,recip:ActorRef,data:Any):FiniteDuration = {
     if (!distanceMap.keySet.contains((sender,recip))) {
-      distanceMap += ((sender,recip)->(delay_ms_km*1.0e6*DistanceCalculator.distance(
+      distanceMap += ((sender,recip)->(delay_ms_km*1.0e6*Distance.calculate(
         holdersPosition(sender)._1,
         holdersPosition(sender)._2,
         holdersPosition(recip)._1,

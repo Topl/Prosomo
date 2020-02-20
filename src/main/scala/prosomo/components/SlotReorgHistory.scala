@@ -4,7 +4,6 @@ import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import prosomo.components.Serializer.DeserializeIdList
 
 class SlotReorgHistory(dir:String) extends Types {
   import prosomo.components.Serializer._
@@ -12,7 +11,7 @@ class SlotReorgHistory(dir:String) extends Types {
 
   private var data:Map[Slot,List[BlockId]] = Map()
 
-  val blockReorgStore:LSMStore = {
+  private var blockReorgStore:LSMStore = {
     val iFile = new File(s"$dir/history/reorg")
     iFile.mkdirs()
     val store = new LSMStore(iFile)
@@ -64,6 +63,11 @@ class SlotReorgHistory(dir:String) extends Types {
       }
       case _ => List(ByteArrayWrapper(Array()))
     }
+  }
+
+  def copy(srh:SlotReorgHistory):Unit = {
+    this.data = srh.data
+    this.blockReorgStore = srh.blockReorgStore
   }
 
 }

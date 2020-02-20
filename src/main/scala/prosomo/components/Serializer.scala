@@ -1,11 +1,10 @@
 package prosomo.components
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
 import prosomo.primitives.Ratio
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
-import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
 

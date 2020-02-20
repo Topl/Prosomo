@@ -55,7 +55,7 @@ class Chain extends SimpleTypes {
     ListMap(data.toSeq.sortBy(_._1):_*).toArray
   }
 
-  private def copy(c:Chain):Unit = {
+  def copy(c:Chain):Unit = {
     for (slot <- c.slots) {
       update(c.get(slot))
     }

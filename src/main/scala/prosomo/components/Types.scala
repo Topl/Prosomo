@@ -3,7 +3,7 @@ package prosomo.components
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import com.google.common.primitives.{Bytes, Ints, Longs}
+import com.google.common.primitives.{Bytes}
 
 trait Types extends SimpleTypes {
   /**
