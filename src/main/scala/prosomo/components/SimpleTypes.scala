@@ -20,7 +20,7 @@ trait SimpleTypes {
   val box_length = 2*hash_length + sig_length + pk_length
   val slot_length = int_length
   val bn_length = int_length
-
+  val sk_length = 32
 
   type Hash = ByteArrayWrapper
   type Eta = Array[Byte]

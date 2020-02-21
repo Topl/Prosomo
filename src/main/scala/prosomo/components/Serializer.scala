@@ -2,9 +2,10 @@ package prosomo.components
 
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
-import prosomo.primitives.Ratio
+import prosomo.primitives.{Empty, Leaf, MalkinKey, Node, Ratio, Tree}
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
+import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
 
@@ -47,6 +48,7 @@ class Serializer extends SimpleTypes {
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getBytes(chain:Chain):Array[Byte] = sChain(chain)
+  def getBytes(malkinKey:MalkinKey):Array[Byte] = sMalkinKey(malkinKey)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
   def fromBytes(input:ByteStream): Any = {
@@ -59,6 +61,7 @@ class Serializer extends SimpleTypes {
       case DeserializeIdList => dIdList(input)
       case DeserializeState => dState(input)
       case DeserializeChain => dChain(input)
+      case DeserializeMalkinKey => dMalkinKey(input)
     }
   }
 
@@ -436,6 +439,89 @@ class Serializer extends SimpleTypes {
     Chain(out)
   }
 
+  private def sMalkinKey(key: MalkinKey):Array[Byte] = {
+    Bytes.concat(
+      sTree(key.L),
+      sTree(key.Si),
+      Ints.toByteArray(key.sig.length),
+      key.sig,
+      key.pki,
+      key.rp
+    )
+  }
+
+  private def dMalkinKey(stream:ByteStream):MalkinKey = {
+    val out1len = stream.getInt
+    val out1Bytes = stream.get(out1len)
+    val out1 = dTree(new ByteStream(out1Bytes,stream.caseObject))
+    val out2len = stream.getInt
+    val out2Bytes = stream.get(out2len)
+    val out2 = dTree(new ByteStream(out2Bytes,stream.caseObject))
+    val out3len = stream.getInt
+    val out3 = stream.get(out3len)
+    val out4 = stream.get(pk_length)
+    val out5 = stream.get(hash_length)
+    assert(stream.empty)
+    MalkinKey(out1,out2,out3,out4,out5)
+  }
+
+  private def sTree(tree:Tree[Array[Byte]]):Array[Byte] = {
+    def treeToBytes(t:Tree[Array[Byte]]):Array[Byte] = {
+      t match {
+        case n:Node[Array[Byte]] => {
+          n.l match {
+            case Empty => {
+              n.r match {
+                case ll:Leaf[Array[Byte]] => {
+                  Ints.toByteArray(2) ++ n.v ++ Ints.toByteArray(0) ++ ll.v
+                }
+                case nn:Node[Array[Byte]] => {
+                  Ints.toByteArray(2) ++ n.v ++ treeToBytes(nn)
+                }
+              }
+            }
+            case ll:Leaf[Array[Byte]] => {
+              Ints.toByteArray(1) ++ n.v ++ Ints.toByteArray(0) ++ ll.v
+            }
+            case nn:Node[Array[Byte]] => {
+              Ints.toByteArray(1) ++ n.v ++ treeToBytes(nn)
+            }
+          }
+        }
+        case l:Leaf[Array[Byte]] => {
+          Ints.toByteArray(0) ++ l.v
+        }
+      }
+    }
+    val output = treeToBytes(tree)
+    Ints.toByteArray(output.length) ++ output
+  }
+
+  private def dTree(stream:ByteStream):Tree[Array[Byte]] = {
+    def buildTree:Tree[Array[Byte]] = {
+      stream.getInt match {
+        case 0 => {
+          //println("leaf")
+          val bytes:Array[Byte] = stream.get(sig_length)
+          Leaf(bytes)
+        }
+        case 1 => {
+          //println("left")
+          val bytes:Array[Byte] = stream.get(hash_length+sig_length)
+          Node(bytes,buildTree,Empty)
+        }
+        case 2 => {
+          //println("right")
+          val bytes:Array[Byte] = stream.get(hash_length+sig_length)
+          Node(bytes,Empty,buildTree)
+        }
+      }
+    }
+    val out = buildTree
+    assert(stream.empty)
+    out
+  }
+
   private def sBlock(block:Block):Array[Byte] = {
     val bodyBytes = block.body match {
       case txs:TransactionSet => getBytes(txs)
@@ -457,5 +543,6 @@ object Serializer {
   case object DeserializeState
   case object DeserializeBoolean
   case object DeserializeChain
+  case object DeserializeMalkinKey
   case object Deserialize
 }

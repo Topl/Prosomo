@@ -1,11 +1,11 @@
 package prosomo.primitives
 
 class MalkinKey {
-  private var L:Tree[Array[Byte]] = Leaf(Array())
-  private var Si:Tree[Array[Byte]] = Leaf(Array())
-  private var sig:Array[Byte] = Array()
-  private var pki:Array[Byte] = Array()
-  private var rp:Array[Byte] = Array()
+  var L:Tree[Array[Byte]] = Leaf(Array())
+  var Si:Tree[Array[Byte]] = Leaf(Array())
+  var sig:Array[Byte] = Array()
+  var pki:Array[Byte] = Array()
+  var rp:Array[Byte] = Array()
 
   def update(kes:Kes,t:Int) = {
     val updatedKey = kes.updateKey((L,Si,sig,pki,rp),t)
@@ -27,7 +27,6 @@ class MalkinKey {
   def time(kes:Kes):Int = {
     kes.getKeyTimeStep((L,Si,sig,pki,rp))
   }
-
 }
 
 object MalkinKey {
@@ -40,6 +39,15 @@ object MalkinKey {
     newKey.sig = updatedKeyData._3
     newKey.pki = updatedKeyData._4
     newKey.rp = updatedKeyData._5
+    newKey
+  }
+  def apply(L:Tree[Array[Byte]],Si:Tree[Array[Byte]],sig:Array[Byte],pki:Array[Byte],rp:Array[Byte]):MalkinKey = {
+    val newKey = new MalkinKey
+    newKey.L = L
+    newKey.Si = Si
+    newKey.sig = sig
+    newKey.pki = pki
+    newKey.rp = rp
     newKey
   }
 }

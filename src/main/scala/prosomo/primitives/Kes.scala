@@ -2,6 +2,8 @@ package prosomo.primitives
 
 import bifrost.crypto.hash.FastCryptographicHash
 import org.bouncycastle.math.ec.rfc8032.Ed25519
+import scorex.crypto.encode.Base58
+
 import scala.math.BigInt
 
 
@@ -682,6 +684,42 @@ class Kes {
     */
   def publicKey(key: MalkinKey):  Array[Byte] = {
     sumGetPublicKey(key._1)
+  }
+
+  //print a tree for debugging
+  def printTree(t:Tree[Array[Byte]]):Unit = {
+    t match {
+      case n:Node[Array[Byte]] => {
+        println("["+Base58.encode(n.v)+"]")
+        n.l match {
+          case nn:Node[Array[Byte]] => {
+            println("/")
+            printTree(nn)
+          }
+          case ll:Leaf[Array[Byte]] => {
+            println("|")
+            println("["+Base58.encode(ll.v)+"]")
+          }
+          case _ =>
+        }
+        n.r match {
+          case nn:Node[Array[Byte]] => {
+            println("\\")
+            printTree(nn)
+          }
+          case ll:Leaf[Array[Byte]] => {
+            println("|")
+            println("["+Base58.encode(ll.v)+"]")
+          }
+          case _ =>
+        }
+      }
+      case l:Leaf[Array[Byte]] => {
+        println("|")
+        println("["+Base58.encode(l.v)+"]")
+      }
+      case _ =>
+    }
   }
 
 }

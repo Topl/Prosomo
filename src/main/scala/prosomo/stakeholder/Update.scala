@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.cases.{Hello,WriteFile,GetTime}
+import prosomo.cases.{GetTime, Hello, WriteFile}
 import prosomo.components.Chain
 import prosomo.primitives.{Parameters, SharedData}
 import scorex.crypto.encode.Base58
@@ -135,6 +135,4 @@ trait Update extends Members {
       }
     }
   }
-
-
 }
