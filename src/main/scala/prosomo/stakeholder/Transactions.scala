@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
 import prosomo.components.{Serializer, Transaction}
-import prosomo.components.Types.{PublicKeyW, State}
+import prosomo.primitives.Types.{PublicKeyW, State}
 import prosomo.primitives.{Ratio, Sig}
 
 import scala.math.BigInt

@@ -1,8 +1,9 @@
 package prosomo.cases
 
 import akka.actor.ActorRef
-import prosomo.components.{Block, Box, Transaction}
-import prosomo.components.Types._
+import prosomo.components.{Block, Transaction}
+import prosomo.primitives.Types._
+import prosomo.primitives.Box
 
 // case objects and classes for pattern matching messages between actors
 case object Diffuse

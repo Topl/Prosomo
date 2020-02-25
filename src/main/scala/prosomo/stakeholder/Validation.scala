@@ -1,8 +1,8 @@
 package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Box, Chain, Transaction}
-import prosomo.primitives.{Parameters, Ratio, SharedData}
+import prosomo.components.{Block, Chain, Transaction}
+import prosomo.primitives.{Box, Parameters, Ratio, SharedData}
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt

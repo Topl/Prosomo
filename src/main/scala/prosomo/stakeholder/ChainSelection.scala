@@ -84,6 +84,7 @@ trait ChainSelection extends Members {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
       send(self,gossipers, SendTx(trans,signBox(hash(trans,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
     }
+    walletStorage.store(wallet,serializer)
   }
 
   def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))): Unit = {

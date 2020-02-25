@@ -1,6 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.{Box, SimpleTypes}
 
 case class Block(identifier:ByteArrayWrapper, blockHeader:Any, blockBody:Any) extends SimpleTypes {
   def id:BlockId = identifier

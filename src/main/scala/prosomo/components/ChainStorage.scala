@@ -5,6 +5,7 @@ import java.io.File
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.LSMStore
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.{ByteStream, SimpleTypes}
 
 class ChainStorage(dir:String) extends SimpleTypes {
   import prosomo.primitives.Parameters.storageFlag
@@ -26,7 +27,7 @@ class ChainStorage(dir:String) extends SimpleTypes {
     if (chainStore.versionIDExists(cid)) {
       chainStore.get(cid) match {
         case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeChain)) match {
-          case c:Chain=>c
+          case c:Chain => c
           case _ => {
             println("starting new chain")
             new Chain

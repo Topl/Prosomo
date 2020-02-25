@@ -4,8 +4,8 @@ import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases._
-import prosomo.components.{Serializer, Types}
-import prosomo.primitives.{Parameters, SharedData, Distance}
+import prosomo.components.Serializer
+import prosomo.primitives.{Distance, Parameters, SharedData, Types}
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap

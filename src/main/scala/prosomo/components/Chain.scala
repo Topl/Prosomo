@@ -1,6 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives.SimpleTypes
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap

@@ -3,10 +3,10 @@ package prosomo.stakeholder
 import akka.actor.{ActorPath, ActorRef, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{BlockData, Chain, ChainStorage, Serializer, SlotReorgHistory}
+import prosomo.components.{BlockStorage, Chain, ChainStorage, Serializer, SlotReorgHistory}
 import prosomo.history.History
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
-import prosomo.wallet.Wallet
+import prosomo.wallet.{Wallet, WalletStorage}
 
 import scala.math.BigInt
 import scala.util.Random
@@ -34,9 +34,10 @@ class Stakeholder(inputSeed:Array[Byte])
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
-  val blocks:BlockData = new BlockData(storageDir)
+  val blocks:BlockStorage = new BlockStorage(storageDir)
   val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
   val chainStorage = new ChainStorage(storageDir)
+  val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
@@ -49,6 +50,8 @@ class Stakeholder(inputSeed:Array[Byte])
   val phase:Double = rng.nextDouble
   //stakeholder password, set at runtime
   var password = ""
+  var derivedKey:Array[Byte] = Array()
+  var salt:Array[Byte] = Array()
   //empty keyfile, doesn't write anything to disk
   var keyFile:KeyFile = KeyFile.empty
   var chainUpdateLock = false

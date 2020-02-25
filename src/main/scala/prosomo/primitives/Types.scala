@@ -1,9 +1,10 @@
-package prosomo.components
+package prosomo.primitives
 
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
+import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
-import com.google.common.primitives.{Bytes}
+import prosomo.components.{Serializer, Transaction}
 
 trait Types extends SimpleTypes {
   /**

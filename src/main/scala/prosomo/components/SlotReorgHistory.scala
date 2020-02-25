@@ -4,10 +4,14 @@ import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import prosomo.primitives.{ByteStream, Types}
 
 class SlotReorgHistory(dir:String) extends Types {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.storageFlag
+
+  //import prosomo.primitives.Parameters.storageFlag
+  val storageFlag = false
+  val skipUpdate = true
 
   private var data:Map[Slot,List[BlockId]] = Map()
 
@@ -29,7 +33,7 @@ class SlotReorgHistory(dir:String) extends Types {
     val blockSlotHash = hash(slotId._1,serializer)
     val slotList = get(blockSlotHash,serializer)
     blockReorgStore.update(uuid,Seq(),Seq(blockSlotHash -> ByteArrayWrapper(serializer.getBytes(slotId._2::slotList))))
-  } else {
+  } else if (!skipUpdate) {
     if (data.keySet.contains(slotId._1)) {
       val newList = slotId._2::data(slotId._1)
       data -= slotId._1

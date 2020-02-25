@@ -2,7 +2,7 @@ package prosomo.primitives
 
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Types
+
 import scala.util.Try
 
 class Keys extends Types {

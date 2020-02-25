@@ -1,16 +1,15 @@
 package prosomo.wallet
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.Sig
-import prosomo.components.{Serializer, Transaction, Types}
+import prosomo.primitives.{Ratio, Sig, Types}
+import prosomo.components.{Serializer, Transaction}
 import prosomo.stakeholder.Transactions
-import prosomo.primitives.Ratio
 
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
 import scala.util.Random
 
-class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transactions {
+case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transactions {
   var pendingTxsOut:Map[Sid,Transaction] = Map()
   var availableBalance:BigInt = 0
   var totalBalance:BigInt = 0

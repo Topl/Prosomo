@@ -1,6 +1,7 @@
-package prosomo.components
-import prosomo.components.Types._
-import prosomo.primitives.Sig
+package prosomo.primitives
+
+import prosomo.components.Serializer
+import prosomo.primitives.Types.{Hash, PublicKey, Sid, Signature}
 
 case class Box(dataHash:Hash, sid:Sid, signature:Signature, publicKey:PublicKey) {
   def verify(input:Hash,sig:Sig,serializer:Serializer):Boolean = {

@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.components.Types
+import prosomo.primitives.Types
 
 trait Utilities extends Members with Types {
 

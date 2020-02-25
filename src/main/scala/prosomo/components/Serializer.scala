@@ -2,10 +2,10 @@ package prosomo.components
 
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
-import prosomo.primitives.{Empty, Leaf, MalkinKey, Node, Ratio, Tree}
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
-import scorex.crypto.encode.Base58
+import prosomo.primitives._
+import prosomo.wallet.Wallet
 
 import scala.math.BigInt
 
@@ -48,6 +48,7 @@ class Serializer extends SimpleTypes {
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getBytes(chain:Chain):Array[Byte] = sChain(chain)
+  def getBytes(wallet:Wallet):Array[Byte] = sWallet(wallet)
   def getBytes(malkinKey:MalkinKey):Array[Byte] = sMalkinKey(malkinKey)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
@@ -62,6 +63,7 @@ class Serializer extends SimpleTypes {
       case DeserializeState => dState(input)
       case DeserializeChain => dChain(input)
       case DeserializeMalkinKey => dMalkinKey(input)
+      case DeserializeWallet => dWallet(input)
     }
   }
 
@@ -147,8 +149,8 @@ class Serializer extends SimpleTypes {
     val out2Bytes = stream.get(out2len)
     val out2 = dBigInt(new ByteStream(out2Bytes,Deserialize))
     val out = new Ratio(
-      out1,
-      out2
+        out1,
+        out2
     )
     assert(stream.empty)
     out
@@ -501,17 +503,14 @@ class Serializer extends SimpleTypes {
     def buildTree:Tree[Array[Byte]] = {
       stream.getInt match {
         case 0 => {
-          //println("leaf")
           val bytes:Array[Byte] = stream.get(sig_length)
           Leaf(bytes)
         }
         case 1 => {
-          //println("left")
           val bytes:Array[Byte] = stream.get(hash_length+sig_length)
           Node(bytes,buildTree,Empty)
         }
         case 2 => {
-          //println("right")
           val bytes:Array[Byte] = stream.get(hash_length+sig_length)
           Node(bytes,Empty,buildTree)
         }
@@ -530,6 +529,77 @@ class Serializer extends SimpleTypes {
     Bytes.concat(block.id.data, getBytes(block.prosomoHeader), bodyBytes)
   }
 
+  private def sTxMap(txs:Map[Sid,Transaction]):Array[Byte] = {
+    def mapBytes(entry:(Sid,Transaction)):Array[Byte] = getBytes(entry._1) ++ getBytes(entry._2)
+    val output = Bytes.concat(
+      txs.toSeq.map(mapBytes(_)):_*
+    )
+    val total = Ints.toByteArray(txs.keySet.size) ++ output
+    Ints.toByteArray(total.length) ++ total
+  }
+
+  private def dTxMap(stream: ByteStream):Map[Sid,Transaction] = {
+    val numEntries = stream.getInt
+    var out:Map[Sid,Transaction] = Map()
+    var i = 0
+    while (i < numEntries) {
+      val sid:Sid = ByteArrayWrapper(stream.get(sid_length))
+      val tx_len = stream.getInt
+      val tx:Transaction = dTransaction(new ByteStream(stream.get(tx_len),stream.caseObject))
+      out += (sid->tx)
+      i += 1
+    }
+    assert(out.keySet.size == numEntries)
+    assert(stream.empty)
+    out
+  }
+
+  private def sWallet(wallet: Wallet):Array[Byte] = {
+    val stateBytes1 = getBytes(wallet.issueState)
+    val stateBytes2 = getBytes(wallet.confirmedState)
+    val output = Bytes.concat(
+      wallet.pkw.data,
+      getBytes(wallet.fee_r),
+      sTxMap(wallet.pendingTxsOut),
+      getBytes(wallet.availableBalance),
+      getBytes(wallet.totalBalance),
+      getBytes(wallet.txCounter),
+      getBytes(wallet.confirmedTxCounter),
+      getBytes(wallet.netStake),
+      getBytes(wallet.netStake0),
+      Ints.toByteArray(stateBytes1.length),
+      stateBytes1,
+      Ints.toByteArray(stateBytes2.length),
+      stateBytes2
+    )
+    output
+  }
+
+  private def dWallet(stream: ByteStream):Wallet = {
+    val out1:ByteArrayWrapper = ByteArrayWrapper(stream.get(pkw_length))
+    val out2len = stream.getInt
+    val out2:Ratio = dRatio(new ByteStream(stream.get(out2len),stream.caseObject))
+    var out = new Wallet(out1,out2)
+    val out3len = stream.getInt
+    out.pendingTxsOut = dTxMap(new ByteStream(stream.get(out3len),stream.caseObject))
+    val out4len = stream.getInt
+    out.availableBalance = dBigInt(new ByteStream(stream.get(out4len),stream.caseObject))
+    val out5len = stream.getInt
+    out.totalBalance = dBigInt(new ByteStream(stream.get(out5len),stream.caseObject))
+    out.txCounter = stream.getInt
+    out.confirmedTxCounter = stream.getInt
+    val out8len = stream.getInt
+    out.netStake = dBigInt(new ByteStream(stream.get(out8len),stream.caseObject))
+    val out9len = stream.getInt
+    out.netStake0 = dBigInt(new ByteStream(stream.get(out9len),stream.caseObject))
+    val out10len = stream.getInt
+    out.issueState = dState(new ByteStream(stream.get(out10len),stream.caseObject))
+    val out11len = stream.getInt
+    out.confirmedState = dState(new ByteStream(stream.get(out11len),stream.caseObject))
+    assert(stream.empty)
+    out
+  }
+
 }
 
 object Serializer {
@@ -544,5 +614,6 @@ object Serializer {
   case object DeserializeBoolean
   case object DeserializeChain
   case object DeserializeMalkinKey
+  case object DeserializeWallet
   case object Deserialize
 }

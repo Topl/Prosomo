@@ -4,9 +4,9 @@ import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
-import prosomo.components.{Block, Box, Chain}
+import prosomo.components.{Block, Chain}
 import prosomo.primitives.Parameters.{genesisBytes, initStakeMax, initStakeMin, printFlag, stakeDistribution, stakeScale}
-import prosomo.primitives.{Keys, MalkinKey, Ratio, SharedData}
+import prosomo.primitives.{Box, Keys, MalkinKey, Ratio, SharedData}
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt

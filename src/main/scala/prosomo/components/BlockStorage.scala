@@ -3,8 +3,9 @@ package prosomo.components
 import java.io.File
 
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import prosomo.primitives.{ByteStream, SimpleTypes}
 
-class BlockData(dir:String) extends SimpleTypes {
+class BlockStorage(dir:String) extends SimpleTypes {
   import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
 
@@ -141,7 +142,7 @@ class BlockData(dir:String) extends SimpleTypes {
     }
   }
 
-  def copy(bd:BlockData):Unit = {
+  def copy(bd:BlockStorage):Unit = {
     this.data = bd.data
     this.slotIds = bd.slotIds
     this.blockBodyStore = bd.blockBodyStore

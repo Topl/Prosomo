@@ -1,7 +1,5 @@
 package prosomo.primitives
 
-import prosomo.components.Types
-
 object SharedData extends Types {
   var counter = 0
   var errorFlag = false

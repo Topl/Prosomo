@@ -14,7 +14,7 @@ import prosomo.cases._
 import prosomo.components._
 import prosomo.history.History
 import prosomo.primitives._
-import prosomo.wallet.Wallet
+import prosomo.wallet.{Wallet, WalletStorage}
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -45,9 +45,10 @@ class Coordinator(inputSeed:Array[Byte])
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
-  val blocks:BlockData = new BlockData(storageDir)
+  val blocks:BlockStorage = new BlockStorage(storageDir)
   val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
   val chainStorage = new ChainStorage(storageDir)
+  val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
@@ -59,6 +60,8 @@ class Coordinator(inputSeed:Array[Byte])
 
   var keyFile = KeyFile.empty
   var password = ""
+  var derivedKey:Array[Byte] = Array()
+  var salt:Array[Byte] = Array()
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = new Wallet(keys.pkw,fee_r)
   var chainUpdateLock = false

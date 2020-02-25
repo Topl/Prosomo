@@ -3,7 +3,8 @@ package prosomo.history
 import java.io.File
 
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import prosomo.components.{Types,Serializer,ByteStream}
+import prosomo.components.Serializer
+import prosomo.primitives.{ByteStream, Types}
 import scorex.crypto.encode.Base58
 
 class History(dir:String) extends Types {

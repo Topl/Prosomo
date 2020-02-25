@@ -1,7 +1,7 @@
-package prosomo.components
+package prosomo.primitives
 
-import prosomo.primitives.Ratio
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.components.Transaction
 
 import scala.math.BigInt
 

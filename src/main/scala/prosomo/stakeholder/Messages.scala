@@ -5,8 +5,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.cases._
-import prosomo.components.{BlockData, Box, SlotReorgHistory}
-import prosomo.primitives.Parameters
+import prosomo.components.{BlockStorage, SlotReorgHistory}
+import prosomo.primitives.{Box, Parameters}
 
 import scala.concurrent.Await
 import scala.math.BigInt
@@ -177,7 +177,7 @@ trait Messages extends Members {
     result match {
       case value:GetBlockTree => {
         value.t match {
-          case t:BlockData => blocks.copy(t)
+          case t:BlockStorage => blocks.copy(t)
           case _ => println("error")
         }
         value.h match {

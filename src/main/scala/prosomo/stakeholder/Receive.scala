@@ -229,6 +229,7 @@ trait Receive extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {println(s"Holder $holderIndex Issued Transaction:" + "local state balance:"   +   localState(keys.pkw)._1.toString)}
             wallet.issueTx(data,keys.sk_sig,sig,rng,serializer) match {
               case trans:Transaction => {
+                walletStorage.store(wallet,serializer)
                 txCounter += 1
                 setOfTxs += (trans.sid->trans.nonce)
                 memPool += (trans.sid->(trans,0))
@@ -522,6 +523,8 @@ trait Receive extends Members {
 
     case RequestKeys => {
       password = s"password_holder_$holderIndex"
+      salt = FastCryptographicHash(uuid)
+      derivedKey = KeyFile.getDerivedKey(password,salt)
       KeyFile.restore(storageDir) match {
         case Some(restoredFile:KeyFile) => {
           println("Reading keyfile ...")
@@ -547,7 +550,7 @@ trait Receive extends Members {
         }
       }
       keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
-      wallet = new Wallet(keys.pkw,fee_r)
+      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
       sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
     }
 

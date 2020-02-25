@@ -16,15 +16,15 @@ import org.bouncycastle.crypto.generators.SCrypt
 import org.bouncycastle.crypto.modes.SICBlockCipher
 import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
 import prosomo.components.Serializer.DeserializeMalkinKey
-import prosomo.components.{ByteStream, Serializer}
 import scorex.crypto.encode.Base58
 import scorex.crypto.hash.Keccak256
 import java.io.File
 
 import com.google.common.primitives.Ints
+import prosomo.components.Serializer
 
 import scala.util.{Failure, Success, Try}
-import prosomo.components.Types.Slot
+import prosomo.primitives.Types.Slot
 
 case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Array[Byte]),
                    vrf_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Array[Byte]),
@@ -317,15 +317,19 @@ object KeyFile {
               malkinKey: MalkinKey,
               password:String,
               defaultKeyDir: String,
-              serializer: Serializer
+              serializer: Serializer,
+              salt:Array[Byte] = FastCryptographicHash(uuid),
+              derivedKey:Array[Byte] = Array()
             ):KeyFile = {
     val sig_info = keyFile.sig_info
     val vrf_info = keyFile.vrf_info
     val kes_info = {
-      val salt = FastCryptographicHash(uuid)
       val ivData = FastCryptographicHash(uuid).slice(0, 16)
-      val derivedKey = getDerivedKey(password, salt)
-      val (cipherText, mac) = encryptAES(derivedKey, ivData, serializer.getBytes(malkinKey))
+      val (cipherText, mac) = if (derivedKey.isEmpty) {
+        encryptAES(getDerivedKey(password, salt), ivData, serializer.getBytes(malkinKey))
+      } else {
+        encryptAES(derivedKey, ivData, serializer.getBytes(malkinKey))
+      }
       (
         keyFile.kes_info._1: Array[Byte],
         cipherText: Array[Byte],
