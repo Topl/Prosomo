@@ -258,8 +258,8 @@ trait ChainSelection extends Members {
     } else {
       dropTine
     }
-
     validateChainIds(localChain)
+    chainStorage.store(localChain,serializer)
   }
 
   def validateChainIds(c:Chain) = {

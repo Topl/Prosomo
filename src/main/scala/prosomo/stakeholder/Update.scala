@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import prosomo.cases.{GetTime, Hello, WriteFile}
 import prosomo.components.Chain
-import prosomo.primitives.{Parameters, SharedData}
+import prosomo.primitives.{KeyFile, Parameters, SharedData}
 import scorex.crypto.encode.Base58
 
 trait Update extends Members {
@@ -24,6 +24,7 @@ trait Update extends Members {
           if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
             + Base58.encode(localChain.getLastActiveSlot(globalSlot)._2.data) + Console.WHITE)
           keys.sk_kes.update(kes, localSlot)
+          keyFile = KeyFile.update(keyFile,keys.sk_kes,password,storageDir,serializer)
           if (useGossipProtocol) {
             val newOff = (numGossipers*math.sin(2.0*math.Pi*(globalSlot.toDouble/100.0+phase))/2.0).toInt
             if (newOff != gOff) {

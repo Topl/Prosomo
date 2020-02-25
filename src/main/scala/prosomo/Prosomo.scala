@@ -10,6 +10,7 @@ import bifrost.BifrostApp
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.primitives.Parameters.inputSeed
 import prosomo.stakeholder.Coordinator
+import scorex.crypto.encode.Base58
 
 
 class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
@@ -34,6 +35,7 @@ class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(s
 class Prosomo {
 
   val system = ActorSystem("prosomo")
+  println("Using seed: "+inputSeed)
   val coordinator = system.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate

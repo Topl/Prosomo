@@ -8,8 +8,8 @@ import org.bouncycastle.math.ec.rfc8032.Ed25519
 
 class Sig {
 
-  val SignatureLength = Ed25519.SIGNATURE_SIZE
-  val KeyLength = Ed25519.PUBLIC_KEY_SIZE
+  val signatureLength = Ed25519.SIGNATURE_SIZE
+  val keyLength = Ed25519.PUBLIC_KEY_SIZE
 
   /**
     * Generate a keypair from seed for Ed25519
@@ -30,14 +30,20 @@ class Sig {
     (sk,pk)
   }
 
+  def getPkFromSk(sk:Array[Byte]):Array[Byte] = {
+    var pk_out = Array.fill(keyLength){0x00.toByte}
+    Ed25519.generatePublicKey(sk,0,pk_out,0)
+    pk_out
+  }
+
   def sign(privateKey: Array[Byte], message: Array[Byte]): Array[Byte] = {
-    var sig:Array[Byte] = Array.fill(SignatureLength){0x00.toByte}
+    var sig:Array[Byte] = Array.fill(signatureLength){0x00.toByte}
     Ed25519.sign(privateKey,0,message,0,message.length,sig,0)
     sig
   }
 
   def verify(signature: Array[Byte], message: Array[Byte], publicKey: Array[Byte]): Boolean = {
-    Ed25519.verify(signature,0,publicKey,0,message,0,message.length) && signature.length == SignatureLength && publicKey.length == KeyLength
+    Ed25519.verify(signature,0,publicKey,0,message,0,message.length) && signature.length == signatureLength && publicKey.length == keyLength
   }
 
 }

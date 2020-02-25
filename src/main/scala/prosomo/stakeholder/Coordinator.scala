@@ -43,7 +43,7 @@ class Coordinator(inputSeed:Array[Byte])
   import Parameters._
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
+  val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
   val blocks:BlockData = new BlockData(storageDir)
   val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
@@ -51,14 +51,16 @@ class Coordinator(inputSeed:Array[Byte])
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
-  val keys:Keys = Keys(seed,sig,vrf,kes,0)
-  val wallet:Wallet = new Wallet(keys.pkw,fee_r)
   val history:History = new History(storageDir)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
   val phase:Double = rng.nextDouble
 
+  var keyFile = KeyFile.empty
+  var password = ""
+  var keys:Keys = Keys(seed,sig,vrf,kes,0)
+  var wallet:Wallet = new Wallet(keys.pkw,fee_r)
   var chainUpdateLock = false
   var routerRef:ActorRef = _
   var localState:State = Map()
@@ -118,6 +120,53 @@ class Coordinator(inputSeed:Array[Byte])
   var gossipersMap:Map[ActorRef,List[ActorRef]] = Map()
   var transactionCounter:Int = 0
 
+  def readFile(filename: String): Seq[String] = {
+    val bufferedSource = scala.io.Source.fromFile(filename)
+    val lines = (for (line <- bufferedSource.getLines()) yield line).toList
+    bufferedSource.close
+    lines
+  }
+
+  def restoreTimeInfo = {
+    def getListOfFiles(dir: String):List[File] = {
+      val d = new File(dir)
+      if (d.exists && d.isDirectory) {
+        d.listFiles.filter(_.isFile).toList
+      } else {
+        List[File]()
+      }
+    }
+    val files = getListOfFiles(s"$storageDir/time/")
+    files.length match {
+      case x:Int if x > 0 => {
+        println("Coordinator loading time information...")
+        val lines = readFile(files.head.getPath)
+        val t0in:Long = lines(0).toLong
+        val tw:Long = lines(1).toLong
+        val tpin:Long = lines(2).toLong
+        //println(lines(0),lines(1),lines(2))
+        val offset =  System.currentTimeMillis()-tw
+        //println(System.currentTimeMillis(),t0in,tw,tp)
+        t0 = t0in + offset
+        tp = tpin
+        val t1:Long = System.currentTimeMillis()-tp
+        val slot = ((t1 - t0) / slotT).toInt
+        //println("slot",slot)
+        //assert(slot>0)
+      }
+      case _ => t0 = System.currentTimeMillis()
+    }
+  }
+
+  def writeTimeInfo = {
+    val file = new File(s"$storageDir/time/timeInfo.txt")
+    file.getParentFile.mkdirs
+    val bw = new BufferedWriter(new FileWriter(file))
+    val tw = System.currentTimeMillis()
+    bw.write(s"$t0\n$tw\n$tp\n")
+    bw.close()
+  }
+
   def populate: Receive ={
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
@@ -128,7 +177,7 @@ class Coordinator(inputSeed:Array[Byte])
       var i = -1
       holders = List.fill(numHolders){
         i+=1
-        context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder:" + bytes2hex(FastCryptographicHash(inputSeed+i.toString)))
+        context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder_" + i.toString)
       }
       println("Sending holders list")
       sendAssertDone(List(routerRef),holders)
@@ -158,7 +207,7 @@ class Coordinator(inputSeed:Array[Byte])
       sendAssertDone(holders,Initialize(L_s))
       if (useFencing) sendAssertDone(routerRef,CoordRef(self))
       println("Run")
-      t0 = System.currentTimeMillis()
+      restoreTimeInfo
       sendAssertDone(holders,SetClock(t0))
       if (useFencing) sendAssertDone(routerRef,SetClock(t0))
       if (useFencing) routerRef ! Run
@@ -569,6 +618,10 @@ class Coordinator(inputSeed:Array[Byte])
       } else {
         t = ((tp - t0) / slotT).toInt
       }
+    }
+    if (t>globalSlot) {
+      writeTimeInfo
+      globalSlot = t
     }
     if (new File("/tmp/scorex/test-data/crypto/cmd").exists) {
       println("-----------------------------------------------------------")

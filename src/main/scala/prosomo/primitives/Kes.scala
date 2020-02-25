@@ -3,6 +3,7 @@ package prosomo.primitives
 import bifrost.crypto.hash.FastCryptographicHash
 import org.bouncycastle.math.ec.rfc8032.Ed25519
 import scorex.crypto.encode.Base58
+import prosomo.primitives.MalkinKey
 
 import scala.math.BigInt
 
@@ -29,7 +30,7 @@ class Kes {
   val KeyLength = hashBytes
   val logl = 7
 
-  type MalkinKey = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
+  type MalkinKeyBytes = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
   type MalkinSignature = (Array[Byte],Array[Byte],Array[Byte])
 
   /**
@@ -523,7 +524,7 @@ class Kes {
     * @param seed input entropy for key generation
     * @return
     */
-  def generateKey(seed: Array[Byte]): MalkinKey = {
+  def generateKey(seed: Array[Byte]): MalkinKeyBytes = {
     val r = PRNG(seed)
     val rp = PRNG(r._2)
     //super-scheme sum composition
@@ -543,7 +544,7 @@ class Kes {
     * @param t time step key is to be updated to
     * @return updated MMM key
     */
-  def updateKey(key: MalkinKey,t:Int): MalkinKey = {
+  def updateKey(key: MalkinKeyBytes, t:Int): MalkinKeyBytes = {
     val keyTime = getKeyTimeStep(key)
     var L = key._1
     var Si = key._2
@@ -583,7 +584,7 @@ class Kes {
     * @param t
     * @return  updated key
     */
-  def updateKeyFast(key: MalkinKey,t:Int): MalkinKey = {
+  def updateKeyFast(key: MalkinKeyBytes, t:Int): MalkinKeyBytes = {
     val keyTime = getKeyTimeStep(key)
     var L = key._1
     var Si = key._2
@@ -634,9 +635,17 @@ class Kes {
     * @param key MMM key to be inspected
     * @return Current time step of key
     */
-  def getKeyTimeStep(key: MalkinKey): Int = {
+  def getKeyTimeStep(key: MalkinKeyBytes): Int = {
     val L = key._1
     val Si = key._2
+    val tl = sumGetKeyTimeStep(L)
+    val ti = sumGetKeyTimeStep(Si)
+    exp(tl)-1+ti
+  }
+
+  def getKeyTimeStep(key: MalkinKey): Int = {
+    val L = key.L
+    val Si = key.Si
     val tl = sumGetKeyTimeStep(L)
     val ti = sumGetKeyTimeStep(Si)
     exp(tl)-1+ti
@@ -648,7 +657,7 @@ class Kes {
     * @param m message to be signed
     * @return signature of m
     */
-  def sign(key: MalkinKey,m: Array[Byte]): MalkinSignature = {
+  def sign(key: MalkinKeyBytes, m: Array[Byte]): MalkinSignature = {
     val keyTime = BigInt(getKeyTimeStep(key)).toByteArray
     val L = key._1
     val Si = key._2
@@ -682,7 +691,7 @@ class Kes {
     * @param key
     * @return
     */
-  def publicKey(key: MalkinKey):  Array[Byte] = {
+  def publicKey(key: MalkinKeyBytes):  Array[Byte] = {
     sumGetPublicKey(key._1)
   }
 

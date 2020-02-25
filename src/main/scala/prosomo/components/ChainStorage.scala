@@ -27,14 +27,32 @@ class ChainStorage(dir:String) extends SimpleTypes {
       chainStore.get(cid) match {
         case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeChain)) match {
           case c:Chain=>c
-          case _ => new Chain
+          case _ => {
+            println("starting new chain")
+            new Chain
+          }
         }
-        case None => new Chain
+        case None => {
+          println("starting new chain")
+          new Chain
+        }
       }
 
     } else {
       new Chain
     }
+  }
+
+  def restore(serializer: Serializer):Chain = {
+    chainStore.lastVersionID match {
+      case Some(id:ByteArrayWrapper) => get(id,serializer)
+      case None => {
+        println("starting new chain")
+        new Chain
+      }
+    }
+
+
   }
 
   def store(chain:Chain,serializer: Serializer):Hash  = {

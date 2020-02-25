@@ -5,7 +5,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{BlockData, Chain, ChainStorage, Serializer, SlotReorgHistory}
 import prosomo.history.History
-import prosomo.primitives.{Kes, Keys, Parameters, Sig, Vrf}
+import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
 
 import scala.math.BigInt
@@ -32,7 +32,7 @@ class Stakeholder(inputSeed:Array[Byte])
   import Parameters.{dataFileDir,fee_r}
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = dataFileDir+"/"+self.path.toStringWithoutAddress.drop(5)
+  val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
   val blocks:BlockData = new BlockData(storageDir)
   val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
@@ -40,14 +40,17 @@ class Stakeholder(inputSeed:Array[Byte])
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
-  val keys:Keys = Keys(seed,sig,vrf,kes,0)
-  val wallet:Wallet = new Wallet(keys.pkw,fee_r)
-  val history:History = new History(storageDir)
   val rng:Random = new Random(BigInt(seed).toLong)
+  var keys:Keys = Keys(seed,sig,vrf,kes,0)
+  var wallet:Wallet = new Wallet(keys.pkw,fee_r)
+  val history:History = new History(storageDir)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
   val phase:Double = rng.nextDouble
-
+  //stakeholder password, set at runtime
+  var password = ""
+  //empty keyfile, doesn't write anything to disk
+  var keyFile:KeyFile = KeyFile.empty
   var chainUpdateLock = false
   var routerRef:ActorRef = _
   var localState:State = Map()

@@ -190,7 +190,7 @@ object Parameters {
     }
   }
   //path for data output files
-  val dataFileDir:String = config.getString("params.dataFileDir")+"/seed:"+inputSeed
+  val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeed
   val storageFlag:Boolean = config.getBoolean("params.storageFlag")
   val stakeDistribution:String = config.getString("params.stakeDistribution")
   val stakeScale:Double = config.getDouble("params.stakeScale")

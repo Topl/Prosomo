@@ -94,6 +94,13 @@ class Vrf {
     }
   }
 
+  def getPkFromSk(sk:Array[Byte]):Array[Byte] = {
+    var pk_out = Array.fill(Ed25519VRF.PUBLIC_KEY_SIZE){0x00.toByte}
+    Ed25519VRF.generatePublicKey(sk,0,pk_out,0)
+    pk_out
+  }
+
+
   private def isNeutralPoint(p: PointAccum): Boolean = {
     val pBytes: Array[Byte] = Array.fill(Ed25519VRF.POINT_BYTES){0x00.toByte}
     Ed25519VRF.encodePoint(p,pBytes,0)

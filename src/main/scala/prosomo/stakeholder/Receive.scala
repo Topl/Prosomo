@@ -4,10 +4,10 @@ import java.io.BufferedWriter
 
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
-import prosomo.cases.{Adversary, CoordRef, Diffuse, DiffuseData, GenBlock, GetBalance, GetBlockTree, GetGossipers, GetSlot, GetState, GetTime, Hello, Inbox, Initialize, IssueTx, Party, RequestBlock, RequestBlockTree, RequestChain, RequestGossipers, RequestKeys, RequestState, ReturnBlock, RouterRef, Run, SendBlock, SendTx, SetClock, StallActor, Status, Update, Verify, WriteFile}
-import prosomo.components.{Block, Chain, Transaction}
-import prosomo.primitives.Parameters
-import prosomo.primitives.SharedData
+import prosomo.cases._
+import prosomo.components.{Block, Chain, Serializer, Transaction}
+import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
+import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -284,30 +284,43 @@ trait Receive extends Members {
       sender() ! "done"
     }
 
-
-    /************************************************** Coordinator *******************************************************/
+    /************************************************** From Coordinator *******************************************************/
 
     /**allocate arrays and vars of simulation*/
     case value:Initialize => {
       println("Holder "+holderIndex.toString+" starting...")
       tMax = value.tMax
-      localChain.update((0,genBlockHash))
-      chainHistory.update((0,genBlockHash),serializer)
-      println(Base58.encode(genBlockHash.data))
+
+      chainStorage.restore(serializer) match {
+        case newChain:Chain if newChain.isEmpty => {
+          localChain.update((0,genBlockHash))
+          chainHistory.update((0,genBlockHash),serializer)
+          updateLocalState(localState, Chain(localChain.get(0))) match {
+            case value:State => localState = {
+              value
+            }
+            case _ => {
+              SharedData.throwError(holderIndex)
+              println("error: invalid genesis block")
+            }
+          }
+          eta = eta(localChain, 0, Array())
+          history.add(genBlockHash,localState,eta,serializer)
+        }
+        case newChain:Chain if !newChain.isEmpty => {
+          localChain.copy(newChain)
+          val loadState = history.get(localChain.last._2,serializer) match {case data:(State,Eta) => data}
+          localState = loadState._1
+          eta = loadState._2
+        }
+      }
+
+      globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       val genesisBlock = blocks.get(genBlockHash,serializer)
       assert(genBlockHash == hash(genesisBlock.prosomoHeader,serializer))
       println("Valid Genesis Block")
-      updateLocalState(localState, Chain(localChain.get(0))) match {
-        case value:State => localState = value
-        case _ => {
-          SharedData.throwError(holderIndex)
-          println("error: invalid genesis block")
-        }
-      }
       println("local state balance:"   +   localState(keys.pkw)._1.toString)
       assert(localState(keys.pkw)._1 > 0)
-      eta = eta(localChain, 0, Array())
-      history.add(genBlockHash,localState,eta,serializer)
       updateWallet
       sender() ! "done"
     }
@@ -508,6 +521,33 @@ trait Receive extends Members {
     }
 
     case RequestKeys => {
+      password = s"password_holder_$holderIndex"
+      KeyFile.restore(storageDir) match {
+        case Some(restoredFile:KeyFile) => {
+          println("Reading keyfile ...")
+          keyFile = restoredFile
+        }
+        case None => {
+          println("Generating new keyfile...")
+          val seed1 = FastCryptographicHash(rng.nextString(32))
+          val seed2 = FastCryptographicHash(rng.nextString(32))
+          val seed3 = FastCryptographicHash(rng.nextString(32))
+          keyFile = KeyFile.fromSeed(
+            password,
+            storageDir,
+            serializer: Serializer,
+            sig:Sig,
+            vrf:Vrf,
+            kes:Kes,
+            globalSlot:Slot,
+            seed1,
+            seed2,
+            seed3
+          )
+        }
+      }
+      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
+      wallet = new Wallet(keys.pkw,fee_r)
       sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
     }
 

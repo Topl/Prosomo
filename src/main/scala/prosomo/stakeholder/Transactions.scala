@@ -15,7 +15,7 @@ trait Transactions {
         ++transaction.delta.toByteArray
         ++transaction.sid.data
         ++serializer.getBytes(transaction.nonce),
-      transaction.sender.data.take(sig.KeyLength)
+      transaction.sender.data.take(sig.keyLength)
     )
   }
 
