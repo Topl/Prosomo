@@ -1,5 +1,6 @@
 package prosomo.primitives
 
+import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Transaction
 
@@ -21,6 +22,8 @@ trait SimpleTypes {
   val slot_length = int_length
   val bn_length = int_length
   val sk_length = 32
+
+  val localChainId = ByteArrayWrapper(FastCryptographicHash("LOCAL_CHAIN"))
 
   type Hash = ByteArrayWrapper
   type Eta = Array[Byte]

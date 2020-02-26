@@ -259,12 +259,13 @@ trait ChainSelection extends Members {
     } else {
       dropTine
     }
-    validateChainIds(localChain)
-    chainStorage.store(localChain,serializer)
+    assert(validateChainIds(localChain))
+    chainStorage.store(localChain,localChainId,serializer)
   }
 
-  def validateChainIds(c:Chain) = {
+  def validateChainIds(c:Chain):Boolean = {
     var pid = c.head
+    var out = true
     for (id <- c.ordered.tail) {
       getParentId(id) match {
         case bid:SlotId => {
@@ -273,18 +274,23 @@ trait ChainSelection extends Members {
               pid = id
             } else {
               println(s"Holder $holderIndex error: could not find id in history")
+              SharedData.throwError(holderIndex)
+              out = false
             }
           } else {
             println(s"Holder $holderIndex error: pid mismatch in tine")
             SharedData.throwError(holderIndex)
+            out = false
           }
         }
         case _ => {
           println(s"Holder $holderIndex error: couldn't find parent in tine")
           SharedData.throwError(holderIndex)
+          out = false
         }
       }
     }
+    out
   }
 
 }

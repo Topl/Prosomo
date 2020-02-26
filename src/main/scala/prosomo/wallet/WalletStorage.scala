@@ -7,21 +7,27 @@ import io.iohk.iodb.LSMStore
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{ByteStream, Ratio, SimpleTypes}
 import prosomo.components.Serializer
-import scorex.crypto.encode.Base58
+
 
 class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
 
+  val checkPoint = ByteArrayWrapper(FastCryptographicHash("CHECKPOINT"))
+
   val walletStore:LSMStore = {
     val iFile = new File(s"$dir/wallet")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LSMStore(iFile,maxFileSize = 1024)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
       }
     })
+    store.lastVersionID match {
+      case None => store.update(checkPoint,Seq(),Seq())
+      case _ =>
+    }
     store
   }
 
@@ -51,9 +57,9 @@ class WalletStorage(dir:String) extends SimpleTypes {
 
   def store(wallet:Wallet,serializer: Serializer):Unit  = if (storageFlag) {
     val wBytes = serializer.getBytes(wallet)
-    val id = ByteArrayWrapper(FastCryptographicHash(uuid))
     val key = ByteArrayWrapper(FastCryptographicHash(wallet.pkw.data))
-    walletStore.update(id,Seq(),Seq(key -> ByteArrayWrapper(wBytes)))
+    walletStore.rollback(checkPoint)
+    walletStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(wBytes)))
   }
 
 }

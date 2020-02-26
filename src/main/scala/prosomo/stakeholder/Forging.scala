@@ -54,7 +54,7 @@ trait Forging extends Members {
         history.add(hb,localState,eta,serializer)
         updateWallet
         trimMemPool
-        validateChainIds(localChain)
+        assert(validateChainIds(localChain))
         b
       }
     } else {

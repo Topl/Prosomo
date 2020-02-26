@@ -291,8 +291,9 @@ trait Receive extends Members {
     case value:Initialize => {
       println("Holder "+holderIndex.toString+" starting...")
       tMax = value.tMax
-
-      chainStorage.restore(serializer) match {
+      globalSlot = kes.getKeyTimeStep(keys.sk_kes)
+      localSlot = globalSlot
+      chainStorage.restore(localChainId,serializer) match {
         case newChain:Chain if newChain.isEmpty => {
           localChain.update((0,genBlockHash))
           chainHistory.update((0,genBlockHash),serializer)
@@ -307,6 +308,8 @@ trait Receive extends Members {
           }
           eta = eta(localChain, 0, Array())
           history.add(genBlockHash,localState,eta,serializer)
+          updateWallet
+          trimMemPool
         }
         case newChain:Chain if !newChain.isEmpty => {
           localChain.copy(newChain)
@@ -315,14 +318,12 @@ trait Receive extends Members {
           eta = loadState._2
         }
       }
-
-      globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       val genesisBlock = blocks.get(genBlockHash,serializer)
       assert(genBlockHash == hash(genesisBlock.prosomoHeader,serializer))
       println("Valid Genesis Block")
-      println("local state balance:"   +   localState(keys.pkw)._1.toString)
+      println("Local state balance:"   +   localState(keys.pkw)._1.toString)
       assert(localState(keys.pkw)._1 > 0)
-      updateWallet
+      assert(validateChainIds(localChain))
       sender() ! "done"
     }
 

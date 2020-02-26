@@ -76,7 +76,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def updateWallet:Unit
   def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))):Unit
   def maxValidBG:Unit
-  def validateChainIds(c:Chain):Unit
+  def validateChainIds(c:Chain):Boolean
   def updateSlot:Unit
   def updateEpoch(slot:Slot,epochIn:Int):Int
   def updateStakingState(ep:Int):Unit
