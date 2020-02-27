@@ -22,9 +22,11 @@ trait Forging extends Members {
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
-      //println("Eta on forging:"+Base58.encode(eta))
       roundBlock = {
-        val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(localSlot-1)) match {case b:BlockHeader => b}
+        val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot)) match {case b:BlockHeader =>
+          assert(b._3 != slot)
+          b
+        }
         val bn:Int = pb._9 + 1
         val ps:Slot = pb._3
         val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
@@ -39,12 +41,12 @@ trait Forging extends Members {
         if (printFlag) {println("Holder " + holderIndex.toString + s" forged block $bn with id:"+Base58.encode(hb.data))}
         val block = new Block(hb,b,txs)
         blocks.add(block,serializer)
-        assert(localChain.getLastActiveSlot(localSlot)._2 == b._1)
-        localChain.update((localSlot, hb))
-        chainHistory.update((localSlot,hb),serializer)
+        assert(localChain.getLastActiveSlot(slot)._2 == b._1)
+        localChain.update((slot, hb))
+        chainHistory.update((slot,hb),serializer)
         send(self,gossipers, SendBlock(block,signBox(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
         blocksForged += 1
-        updateLocalState(localState, Chain(localChain.get(localSlot))) match {
+        updateLocalState(localState, Chain(localChain.get(slot))) match {
           case value:State => localState = value
           case _ => {
             SharedData.throwError(holderIndex)
@@ -108,6 +110,7 @@ trait Forging extends Members {
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
+    println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
     (new Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries),holderKeys)
   }
 

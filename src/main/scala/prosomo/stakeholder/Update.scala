@@ -13,43 +13,37 @@ trait Update extends Members {
       case ep:Int if ep > currentEpoch => currentEpoch = ep
       case _ =>
     }
-    if (localSlot == globalSlot) {
-      timeFlag(
-        if (keys.sk_kes.time(kes) < localSlot) {
-          if (holderIndex == SharedData.printingHolder && printFlag && localSlot%epochLength == 0) {
-            println("Current Epoch = " + currentEpoch.toString)
-            println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
+    timeFlag(
+      if (keys.sk_kes.time(kes) < localSlot) {
+        if (holderIndex == SharedData.printingHolder && printFlag && localSlot%epochLength == 0) {
+          println("Current Epoch = " + currentEpoch.toString)
+          println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
+        }
+        if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
+          + Base58.encode(localChain.getLastActiveSlot(localSlot-1)._2.data) + Console.WHITE)
+        keys.sk_kes.update(kes, localSlot)
+        if (!useFencing) {
+          checkTines
+          if (subChain(localChain,localSlot,globalSlot).isEmpty) forgeBlock(keys)
+        }
+        keyFile = KeyFile.update(keyFile,keys.sk_kes,password,storageDir,serializer,salt,derivedKey)
+        if (useGossipProtocol) {
+          val newOff = (numGossipers*math.sin(2.0*math.Pi*(globalSlot.toDouble/100.0+phase))/2.0).toInt
+          if (newOff != gOff) {
+            if (gOff < newOff) numHello = 0
+            gOff = newOff
           }
-          roundBlock = 0
-          if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
-            + Base58.encode(localChain.getLastActiveSlot(globalSlot)._2.data) + Console.WHITE)
-          keys.sk_kes.update(kes, localSlot)
-          keyFile = KeyFile.update(keyFile,keys.sk_kes,password,storageDir,serializer,salt,derivedKey)
-          if (useGossipProtocol) {
-            val newOff = (numGossipers*math.sin(2.0*math.Pi*(globalSlot.toDouble/100.0+phase))/2.0).toInt
-            if (newOff != gOff) {
-              if (gOff < newOff) numHello = 0
-              gOff = newOff
-            }
-            if (gossipers.length < numGossipers + gOff && numHello < 1) {
-              send(self,rng.shuffle(holders.filter(_!=self)),Hello(self,signBox(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
-              numHello += 1
-            } else if (gossipers.length > numGossipers + gOff) {
-              gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)
-            }
+          if (gossipers.length < numGossipers + gOff && numHello < 1) {
+            send(self,rng.shuffle(holders.filter(_!=self)),Hello(self,signBox(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+            numHello += 1
+          } else if (gossipers.length > numGossipers + gOff) {
+            gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)
           }
         }
-      )
-      updateLocalState(localState, Chain(localChain.get(localSlot))) match {
-        case value:State => localState = value
-        case _ => {
-          SharedData.throwError(holderIndex)
-          println("error: invalid block ledger on chain")
-        }
       }
-      if (dataOutFlag && globalSlot % dataOutInterval == 0) {
-        coordinatorRef ! WriteFile
-      }
+    )
+    if (dataOutFlag && globalSlot % dataOutInterval == 0) {
+      coordinatorRef ! WriteFile
     }
   }
 
@@ -100,40 +94,51 @@ trait Update extends Members {
     keys.threshold = phi(keys.alpha)
   }
 
-  def update = { if (SharedData.error) {actorStalled = true}
-    if (!actorStalled) {
-      if (!updating) {
-        updating = true
-        if (globalSlot > tMax || SharedData.killFlag) {
-          timers.cancelAll
-        } else if (diffuseSent) {
-          if (!useFencing) coordinatorRef ! GetTime
-          if (globalSlot > localSlot) {
-            while (globalSlot > localSlot) {
-              localSlot += 1
-              updateSlot
-            }
-          } else if (roundBlock == 0 && candidateTines.isEmpty) {
-            forgeBlock(keys)
-            if (useFencing) {routerRef ! (self,"updateSlot")}
-          } else if (!useFencing && candidateTines.nonEmpty) {
+  def update = {
+
+    if (SharedData.error) actorStalled = true
+
+    if (!actorStalled && !updating && diffuseSent) {
+
+      updating = true
+      
+      if (globalSlot > tMax || SharedData.killFlag) {timers.cancelAll;updating = false}
+
+      if (!useFencing && updating) coordinatorRef ! GetTime
+
+      while (globalSlot > localSlot) {
+        localSlot += 1
+        updateSlot
+      }
+
+      checkTines
+
+      if (useFencing) roundBlock match {
+        case 0 => {
+          forgeBlock(keys)
+          routerRef ! (self,"updateSlot")
+        }
+        case _ if chainUpdateLock => {
+          if (candidateTines.isEmpty) {
+            chainUpdateLock = false
+          } else {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Checking Tine")
             }
             timeFlag(maxValidBG)
-          } else if (useFencing && chainUpdateLock) {
-            if (candidateTines.isEmpty) {
-              chainUpdateLock = false
-            } else {
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Checking Tine")
-              }
-              timeFlag(maxValidBG)
-            }
           }
         }
-        updating = false
+        case _ =>
       }
+
+      updating = false
     }
+  }
+
+  def checkTines = while (candidateTines.nonEmpty) {
+    if (holderIndex == SharedData.printingHolder && printFlag) {
+      println("Holder " + holderIndex.toString + " Checking Tine")
+    }
+    timeFlag(maxValidBG)
   }
 }

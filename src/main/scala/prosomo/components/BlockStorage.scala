@@ -2,6 +2,7 @@ package prosomo.components
 
 import java.io.File
 
+import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import prosomo.primitives.{ByteStream, SimpleTypes}
 
@@ -62,6 +63,35 @@ class BlockStorage(dir:String) extends SimpleTypes {
       }
       slotIds += (slot->slotIdSet)
     }
+  }
+
+  def store(key:ByteArrayWrapper,block:Block,serializer: Serializer) = {
+    val blockHeader = block.prosomoHeader
+    blockHeaderStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
+    if (blockHeader._3 == 0) {
+      blockBodyStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
+        block.body match {case txs:GenesisSet => {txs}}
+      ))))
+    } else {
+      blockBodyStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
+        block.body match {case txs:TransactionSet => txs}
+      ))))
+    }
+  }
+
+  def load(key:ByteArrayWrapper,serializer: Serializer):Option[Block] = {
+    blockHeaderStore.get(key) match {
+      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {case h:BlockHeader=>
+        val blockBody = if (h._3 == 0) {
+          getGenBody(key,serializer)
+        } else {
+          getBody(key,serializer)
+        }
+        Some(new Block(ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(h))),h,blockBody))
+      }
+      case None => None
+    }
+
   }
 
   def get(id:BlockId,serializer: Serializer):Block = if (storageFlag) {

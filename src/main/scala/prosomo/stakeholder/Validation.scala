@@ -87,6 +87,7 @@ trait Validation extends Members {
       case b:BlockHeader => bool &&= hash(b,serializer) == gh
       case _ => bool &&= false
     }
+    if (!bool) println("Holder "+holderIndex.toString+" invalid genesis block")
 
     for (id <- c.ordered.tail) {
       getBlockHeader(id) match {
@@ -94,7 +95,10 @@ trait Validation extends Members {
           getParentBlockHeader(b) match {
             case pb:BlockHeader => {
               bool &&= getParentId(b) == pid
-              if (getParentId(b) != pid) println("Holder "+holderIndex.toString+" pid mismatch")
+              if (getParentId(b) != pid) {
+                println("Holder "+holderIndex.toString+" pid mismatch")
+                println(s"bs:${b._3} pbs:${pid._1}")
+              }
               compareBlocks(pb,b)
               pid = id
             }

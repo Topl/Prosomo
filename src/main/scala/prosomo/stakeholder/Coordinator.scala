@@ -98,7 +98,7 @@ class Coordinator(inputSeed:Array[Byte])
   var covert:Boolean = false
   var forgeAll:Boolean = false
 
-  val coordId:String = s"${self.path}"
+  val coordId:String = s"${self.path.toStringWithoutAddress}"
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   val eta0:Eta = FastCryptographicHash(inputSeed+"eta0")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
@@ -191,9 +191,30 @@ class Coordinator(inputSeed:Array[Byte])
       println("Getting holder keys")
       genKeys = collectKeys(holders,RequestKeys,genKeys)
       assert(!containsDuplicates(genKeys))
-      println("Forge Genesis Block")
-      forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-        case out:(Block,Map[ActorRef,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}}
+      val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
+      blocks.load(genBlockKey,serializer) match {
+        case Some(b:Block) => {
+          genBlock = b
+          def refMapKey(ref:ActorRef) = {
+            val pkw = ByteArrayWrapper(
+              hex2bytes(genKeys(s"${ref.path}").split(";")(0))
+                ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
+                ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
+            )
+            holderKeys += (ref-> pkw)
+          }
+          holders.map(refMapKey(_))
+          verifyBlock(genBlock)
+          println("Recovered Genesis Block")
+        }
+        case None => {
+          println("Forge Genesis Block")
+          forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+            case out:(Block,Map[ActorRef,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
+          }
+          blocks.store(genBlockKey,genBlock,serializer)
+        }
+      }
       println("Send GenBlock")
       sendAssertDone(holders,GenBlock(genBlock))
       println("Send Router Keys")

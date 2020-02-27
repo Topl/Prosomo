@@ -37,7 +37,7 @@ case class ReturnBlock(blocks:List[Block],box:Box,job:Int)
 case class DiffuseData(ref:ActorRef,pks:PublicKeys,box:Box)
 case class SendTx(transaction:Transaction,box:Box)
 
-//messages between coordinator and holders
+//messages between coordinator/router and holders
 case class GetSlot(s:Int)
 case class CoordRef(ref: ActorRef)
 case class RouterRef(ref:ActorRef)

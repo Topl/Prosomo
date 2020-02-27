@@ -362,9 +362,10 @@ trait Receive extends Members {
     /**accepts genesis block from coordinator */
     case gb:GenBlock => {
       genBlockHash = hash(gb.b.prosomoHeader,serializer)
+      println("Holder "+holderIndex.toString+" got genesis block "+Base58.encode(genBlockHash.data))
       assert(genBlockHash == gb.b.id)
       assert(verifyBlock(gb.b))
-      blocks.add(gb.b,serializer)
+      if (!blocks.known(gb.b.id)) blocks.add(gb.b,serializer)
       sender() ! "done"
     }
 

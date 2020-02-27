@@ -15,6 +15,9 @@ do
 	elif [ "$CMD" == "plot_graph" ]
 	then
 	    python ./src/main/python/obGraph.py
+    elif [ "$CMD" == "clean" ]
+    then
+        rm -r data/*
 	elif [ "$CMD" != "q" ]
 	then
         mkdir -p "$pth"
