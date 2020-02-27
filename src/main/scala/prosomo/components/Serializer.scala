@@ -20,7 +20,7 @@ class Serializer extends SimpleTypes {
   def getAnyBytes(input:Any):Array[Byte] = {
     input match {
       case block:Block => sBlock(block)
-      case box:Box => sBox(box)
+      case mac:Mac => sMac(mac)
       case transaction: Transaction => sTransaction(transaction)
       case blockHeader: BlockHeader => sBlockHeader(blockHeader)
       case ratio: Ratio => sRatio(ratio)
@@ -41,9 +41,9 @@ class Serializer extends SimpleTypes {
   def getBytes(kesSignature: KesSignature):Array[Byte] = sKesSignature(kesSignature)
   def getBytes(state: State):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
-  def getBytes(box:Box):Array[Byte] = sBox(box)
+  def getBytes(mac:Mac):Array[Byte] = sMac(mac)
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
-  def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt,Box)):Array[Byte] = sGen(gen)
+  def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt,Mac)):Array[Byte] = sGen(gen)
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
@@ -55,7 +55,7 @@ class Serializer extends SimpleTypes {
   def fromBytes(input:ByteStream): Any = {
     input.caseObject match {
       case DeserializeBlockHeader => dBlockHeader(input)
-      case DeserializeBox => dBox(input)
+      case DeserializeMac => dMac(input)
       case DeserializeTransaction => dTransaction(input)
       case DeserializeGenesisSet => dGenesisSet(input)
       case DeserializeTransactionSet => dTransactionSet(input)
@@ -167,18 +167,18 @@ class Serializer extends SimpleTypes {
     out
   }
 
-  private def sBox(box: Box):Array[Byte] = {
+  private def sMac(mac: Mac):Array[Byte] = {
     val output = Bytes.concat(
-      box.dataHash.data,
-      box.sid.data,
-      box.signature,
-      box.publicKey
+      mac.dataHash.data,
+      mac.sid.data,
+      mac.signature,
+      mac.publicKey
     )
     output
   }
 
-  private def dBox(stream:ByteStream):Box = {
-    val out = new Box(
+  private def dMac(stream:ByteStream):Mac = {
+    val out = new Mac(
       ByteArrayWrapper(stream.get(hash_length)),
       ByteArrayWrapper(stream.get(hash_length)),
       stream.get(sig_length),
@@ -221,23 +221,23 @@ class Serializer extends SimpleTypes {
     out
   }
 
-  private def sGen(gen:(Array[Byte], ByteArrayWrapper, BigInt,Box)):Array[Byte] = {
+  private def sGen(gen:(Array[Byte], ByteArrayWrapper, BigInt,Mac)):Array[Byte] = {
     val output = Bytes.concat(
       gen._1,
       gen._2.data,
       sBigInt(gen._3),
-      sBox(gen._4)
+      sMac(gen._4)
     )
     Ints.toByteArray(output.length) ++ output
   }
 
-  private def dGen(stream: ByteStream):(Array[Byte], ByteArrayWrapper, BigInt,Box) = {
+  private def dGen(stream: ByteStream):(Array[Byte], ByteArrayWrapper, BigInt,Mac) = {
     val out1 = stream.get(hash_length)
     val out2 = ByteArrayWrapper(stream.get(pkw_length))
     val out3len = stream.getInt
     val out3Bytes = stream.get(out3len)
     val out3 = dBigInt(new ByteStream(out3Bytes,stream.caseObject))
-    val out4 = dBox(new ByteStream(stream.get(box_length),stream.caseObject))
+    val out4 = dMac(new ByteStream(stream.get(mac_length),stream.caseObject))
     val out = (
       out1,
       out2,
@@ -265,7 +265,7 @@ class Serializer extends SimpleTypes {
 
   private def dBlockHeader(stream:ByteStream):BlockHeader = {
     val out1 = ByteArrayWrapper(stream.get(hash_length))
-    val out2 = dBox(new ByteStream(stream.get(box_length),DeserializeBox))
+    val out2 = dMac(new ByteStream(stream.get(mac_length),DeserializeMac))
     val out3 = stream.getInt
     val out4len = stream.getInt
     val out4Bytes = stream.get(out4len)
@@ -606,7 +606,7 @@ object Serializer {
   case object DeserializeBlock
   case object DeserializeBlockHeader
   case object DeserializeTransaction
-  case object DeserializeBox
+  case object DeserializeMac
   case object DeserializeGenesisSet
   case object DeserializeTransactionSet
   case object DeserializeIdList

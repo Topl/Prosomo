@@ -5,6 +5,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{RequestBlock, RequestChain, SendTx}
 import prosomo.components.{Chain, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
+import scorex.crypto.encode.Base58
 
 import scala.util.control.Breaks.{break, breakable}
 
@@ -47,7 +48,7 @@ trait ChainSelection extends Members {
   }
 
   def updateWallet = {
-    var id = localChain.getLastActiveSlot(localSlot)
+    var id = localChain.getLastActiveSlot(globalSlot)
     val bn = {getBlockHeader(id) match {case b:BlockHeader => b._9}}
     if (bn == 0) {
       getBlockHeader(id) match {
@@ -82,7 +83,7 @@ trait ChainSelection extends Members {
     }
     for (trans:Transaction <- wallet.getPending(localState)) {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(self,gossipers, SendTx(trans,signBox(hash(trans,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
+      send(self,gossipers, SendTx(trans))
     }
     walletStorage.store(wallet,serializer)
   }
@@ -139,11 +140,11 @@ trait ChainSelection extends Members {
             tineMaxDepth
           }
           val request:Request = (List(tine.head._2),depth,job._1)
-          send(self,ref, RequestChain(tine.head._2,depth,signBox(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(self,ref, RequestChain(tine.head._2,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
           val request:Request = (List(tine.head._2),0,job._1)
-          send(self,ref, RequestBlock(tine.head._2,signBox(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(self,ref, RequestBlock(tine.head._2,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }
       }
     }
@@ -155,18 +156,19 @@ trait ChainSelection extends Members {
     val tine:Chain = Chain(candidateTines.last._1)
     val job:Int = candidateTines.last._3
     val tineMaxSlot = tine.last._1
-    val bnt = {getBlockHeader(tine.getLastActiveSlot(localSlot)) match {case b:BlockHeader => b._9}}
-    val bnl = {getBlockHeader(localChain.getLastActiveSlot(localSlot)) match {case b:BlockHeader => b._9}}
+    val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
+    val bnl = {getBlockHeader(localChain.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
 
     def adoptTine:Unit = {
-      if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Adopting Chain")
-      collectLedger(subChain(localChain,prefix+1,localSlot))
+      if (holderIndex == SharedData.printingHolder && printFlag)
+        println("Holder " + holderIndex.toString + " Adopting Chain")
+      collectLedger(subChain(localChain,prefix+1,globalSlot))
       collectLedger(tine)
-      for (id <- subChain(localChain,prefix+1,localSlot).ordered) {
+      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
         val ledger:TransactionSet = blocks.getTxs(id,serializer)
         wallet.add(ledger)
       }
-      for (i <- prefix+1 to localSlot) {
+      for (i <- prefix+1 to globalSlot) {
         localChain.remove(i)
         val id = tine.get(i)
         if (id._1 > -1) {
@@ -202,7 +204,7 @@ trait ChainSelection extends Members {
       candidateTines = newCandidateTines
       updateWallet
       trimMemPool
-      history.get(localChain.getLastActiveSlot(localSlot)._2,serializer) match {
+      history.get(localChain.getLastActiveSlot(globalSlot)._2,serializer) match {
         case reorgState:(State,Eta) => {
           localState = reorgState._1
           eta = reorgState._2
@@ -213,9 +215,9 @@ trait ChainSelection extends Members {
           SharedData.throwError(holderIndex)
         }
       }
-      var epoch = localChain.lastActiveSlot(localSlot) / epochLength
+      var epoch = localChain.lastActiveSlot(globalSlot) / epochLength
       updateStakingState(epoch)
-      for (slot <- localChain.lastActiveSlot(localSlot) to localSlot) {
+      for (slot <- localChain.lastActiveSlot(globalSlot) to globalSlot) {
         updateEpoch(slot,epoch) match {
           case ep:Int if ep > epoch => epoch = ep
           case _ =>
@@ -225,7 +227,7 @@ trait ChainSelection extends Members {
 
     def dropTine:Unit = {
       collectLedger(tine)
-      for (id <- subChain(localChain,prefix+1,localSlot).ordered) {
+      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
         if (id._1 > -1) {
           val blockLedger:TransactionSet = blocks.getTxs(id,serializer)
           for (trans <- blockLedger) {

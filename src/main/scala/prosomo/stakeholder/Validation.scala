@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Chain, Transaction}
-import prosomo.primitives.{Box, Parameters, Ratio, SharedData}
+import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -27,7 +27,7 @@ trait Validation extends Members {
       sig,
       slot
     )
-    verifyBox(ledger.dataHash,ledger) && kesVer
+    verifyMac(ledger.dataHash,ledger) && kesVer
   }
 
   def verifyBlock(b:Block): Boolean = {
@@ -38,8 +38,8 @@ trait Validation extends Members {
         case txs:GenesisSet => {
           if (txs.nonEmpty) {
             hashGen(txs,serializer) == header._2.dataHash && txs.map(
-              _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
-                verifyBox(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
+              _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
+                verifyMac(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
               }}
             ).reduceLeft(_ && _)
           } else {

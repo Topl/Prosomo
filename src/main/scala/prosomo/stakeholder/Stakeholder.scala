@@ -87,7 +87,7 @@ class Stakeholder(inputSeed:Array[Byte])
   //placeholder for genesis block ID
   var genBlockHash: Hash = ByteArrayWrapper(Array())
   //placeholder for forged block if elected slot leader
-  var roundBlock: Any = 0
+  var roundBlock: Int = 0
   //max time steps set by coordinator
   var tMax = 0
   //start system time set by coordinator

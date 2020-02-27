@@ -1,7 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Box, SimpleTypes}
+import prosomo.primitives.{Mac, SimpleTypes}
 
 case class Block(identifier:ByteArrayWrapper, blockHeader:Any, blockBody:Any) extends SimpleTypes {
   def id:BlockId = identifier
@@ -11,7 +11,7 @@ case class Block(identifier:ByteArrayWrapper, blockHeader:Any, blockBody:Any) ex
     case h:BlockHeader => h
   }
   def pid:BlockId = prosomoHeader._1
-  def ledger:Box = prosomoHeader._2
+  def ledger:Mac = prosomoHeader._2
   def slot:Slot = prosomoHeader._3
   def certificate:Cert = prosomoHeader._4
   def nonce:Rho = prosomoHeader._5

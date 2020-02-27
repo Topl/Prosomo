@@ -18,7 +18,7 @@ trait SimpleTypes {
   val pi_length = 80
   val rho_length = 64
   val id_length = hash_length
-  val box_length = 2*hash_length + sig_length + pk_length
+  val mac_length = 2*hash_length + sig_length + pk_length
   val slot_length = int_length
   val bn_length = int_length
   val sk_length = 32
@@ -41,9 +41,9 @@ trait SimpleTypes {
   type SlotId = (Slot,BlockId)
   type Cert = (PublicKey,Rho,Pi,PublicKey,Ratio,String)
   type TransactionSet = Seq[Transaction]
-  type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt,Box)]
+  type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt,Mac)]
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
-  type BlockHeader = (Hash,Box,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
+  type BlockHeader = (Hash,Mac,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
   type Request = (List[BlockId],Int,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
   type MemPool = Map[Sid,(Transaction,Int)]

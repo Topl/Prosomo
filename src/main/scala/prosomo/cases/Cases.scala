@@ -3,7 +3,7 @@ package prosomo.cases
 import akka.actor.ActorRef
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
-import prosomo.primitives.Box
+import prosomo.primitives.Mac
 
 // case objects and classes for pattern matching messages between actors
 case object Diffuse
@@ -29,13 +29,13 @@ case object RequestPositionData
 case object GetBalance
 
 //signed messages between holders, messages from remote
-case class Hello(id:ActorRef, box:Box)
-case class SendBlock(block:Block,box:Box)
-case class RequestBlock(id:BlockId,box:Box,job:Int)
-case class RequestChain(id:BlockId,depth:Int,box:Box,job:Int)
-case class ReturnBlock(blocks:List[Block],box:Box,job:Int)
-case class DiffuseData(ref:ActorRef,pks:PublicKeys,box:Box)
-case class SendTx(transaction:Transaction,box:Box)
+case class Hello(id:ActorRef, mac:Mac)
+case class SendBlock(block:Block,mac:Mac)
+case class RequestBlock(id:BlockId, mac:Mac, job:Int)
+case class RequestChain(id:BlockId, depth:Int, mac:Mac, job:Int)
+case class ReturnBlock(blocks:List[Block], mac:Mac, job:Int)
+case class DiffuseData(ref:ActorRef,pks:PublicKeys,mac:Mac)
+case class SendTx(transaction:Transaction)
 
 //messages between coordinator/router and holders
 case class GetSlot(s:Int)

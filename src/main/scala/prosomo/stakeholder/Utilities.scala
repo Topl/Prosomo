@@ -41,11 +41,13 @@ trait Utilities extends Members with Types {
   def timeFlag[R](block: => R): R = {
     if (timingFlag && holderIndex == 0) {
       val t0 = System.nanoTime()
-      val result = block // call-by-name
+      val result = block
       val t1 = System.nanoTime()
       val outTime = (t1 - t0)*1.0e-9
-      val tString = "%6.6f".format(outTime)
-      println("Elapsed time: " + tString + " s")
+      if (outTime > slotT*1000000L*1.0e-9) {
+        val tString = "%6.6f".format(outTime)
+        println(Console.YELLOW  + "Warning: method call elapsed time: " + tString + "s longer than slot time" + Console.WHITE)
+      }
       result
     } else {
       block
@@ -53,14 +55,13 @@ trait Utilities extends Members with Types {
   }
 
   def time[R](block: => R): R = {
-    {
-      val t0 = System.nanoTime()
-      val result = block // call-by-name
+    val t0 = System.nanoTime()
+    val result = block // call-by-name
     val t1 = System.nanoTime()
-      val outTime = (t1 - t0)*1.0e-9
-      val tString = "%6.6f".format(outTime)
-      println("Elapsed time: " + tString + " s")
-      result
-    }
+    val outTime = (t1 - t0)*1.0e-9
+    val tString = "%6.6f".format(outTime)
+    println("Elapsed time: " + tString + " s")
+    result
   }
+
 }

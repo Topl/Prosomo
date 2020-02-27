@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, ActorRef, Timers}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Box, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
+import prosomo.primitives.{Mac, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, BlockStorage, Chain, ChainStorage, Serializer, SlotReorgHistory, Transaction}
 import prosomo.history.History
 import prosomo.wallet._
@@ -55,7 +55,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var candidateTines:Array[(Chain,Slot,Int)]
   var genBlockHeader:BlockHeader
   var genBlockHash:Hash
-  var roundBlock:Any
+  var roundBlock:Int
   var tMax:Int
   var t0:Long
   var localSlot:Slot
@@ -77,7 +77,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))):Unit
   def maxValidBG:Unit
   def validateChainIds(c:Chain):Boolean
-  def updateSlot:Unit
   def updateEpoch(slot:Slot,epochIn:Int):Int
   def updateStakingState(ep:Int):Unit
   def update:Unit
@@ -111,8 +110,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def eta(c:Chain, ep:Int):Eta
   def eta(c:Chain, ep:Int, etaP:Eta):Eta
   def diffuse(str: String,id: String,sk_sig: PrivateKey):String
-  def signBox(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Box
-  def verifyBox(input:Hash,box:Box):Boolean
+  def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
+  def verifyMac(input:Hash, mac:Mac):Boolean
   def gossipSet(id:ActorPath,h:List[ActorRef]):List[ActorRef]
   def send(sender:ActorRef,holder:ActorRef,command: Any):Unit
   def send(sender:ActorRef,holders:List[ActorRef],command: Any):Unit

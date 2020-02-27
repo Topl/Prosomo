@@ -84,7 +84,7 @@ class Coordinator(inputSeed:Array[Byte])
   var candidateTines:Array[(Chain,Slot,Int)] = Array()
   var genBlockHeader: BlockHeader = _
   var genBlockHash: Hash = ByteArrayWrapper(Array())
-  var roundBlock: Any = 0
+  var roundBlock: Int = 0
   var tMax = 0
   var t0:Long = 0
   var localSlot = 0
@@ -802,10 +802,11 @@ class Coordinator(inputSeed:Array[Byte])
               "slot" -> i.asJson,
               "blocks" -> blocks.slotBlocks(i,serializer).map{
                 case value:(ByteArrayWrapper,BlockHeader) => {
-                  val (pid:Hash,ledger:Box,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
+                  val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
                   val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
                   val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
                   Map(
+                    "forger"-> Base58.encode(pk_f.data).asJson,
                     "id" -> Base58.encode(value._1.data).asJson,
                     "bn" -> bn.asJson,
                     "bs" -> bs.asJson,
@@ -819,7 +820,7 @@ class Coordinator(inputSeed:Array[Byte])
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
                     "ledger" -> {blocks.getBody(value._1,serializer) match {case txs:Seq[Any]=>txs}}.toArray.map{
-                      case entry:(Array[Byte], ByteArrayWrapper, BigInt,Box) => {
+                      case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
                         val delta = entry._3
                         val pk_g:PublicKeyW = entry._2
                         Map(

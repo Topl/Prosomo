@@ -20,11 +20,8 @@ trait Receive extends Members {
 
     /**updates time, the kes key, and resets variables */
     case Update => {
-      if (adversary) {
-        update
-      } else {
-        update
-      }
+      update
+      context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
     }
 
     case value:GetSlot => {
@@ -88,7 +85,7 @@ trait Receive extends Members {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
               memPool += (value.transaction.sid->(value.transaction,0))
-              send(self,gossipers, SendTx(value.transaction,signBox(hash(value.transaction,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
+              send(self,gossipers, SendTx(value.transaction))
             }
           }
         }
@@ -101,23 +98,21 @@ trait Receive extends Members {
     /**block passing, new blocks delivered are added to list of tines and then sent to gossipers*/
     case value:SendBlock => {
       if (!actorStalled) {
-        if (inbox.keySet.contains(value.box.sid)) {
+        if (inbox.keySet.contains(value.mac.sid)) {
           val foundBlock = blocks.known(value.block.id)
           if (!foundBlock) {
             val b:BlockHeader = value.block.prosomoHeader
             val bHash = hash(b,serializer)
             val bSlot = b._3
-            if (verifyBox(value.block.id,value.box)) {
+            if (verifyMac(value.block.id,value.mac)) {
               if (verifyBlock(value.block)) {
                 blocks.add(value.block,serializer)
                 if (bSlot <= globalSlot) {
-                  if (holderIndex == SharedData.printingHolder && printFlag) {
-                    println("Holder " + holderIndex.toString + " Got New Tine")
-                  }
+                  //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
-                  send(self,gossipers, SendBlock(value.block,signBox(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+                  send(self,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   val jobNumber = tineCounter
-                  tines += (jobNumber -> (Chain(newId),0,0,0,inbox(value.box.sid)._1))
+                  tines += (jobNumber -> (Chain(newId),0,0,0,inbox(value.mac.sid)._1))
                   buildTine((jobNumber,tines(jobNumber)))
                   tineCounter += 1
                 }
@@ -138,8 +133,8 @@ trait Receive extends Members {
     /**block passing, returned blocks are added to block database*/
     case value:ReturnBlock => {
       if (!actorStalled) {
-        if (inbox.keySet.contains(value.box.sid)) {
-          if (verifyBox(hash((value.blocks.map(_.id),0,value.job),serializer),value.box)) {
+        if (inbox.keySet.contains(value.mac.sid)) {
+          if (verifyMac(hash((value.blocks.map(_.id),0,value.job),serializer),value.mac)) {
             for (block <- value.blocks) {
               if (!blocks.known(block.id)) {
                 if (verifyBlock(block)) {
@@ -166,23 +161,23 @@ trait Receive extends Members {
     /**block passing, parent ids that are not found are requested*/
     case value:RequestBlock => {
       if (!actorStalled) {
-        if (inbox.keySet.contains(value.box.sid)) {
+        if (inbox.keySet.contains(value.mac.sid)) {
           if (holderIndex == SharedData.printingHolder && printFlag) {
             println("Holder " + holderIndex.toString + " Was Requested Block")
           }
-          if (verifyBox(hash((List(value.id),0,value.job),serializer),value.box)) {
-            val ref = inbox(value.box.sid)._1
+          if (verifyMac(hash((List(value.id),0,value.job),serializer),value.mac)) {
+            val ref = inbox(value.mac.sid)._1
             if (blocks.known(value.id)) {
               val returnedBlock:List[Block] = List(blocks.get(value.id,serializer))
-              send(self,ref,ReturnBlock(returnedBlock,signBox(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(self,ref,ReturnBlock(returnedBlock,signMac(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
               if (holderIndex == SharedData.printingHolder && printFlag) {
                 println("Holder " + holderIndex.toString + " Returned Block")
               }
             } else {
               val returnedBlock:List[Block] = List()
-              send(self,ref,ReturnBlock(returnedBlock,signBox(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(self,ref,ReturnBlock(returnedBlock,signMac(hash((returnedBlock.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
             }
-          } else {println("error: request block invalid box")}
+          } else {println("error: request block invalid mac")}
         }
       }
       if (useFencing) {
@@ -193,13 +188,13 @@ trait Receive extends Members {
     /**block passing, parent ids are requested with increasing depth of chain upto a finite number of attempts*/
     case value:RequestChain => {
       if (!actorStalled) {
-        if (inbox.keySet.contains(value.box.sid)) {
+        if (inbox.keySet.contains(value.mac.sid)) {
           val request:Request = (List(value.id),value.depth,value.job)
-          if (verifyBox(hash(request,serializer),value.box) && value.depth <= tineMaxDepth) {
+          if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Was Requested Blocks")
             }
-            val ref = inbox(value.box.sid)._1
+            val ref = inbox(value.mac.sid)._1
             val startId:BlockId = value.id
             val depth:Int = value.depth
             val job:Int = value.job
@@ -212,8 +207,8 @@ trait Receive extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Returned Blocks")
             }
-            send(self,ref,ReturnBlock(returnedBlockList,signBox(hash((returnedBlockList.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
-          } else {println("error:chain request box invalid")}
+            send(self,ref,ReturnBlock(returnedBlockList,signMac(hash((returnedBlockList.map(_.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+          } else {println("error:chain request mac invalid")}
         }
       }
       if (useFencing) {
@@ -226,14 +221,14 @@ trait Receive extends Members {
       if (!actorStalled) {
         value.s match {
           case data:(PublicKeyW,BigInt) => {
-            if (holderIndex == SharedData.printingHolder && printFlag) {println(s"Holder $holderIndex Issued Transaction:" + "local state balance:"   +   localState(keys.pkw)._1.toString)}
+            //if (printFlag) {println(s"Holder $holderIndex Issued Transaction:"+"local state balance:"+localState(keys.pkw)._1.toString)}
             wallet.issueTx(data,keys.sk_sig,sig,rng,serializer) match {
               case trans:Transaction => {
                 walletStorage.store(wallet,serializer)
                 txCounter += 1
                 setOfTxs += (trans.sid->trans.nonce)
                 memPool += (trans.sid->(trans,0))
-                send(self,gossipers, SendTx(trans,signBox(hash(trans,serializer),sessionId,keys.sk_sig,keys.pk_sig)))
+                send(self,gossipers, SendTx(trans))
               }
               case _ => //{println("Holder "+holderIndex.toString+" tx issue failed")}
             }
@@ -252,13 +247,11 @@ trait Receive extends Members {
     case value:Hello => {
       if (!actorStalled) {
         if (gossipers.length < numGossipers + gOff) {
-          if (verifyBox(hash(value.id,serializer),value.box)) {
-            if (!gossipers.contains(value.id) && inbox.keySet.contains(value.box.sid)) {
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Adding Gossiper")
-              }
-              if (inbox(value.box.sid)._1 == value.id) gossipers = gossipers ++ List(value.id)
-              send(self,value.id,Hello(self,signBox(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+          if (verifyMac(hash(value.id,serializer),value.mac)) {
+            if (!gossipers.contains(value.id) && inbox.keySet.contains(value.mac.sid)) {
+              //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Adding Gossiper")}
+              if (inbox(value.mac.sid)._1 == value.id) gossipers = gossipers ++ List(value.id)
+              send(self,value.id,Hello(self,signMac(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
           }
         }
@@ -273,14 +266,14 @@ trait Receive extends Members {
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
-      sendDiffuse(holderId, holders, DiffuseData(self,keys.publicKeys,signBox(hash((self,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+      sendDiffuse(holderId, holders, DiffuseData(self,keys.publicKeys,signMac(hash((self,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
       sender() ! "done"
     }
 
     /**validates diffused string from other holders and stores in inbox */
     case value:DiffuseData => {
-      if (verifyBox(hash((value.ref,value.pks),serializer),value.box) && !inbox.keySet.contains(value.box.sid)) {
-        inbox += (value.box.sid->(value.ref,value.pks))
+      if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
+        inbox += (value.mac.sid->(value.ref,value.pks))
       }
       sender() ! "done"
     }
@@ -329,7 +322,14 @@ trait Receive extends Members {
 
     /**starts the timer that repeats the update command*/
     case Run => {
-      if (!useFencing) timers.startPeriodicTimer(timerKey, Update, updateTime)
+      if (!useFencing) {
+        context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
+        timers.startPeriodicTimer(timerKey, GetTime, updateTime)
+      }
+    }
+
+    case GetTime => {
+      coordinatorRef ! GetTime
     }
 
     /**sets the initial time*/
