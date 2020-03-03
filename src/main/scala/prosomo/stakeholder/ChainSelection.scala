@@ -261,7 +261,6 @@ trait ChainSelection extends Members {
     } else {
       dropTine
     }
-    //assert(validateChainIds(localChain))
     chainStorage.store(localChain,localChainId,serializer)
   }
 

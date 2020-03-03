@@ -104,8 +104,6 @@ class Stakeholder(inputSeed:Array[Byte])
   var coordinatorRef:ActorRef = _
   //total number of transactions issued
   var txCounter = 0
-  //set of all txs issued by holder
-  var setOfTxs:Map[Sid,Int] = Map()
   //toggle if holder is adversary
   var adversary:Boolean = false
   //toggle for covert mining

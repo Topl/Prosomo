@@ -6,10 +6,10 @@ object SharedData extends Types {
   var killFlag = false
   var txCounter = 0
   var printingHolder = 0
-  var setOfTxs:Map[Sid,Int] = Map()
   var t_0:Long = 0
   var t_1:Long = 0
   var timing:Boolean = false
+  var diskAccess:Boolean = false
 
   def time0 = {
     timing = true
@@ -30,6 +30,12 @@ object SharedData extends Types {
     println(counter)
     out
   }
+
+  def throwDiskWarning = if (!diskAccess) {
+    println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
+    diskAccess = true
+  }
+
   def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<");errorFlag=true}
   def throwError = {println("<---------Error------------<<<<");errorFlag=true}
   def error:Boolean = {errorFlag}

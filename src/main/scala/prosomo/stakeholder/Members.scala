@@ -64,7 +64,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   var actorStalled:Boolean
   var coordinatorRef:ActorRef
   var txCounter:Int
-  var setOfTxs:Map[Sid,Int]
   var adversary:Boolean
   var covert:Boolean
   var forgeAll:Boolean

@@ -24,60 +24,6 @@ trait Receive extends Members {
       context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
     }
 
-    case value:GetSlot => {
-      if (!actorStalled) {
-        if (roundBlock == 0) globalSlot += 1
-        assert(globalSlot == value.s)
-        while (roundBlock == 0) {
-          update
-        }
-      } else {
-        if (useFencing) {routerRef ! (self,"updateSlot")}
-      }
-      sender() ! "done"
-    }
-
-    case "endStep" => if (useFencing) {
-      roundBlock = 0
-      routerRef ! (self,"endStep")
-    }
-
-    case "passData" => if (useFencing) {
-      routerRef ! (self,"passData")
-    }
-
-    case value:Adversary => {
-      value.s match {
-        case "" => {
-          if (adversary) {
-            adversary=false
-          } else {
-            adversary=true
-          }
-        }
-        case "covert" => {
-          if (covert) {
-            adversary=false
-            covert=false
-          } else {
-            adversary=true
-            covert=true
-          }
-        }
-        case "nas" => {
-          if (forgeAll) {
-            adversary = false
-            forgeAll = false
-          } else {
-            adversary = true
-            forgeAll = true
-          }
-        }
-        case _ => "error: Adversary command unknown"
-      }
-      sender() ! "done"
-    }
-
     /**adds confirmed transactions to buffer and sends new ones to gossipers*/
     case value:SendTx => {
       if (!actorStalled) {
@@ -228,7 +174,7 @@ trait Receive extends Members {
               case trans:Transaction => {
                 walletStorage.store(wallet,serializer)
                 txCounter += 1
-                setOfTxs += (trans.sid->trans.nonce)
+                //setOfTxs += (trans.sid->trans.nonce)
                 memPool += (trans.sid->(trans,0))
                 send(self,gossipers, SendTx(trans))
               }
@@ -264,7 +210,8 @@ trait Receive extends Members {
     }
 
 
-    /************************************************** Diffuse ***********************************************************/
+
+    /************************************************** From Coordinator *******************************************************/
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
@@ -280,9 +227,7 @@ trait Receive extends Members {
       sender() ! "done"
     }
 
-    /************************************************** From Coordinator *******************************************************/
-
-    /**allocate arrays and vars of simulation*/
+    /**allocation and vars of simulation*/
     case value:Initialize => {
       println("Holder "+holderIndex.toString+" starting...")
       tMax = value.tMax
@@ -319,7 +264,6 @@ trait Receive extends Members {
       println("Valid Genesis Block")
       println("Local state balance:"   +   localState(keys.pkw)._1.toString)
       assert(localState(keys.pkw)._1 > 0)
-      assert(validateChainIds(localChain))
       sender() ! "done"
     }
 
@@ -373,6 +317,85 @@ trait Receive extends Members {
       }
       sender() ! "done"
     }
+
+    /**accepts coordinator ref*/
+    case value:CoordRef => {
+      coordinatorRef = value.ref
+      sender() ! "done"
+    }
+
+    /**accepts router ref*/
+    case value:RouterRef => {
+      routerRef = value.ref
+      sender() ! "done"
+    }
+
+    /**sets new list of holders resets gossipers*/
+    case value:Party => {
+      value.list match {
+        case list: List[ActorRef] => {
+          holders = list
+          if (useGossipProtocol) {
+            gossipers = List()
+            numHello = 0
+          } else {
+            gossipers = gossipSet(holderId,holders)
+          }
+          if (value.clear) inbox = Map()
+          diffuseSent = false
+        }
+        case _ =>
+      }
+      sender() ! "done"
+    }
+
+    case RequestKeys => {
+      password = s"password_holder_$holderIndex"
+      salt = FastCryptographicHash(uuid)
+      derivedKey = KeyFile.getDerivedKey(password,salt)
+      KeyFile.restore(storageDir) match {
+        case Some(restoredFile:KeyFile) => {
+          println("Reading keyfile ...")
+          keyFile = restoredFile
+        }
+        case None => {
+          println("Generating new keyfile...")
+          val seed1 = FastCryptographicHash(rng.nextString(32))
+          val seed2 = FastCryptographicHash(rng.nextString(32))
+          val seed3 = FastCryptographicHash(rng.nextString(32))
+          keyFile = KeyFile.fromSeed(
+            password,
+            storageDir,
+            serializer: Serializer,
+            sig:Sig,
+            vrf:Vrf,
+            kes:Kes,
+            globalSlot:Slot,
+            seed1,
+            seed2,
+            seed3
+          )
+        }
+      }
+      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
+      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
+      sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
+    }
+
+    /************************************************** Tests ***********************************************************/
+
+    case RequestGossipers => {
+      sender() ! GetGossipers(gossipers)
+    }
+
+    case RequestState => {
+      sender() ! GetState(stakingState)
+    }
+
+    case RequestBlockTree => {
+      sender() ! GetBlockTree(blocks,chainHistory)
+    }
+
 
     /**when stalled actor will do nothing when messages are received*/
     case StallActor => {
@@ -438,7 +461,6 @@ trait Receive extends Members {
         }
       }
       SharedData.txCounter += txCounter
-      SharedData.setOfTxs ++= setOfTxs
       var txCount = 0
       var allTx:List[Sid] = List()
       var duplicatesFound = false
@@ -458,11 +480,10 @@ trait Receive extends Members {
         }
       }
       val holderTxCount = holderTxOnChain.length
-      val holderTxCountTotal = setOfTxs.keySet.size
       val txCountChain = if (holderTxOnChain.isEmpty) {0} else {holderTxOnChain.head._2.nonce}
       val txCountState = math.max(localState(keys.pkw)._3-1,0)
       println(s"Tx Counts in state and chain: $txCountState, $txCountChain")
-      println(s"Transactions on chain: $holderTxCount / $holderTxCountTotal Total: $txCount Duplicates: $duplicatesFound")
+      println(s"Transactions on chain: $holderTxCount/$txCount Duplicates: $duplicatesFound")
       println("Chain hash: " + Base58.encode(FastCryptographicHash(chainBytes))+"\n")
       sender() ! "done"
     }
@@ -485,81 +506,61 @@ trait Receive extends Members {
       }
     }
 
-    /**accepts coordinator ref*/
-    case value:CoordRef => {
-      coordinatorRef = value.ref
+
+    case value:GetSlot => {
+      if (!actorStalled) {
+        if (roundBlock == 0) globalSlot += 1
+        assert(globalSlot == value.s)
+        while (roundBlock == 0) {
+          update
+        }
+      } else {
+        if (useFencing) {routerRef ! (self,"updateSlot")}
+      }
       sender() ! "done"
     }
 
-    /**accepts router ref*/
-    case value:RouterRef => {
-      routerRef = value.ref
-      sender() ! "done"
+    case "endStep" => if (useFencing) {
+      roundBlock = 0
+      routerRef ! (self,"endStep")
     }
 
-    /**sets new list of holders resets gossipers*/
-    case value:Party => {
-      value.list match {
-        case list: List[ActorRef] => {
-          holders = list
-          if (useGossipProtocol) {
-            gossipers = List()
-            numHello = 0
+    case "passData" => if (useFencing) {
+      routerRef ! (self,"passData")
+    }
+
+    case value:Adversary => {
+      value.s match {
+        case "" => {
+          if (adversary) {
+            adversary=false
           } else {
-            gossipers = gossipSet(holderId,holders)
+            adversary=true
           }
-          if (value.clear) inbox = Map()
-          diffuseSent = false
         }
-        case _ =>
+        case "covert" => {
+          if (covert) {
+            adversary=false
+            covert=false
+          } else {
+            adversary=true
+            covert=true
+          }
+        }
+        case "nas" => {
+          if (forgeAll) {
+            adversary = false
+            forgeAll = false
+          } else {
+            adversary = true
+            forgeAll = true
+          }
+        }
+        case _ => "error: Adversary command unknown"
       }
       sender() ! "done"
     }
 
-    case RequestGossipers => {
-      sender() ! GetGossipers(gossipers)
-    }
-
-    case RequestState => {
-      sender() ! GetState(stakingState)
-    }
-
-    case RequestBlockTree => {
-      sender() ! GetBlockTree(blocks,chainHistory)
-    }
-
-    case RequestKeys => {
-      password = s"password_holder_$holderIndex"
-      salt = FastCryptographicHash(uuid)
-      derivedKey = KeyFile.getDerivedKey(password,salt)
-      KeyFile.restore(storageDir) match {
-        case Some(restoredFile:KeyFile) => {
-          println("Reading keyfile ...")
-          keyFile = restoredFile
-        }
-        case None => {
-          println("Generating new keyfile...")
-          val seed1 = FastCryptographicHash(rng.nextString(32))
-          val seed2 = FastCryptographicHash(rng.nextString(32))
-          val seed3 = FastCryptographicHash(rng.nextString(32))
-          keyFile = KeyFile.fromSeed(
-            password,
-            storageDir,
-            serializer: Serializer,
-            sig:Sig,
-            vrf:Vrf,
-            kes:Kes,
-            globalSlot:Slot,
-            seed1,
-            seed2,
-            seed3
-          )
-        }
-      }
-      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
-      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
-      sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
-    }
 
     case unknown:Any => if (!actorStalled) {
       print("received unknown message ")

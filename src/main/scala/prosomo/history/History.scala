@@ -5,7 +5,7 @@ import java.io.File
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, Types}
+import prosomo.primitives.{ByteStream, SharedData, Types}
 import scorex.crypto.encode.Base58
 
 import scala.concurrent.duration.MINUTES
@@ -44,7 +44,7 @@ class History(dir:String) extends Types {
 
   private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
     def load(id:SlotId):(State,Eta) = {
-      println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
+      SharedData.throwDiskWarning
       (
         stateStore.get(id._2) match {
           case Some(bytes:ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeState)) match {

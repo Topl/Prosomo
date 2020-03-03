@@ -4,8 +4,9 @@ import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import prosomo.primitives.{ByteStream, SimpleTypes}
-import com.google.common.cache.{LoadingCache, CacheBuilder, CacheLoader}
+import prosomo.primitives.{ByteStream, SharedData, SimpleTypes}
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.oracle.truffle.api.dsl.Cached.Shared
 
 import scala.concurrent.duration.MINUTES
 
@@ -100,7 +101,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
   }
 
   def restore(key:ByteArrayWrapper):Option[Block] = {
-    println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
+    SharedData.throwDiskWarning
     blockHeaderStore.get(key) match {
       case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {
         case h:BlockHeader=> {

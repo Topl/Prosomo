@@ -93,7 +93,6 @@ class Coordinator(inputSeed:Array[Byte])
   var actorStalled = false
   var coordinatorRef:ActorRef = _
   var txCounter = 0
-  var setOfTxs:Map[Sid,Int] = Map()
   var adversary:Boolean = false
   var covert:Boolean = false
   var forgeAll:Boolean = false
@@ -321,10 +320,8 @@ class Coordinator(inputSeed:Array[Byte])
 
         case "status_all" => {
           SharedData.txCounter = 0
-          SharedData.setOfTxs = Map()
           sendAssertDone(holders,Status)
-          assert(SharedData.setOfTxs.keySet.size == SharedData.txCounter)
-          println("Total Transactions: "+SharedData.setOfTxs.keySet.size.toString)
+          println("Total Transactions: "+SharedData.txCounter)
           println("Total Attempts to Issue Txs:"+transactionCounter.toString)
           SharedData.txCounter = 0
         }
@@ -649,6 +646,7 @@ class Coordinator(inputSeed:Array[Byte])
     if (t>globalSlot) {
       writeTimeInfo
       globalSlot = t
+      SharedData.diskAccess = false
     }
     if (new File("/tmp/scorex/test-data/crypto/cmd").exists) {
       println("-----------------------------------------------------------")
