@@ -175,6 +175,9 @@ class Coordinator(inputSeed:Array[Byte])
     case Populate => {
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
+      println(s"K = $k_s")
+      println(s"S = $slotWindow")
+      println(s"f = $f_s")
       println("Populating")
       routerRef = context.actorOf(Router.props(FastCryptographicHash(inputSeed+"router")), "Router")
       var i = -1
@@ -192,9 +195,9 @@ class Coordinator(inputSeed:Array[Byte])
       genKeys = collectKeys(holders,RequestKeys,genKeys)
       assert(!containsDuplicates(genKeys))
       val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
-      blocks.load(genBlockKey,serializer) match {
+      blocks.restore(genBlockKey) match {
         case Some(b:Block) => {
-          genBlock = b
+          genBlock = new Block(hash(b.prosomoHeader,serializer),b.header,b.body)
           def refMapKey(ref:ActorRef) = {
             val pkw = ByteArrayWrapper(
               hex2bytes(genKeys(s"${ref.path}").split(";")(0))
@@ -212,7 +215,7 @@ class Coordinator(inputSeed:Array[Byte])
           forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
             case out:(Block,Map[ActorRef,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
           }
-          blocks.store(genBlockKey,genBlock,serializer)
+          blocks.store(genBlockKey,genBlock)
         }
       }
       println("Send GenBlock")
@@ -800,7 +803,7 @@ class Coordinator(inputSeed:Array[Byte])
           "data" -> (0 to tn).toArray.map{
             case i:Int => Map(
               "slot" -> i.asJson,
-              "blocks" -> blocks.slotBlocks(i,serializer).map{
+              "blocks" -> blocks.slotBlocks(i).map{
                 case value:(ByteArrayWrapper,BlockHeader) => {
                   val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
                   val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
@@ -819,7 +822,7 @@ class Coordinator(inputSeed:Array[Byte])
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {blocks.getBody(value._1,serializer) match {case txs:Seq[Any]=>txs}}.toArray.map{
+                    "ledger" -> {blocks.getBodyData(value._1) match {case txs:Seq[Any]=>txs}}.toArray.map{
                       case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
                         val delta = entry._3
                         val pk_g:PublicKeyW = entry._2

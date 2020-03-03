@@ -84,7 +84,7 @@ object Parameters {
   //communication method
   val useRouting:Boolean = config.getBoolean("params.useRouting")
   //delay in slots, calculated as maximum possible delay in random global network model
-  val delta_s:Int = (40075.0*delay_ms_km/slotT+1.0).ceil.toInt
+  val delta_s:Int = (40075.0*delay_ms_km/slotT+delay_ms_noise/slotT+1.0).ceil.toInt
   //epoch parameter
   val epsilon_s:Double = config.getDouble("params.epsilon_s")
   //alert stake ratio

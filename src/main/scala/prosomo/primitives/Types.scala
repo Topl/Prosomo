@@ -54,7 +54,7 @@ trait Types extends SimpleTypes {
     ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
   }
 
-  def hash(input:(List[Hash],Int,Int),serializer: Serializer): Hash = {
+  def hash(input:(List[SlotId],Int,Int),serializer: Serializer): Hash = {
     ByteArrayWrapper(FastCryptographicHash(
       Bytes.concat(
         Bytes.concat(input._1.map(serializer.getBytes):_*),

@@ -29,7 +29,7 @@ trait Update extends Members {
     stakingState = {
       if (ep > 1) {
         val eps:Slot = (ep-1)*epochLength
-        history.get(localChain.getLastActiveSlot(eps)._2,serializer) match {
+        history.get(localChain.getLastActiveSlot(eps)) match {
           case value:(State,Eta) =>
             value._1
           case _ =>
@@ -40,7 +40,7 @@ trait Update extends Members {
             Map()
         }
       } else {
-        history.get(localChain.get(0)._2,serializer) match {
+        history.get(localChain.get(0)) match {
           case value:(State,Eta) =>
             value._1
           case _ =>

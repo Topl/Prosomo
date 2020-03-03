@@ -46,7 +46,7 @@ trait Utilities extends Members with Types {
       val outTime = (t1 - t0)*1.0e-9
       if (outTime > slotT*1000000L*1.0e-9) {
         val tString = "%6.6f".format(outTime)
-        println(Console.YELLOW  + "Warning: method call elapsed time: " + tString + "s longer than slot time" + Console.WHITE)
+        println(Console.YELLOW  + "Warning: method call elapsed time " + tString + "s > slotT" + Console.WHITE)
       }
       result
     } else {

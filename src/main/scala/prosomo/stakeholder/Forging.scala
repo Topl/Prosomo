@@ -22,7 +22,7 @@ trait Forging extends Members {
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
-      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot)) match {case b:BlockHeader =>
+      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)) match {case b:BlockHeader =>
         assert(b._3 != slot)
         b
       }
@@ -39,12 +39,12 @@ trait Forging extends Members {
       val hb = hash(b,serializer)
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
       val block = new Block(hb,b,txs)
-      blocks.add(block,serializer)
+      blocks.add(block)
       updateLocalState(localState, Chain((slot,block.id))) match {
         case forgedState:State => {
-          assert(localChain.getLastActiveSlot(slot)._2 == b._1)
+          assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(self,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
-          history.add(block.id,forgedState,eta,serializer)
+          history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter
           tineCounter += 1

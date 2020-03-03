@@ -5,10 +5,16 @@ import java.io.File
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import prosomo.primitives.{ByteStream, SimpleTypes}
+import com.google.common.cache.{LoadingCache, CacheBuilder, CacheLoader}
+
+import scala.concurrent.duration.MINUTES
 
 class BlockStorage(dir:String) extends SimpleTypes {
   import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
+
+  private val runtime = Runtime.getRuntime
+  private val serializer = new Serializer
 
   private var blockBodyStore:LSMStore = {
     val iFile = new File(s"$dir/blocks/body")
@@ -34,11 +40,24 @@ class BlockStorage(dir:String) extends SimpleTypes {
     store
   }
 
+  private val blockLoader:CacheLoader[SlotId,Block] = new CacheLoader[SlotId,Block] {
+    def load(id:SlotId):Block = {
+      restore(id._2) match {
+        case Some(b:Block) => b
+        case None => new Block(id._2,None,None)
+      }
+    }
+  }
+
+  private val blockCache:LoadingCache[SlotId,Block] = CacheBuilder.newBuilder()
+    .expireAfterAccess(10,MINUTES).maximumSize(200)
+    .build[SlotId,Block](blockLoader)
+
   private var data:Map[ByteArrayWrapper,Block] = Map()
 
   private var slotIds:Map[Slot,Set[BlockId]] = Map()
 
-  def add(block:Block,serializer: Serializer):Unit = if (storageFlag) {
+  def add(block:Block):Unit = if (storageFlag) {
     val blockHeader = block.prosomoHeader
     blockHeaderStore.update(block.id,Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
@@ -50,6 +69,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
         block.body match {case txs:TransactionSet => txs}
       ))))
     }
+    blockCache.put((blockHeader._3,block.id),block)
   } else {
     if (!data.keySet.contains(block.id)) {
       data += (block.id -> block)
@@ -65,7 +85,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
     }
   }
 
-  def store(key:ByteArrayWrapper,block:Block,serializer: Serializer) = {
+  def store(key:ByteArrayWrapper,block:Block) = {
     val blockHeader = block.prosomoHeader
     blockHeaderStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
@@ -79,97 +99,84 @@ class BlockStorage(dir:String) extends SimpleTypes {
     }
   }
 
-  def load(key:ByteArrayWrapper,serializer: Serializer):Option[Block] = {
+  def restore(key:ByteArrayWrapper):Option[Block] = {
     blockHeaderStore.get(key) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {case h:BlockHeader=>
-        val blockBody = if (h._3 == 0) {
-          getGenBody(key,serializer)
-        } else {
-          getBody(key,serializer)
+      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {
+        case h:BlockHeader=> {
+          blockBodyStore.get(key) match {
+            case Some(bytes:ByteArrayWrapper) => {
+              if (h._3 == 0) {
+                serializer.fromBytes(new ByteStream(bytes.data,DeserializeGenesisSet)) match {
+                  case txs:GenesisSet => Some(new Block(key,h,txs))
+                  case _ => None
+                }
+              } else {
+                serializer.fromBytes(new ByteStream(bytes.data,DeserializeTransactionSet)) match {
+                  case txs:TransactionSet => Some(new Block(key,h,txs))
+                  case _ => None
+                }
+              }
+            }
+            case None => Some(new Block(key,h,None))
+          }
         }
-        Some(new Block(ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(h))),h,blockBody))
       }
       case None => None
     }
-
   }
 
-  def get(id:BlockId,serializer: Serializer):Block = if (storageFlag) {
-    val blockHeader = blockHeaderStore.get(id) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {case h:BlockHeader=>h}
-    }
-    val blockBody = if (blockHeader._3 == 0) {
-      getGenBody(id,serializer)
-    } else {
-      getBody(id,serializer)
-    }
-    new Block(id,blockHeader,blockBody)
+  def get(id:SlotId):Block = if (storageFlag) {
+    blockCache.get(id)
   } else {
-    data(id)
+    data(id._2)
   }
-  def get(id:SlotId,serializer: Serializer):Block = get(id._2,serializer)
 
-  def getBody(id:BlockId,serializer: Serializer):Any = if (storageFlag) {
-    blockBodyStore.get(id) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeTransactionSet))
-      case None => None
-    }
+  def getBody(id:SlotId):Any = if (storageFlag) {
+    blockCache.get(id).body
   } else {
-    data(id).body
+    data(id._2).body
   }
-  def getBody(id:SlotId,serializer: Serializer):Any = getBody(id._2,serializer)
 
-  def getGenBody(id:BlockId,serializer: Serializer):Any = if (storageFlag) {
-    blockBodyStore.get(id) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeGenesisSet))
-      case None => None
-    }
-  } else {
-    data(id).body
+  def getBodyData(id:BlockId):Any = blockBodyStore.get(id)
+
+  def getTxs(id:SlotId):TransactionSet = getBody(id) match {
+    case txs:TransactionSet => txs
+    case _ => Seq()
   }
-  def getGenBody(id:SlotId,serializer: Serializer):Any = getGenBody(id._2,serializer)
 
-  def getTxs(id:BlockId,serializer: Serializer):TransactionSet = getBody(id,serializer) match {case txs:TransactionSet => txs}
-  def getTxs(id:SlotId,serializer: Serializer):TransactionSet = getBody(id,serializer) match {case txs:TransactionSet => txs}
-
-  def getGenSet(id:BlockId,serializer: Serializer):GenesisSet = getGenBody(id,serializer) match {case txs:GenesisSet => txs}
-  def getGenSet(id:SlotId,serializer: Serializer):GenesisSet = getGenBody(id,serializer) match {case txs:GenesisSet => txs}
-
-  def known(id:BlockId):Boolean = if (storageFlag) {
-    checkHeaderStore(id)
-  } else {
-    data.keySet.contains(id)
+  def getGenSet(id:SlotId):GenesisSet = getBody(id) match {
+    case txs:GenesisSet => txs
+    case _ => Seq()
   }
 
   def known(id:SlotId):Boolean = if (storageFlag) {
-    checkHeaderStore(id._2)
+    blockCache.getIfPresent(id) match {
+      case b:Block => b.header match {
+        case h:BlockHeader => true
+        case None => false
+      }
+      case _ => blockHeaderStore.versionIDExists(id._2)
+    }
   } else {
     data.keySet.contains(id._2)
   }
 
-  def checkHeaderStore(id:BlockId):Boolean = {
-    blockHeaderStore.versionIDExists(id)
-  }
-
-  def slotBlocks(slot:Slot,serializer: Serializer):Map[ByteArrayWrapper,BlockHeader] = {
-    var out:Map[ByteArrayWrapper,BlockHeader] = Map()
-    if (slotIds.keySet.contains(slot)) for (id <- slotIds(slot)) {out += (id -> get(id,serializer).prosomoHeader)}
-    out
-  }
-
-  def delete(id:BlockId,serializer: Serializer):Unit = if(storageFlag) {
-    blockHeaderStore
-  } else {
-    if (data.keySet.contains(id)) {
-      val slot = get(id,serializer).slot
-      val slotIdSet:Set[BlockId] = {
-        val out = slotIds(slot) -- Set(id)
-        slotIds -= slot
-        out
+  def known_then_load(id:SlotId):Boolean = if (storageFlag) {
+    blockCache.get(id) match {
+      case b:Block => b.header match {
+        case h:BlockHeader => true
+        case None => false
       }
-      slotIds += (slot->slotIdSet)
-      data -= id
+      case _ => false
     }
+  } else {
+    data.keySet.contains(id._2)
+  }
+
+  def slotBlocks(slot:Slot):Map[ByteArrayWrapper,BlockHeader] = {
+    var out:Map[ByteArrayWrapper,BlockHeader] = Map()
+    if (slotIds.keySet.contains(slot)) for (id <- slotIds(slot)) {out += (id -> get((slot,id)).prosomoHeader)}
+    out
   }
 
   def copy(bd:BlockStorage):Unit = {

@@ -44,7 +44,7 @@ trait SimpleTypes {
   type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt,Mac)]
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
   type BlockHeader = (Hash,Mac,Slot,Cert,Rho,Pi,KesSignature,PublicKey,BlockNumber,Slot)
-  type Request = (List[BlockId],Int,Int)
+  type Request = (List[SlotId],Int,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
   type MemPool = Map[Sid,(Transaction,Int)]
 }

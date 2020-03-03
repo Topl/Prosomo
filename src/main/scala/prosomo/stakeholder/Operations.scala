@@ -60,8 +60,8 @@ trait Operations extends Members {
     */
   def getBlockHeader(bid:SlotId): Any = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
-      if (blocks.known(bid)) {
-        blocks.get(bid,serializer).prosomoHeader
+      if (blocks.known_then_load(bid)) {
+        blocks.get(bid).prosomoHeader
       } else {
         0
       }
@@ -77,8 +77,8 @@ trait Operations extends Members {
     */
   def getParentBlockHeader(b:BlockHeader): Any = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
-      if (blocks.known(b._1)) {
-        blocks.get(b._1,serializer).prosomoHeader
+      if (blocks.known_then_load((b._10,b._1))) {
+        blocks.get((b._10,b._1)).prosomoHeader
       } else {
         0
       }

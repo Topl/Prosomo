@@ -2,14 +2,19 @@ package prosomo.history
 
 import java.io.File
 
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, Types}
 import scorex.crypto.encode.Base58
 
+import scala.concurrent.duration.MINUTES
+
 class History(dir:String) extends Types {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
+
+  val serializer:Serializer = new Serializer
 
   var idMap:Map[Hash,(State,Eta)] = Map()
 
@@ -37,45 +42,66 @@ class History(dir:String) extends Types {
     store
   }
 
-  def known(id:BlockId):Boolean = if (storageFlag) {
-    stateStore.versionIDExists(id)
-  } else {
-    idMap.keySet.contains(id)
+  private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
+    def load(id:SlotId):(State,Eta) = {
+      (
+        stateStore.get(id._2) match {
+          case Some(bytes:ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeState)) match {
+            case s:State => s
+            case _ => Map()
+          }
+          case None => Map()
+        },
+        etaStore.get(id._2) match {
+          case Some(bytes:ByteArrayWrapper) => bytes.data
+          case None => Array()
+        }
+      )
+    }
   }
 
+  private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
+    .expireAfterAccess(10,MINUTES).maximumSize(200)
+    .build[SlotId,(State,Eta)](stateLoader)
+
+
   def known(id:SlotId):Boolean = if (storageFlag) {
-    known(id._2)
+    stateCache.getIfPresent(id) match {
+      case s:(State,Eta) => true
+      case _ => stateStore.versionIDExists(id._2)
+    }
   } else {
     idMap.keySet.contains(id._2)
   }
 
-  def add(id:Hash,ls:State,eta:Eta,serializer: Serializer) = if (storageFlag) {
-    if (!known(id)) {
-      stateStore.update(id,Seq(),Seq(id -> ByteArrayWrapper(serializer.getBytes(ls))))
-      etaStore.update(id,Seq(),Seq(id -> ByteArrayWrapper(eta)))
+  def known_then_load(id:SlotId):Boolean = if (storageFlag) {
+    stateCache.get(id) match {
+      case s:(State,Eta) => true
+      case _ => false
     }
   } else {
+    idMap.keySet.contains(id._2)
+  }
+
+  def add(id:SlotId,ls:State,eta:Eta):Unit = if (storageFlag) {
     if (!known(id)) {
-      idMap += (id -> (ls, eta))
+      stateStore.update(id._2,Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
+      etaStore.update(id._2,Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
+    }
+    stateCache.put(id,(ls,eta))
+  } else {
+    if (!known(id)) {
+      idMap += (id._2 -> (ls, eta))
     }
   }
 
-  def get(id:Hash,serializer: Serializer):Any = if (storageFlag) {
-    (
-      stateStore.get(id) match {
-        case Some(bytes:ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeState))
-        case None => None
-      },
-      etaStore.get(id) match {
-        case Some(bytes:ByteArrayWrapper) => bytes.data
-        case None => None
-      }
-    )
+  def get(id:SlotId):Any = if (storageFlag) {
+    stateCache.get(id)
   } else {
     if (known(id)) {
-      idMap(id)
+      idMap(id._2)
     } else {
-      println("Warning: Unknown id in history "+Base58.encode(id.data))
+      println("Warning: Unknown id in history "+Base58.encode(id._2.data))
       0
     }
   }

@@ -86,7 +86,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def hashGenEntry(input:(Array[Byte], ByteArrayWrapper, BigInt),serializer: Serializer):Hash
   def hash(input:BlockHeader,serializer: Serializer):Hash
   def hash(input:Transaction,serializer: Serializer):Hash
-  def hash(input:(List[Hash],Int,Int),serializer: Serializer):Hash
+  def hash(input:(List[SlotId],Int,Int),serializer: Serializer):Hash
   def hashGen(input:GenesisSet,serializer: Serializer):Hash
   def hash(input:TransactionSet,serializer: Serializer):Hash
   def hash(input:String,serializer: Serializer):Hash

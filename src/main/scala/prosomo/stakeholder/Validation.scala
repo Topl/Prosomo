@@ -173,7 +173,7 @@ trait Validation extends Members {
     var eta_Ep:Eta = Array()
     var ls:State = Map()
 
-    history.get(localChain.getLastActiveSlot(prefix)._2,serializer) match {
+    history.get(localChain.getLastActiveSlot(prefix)) match {
       case value:(State,Eta) => {
         ls = value._1
         eta_Ep = value._2
@@ -183,7 +183,7 @@ trait Validation extends Members {
 
     var stakingState: State = {
       if (ep0 > 1) {
-        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)._2,serializer) match {
+        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -194,7 +194,7 @@ trait Validation extends Members {
           }
         }
       } else {
-        history.get(localChain.get(0)._2,serializer) match {
+        history.get(localChain.get(0)) match {
           case value:(State,Eta) => {
             value._1
           }
@@ -250,7 +250,7 @@ trait Validation extends Members {
         }
         case _ =>
       }
-      if (isValid) history.add(id._2,ls,eta_Ep,serializer)
+      if (isValid) history.add(id,ls,eta_Ep)
     }
 
     def compareBlocks(parent:BlockHeader, block:BlockHeader) = {
@@ -263,7 +263,7 @@ trait Validation extends Members {
             eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
             stakingState = {
               val eps = (ep - 1) * epochLength
-              history.get(localChain.getLastActiveSlot(eps)._2,serializer) match {
+              history.get(localChain.getLastActiveSlot(eps)) match {
                 case value:(State,Eta) => {
                   value._1
                 }

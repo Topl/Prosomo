@@ -54,7 +54,7 @@ trait ChainSelection extends Members {
       getBlockHeader(id) match {
         case b:BlockHeader => {
           val bni = b._9
-          history.get(id._2,serializer) match {
+          history.get(id) match {
             case value:(State,Eta) => {
               wallet.update(value._1)
             }
@@ -69,7 +69,7 @@ trait ChainSelection extends Members {
             case b:BlockHeader => {
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
-                history.get(id._2,serializer) match {
+                history.get(id) match {
                   case value:(State,Eta) => {
                     wallet.update(value._1)
                   }
@@ -139,12 +139,12 @@ trait ChainSelection extends Members {
           } else {
             tineMaxDepth
           }
-          val request:Request = (List(tine.head._2),depth,job._1)
-          send(self,ref, RequestChain(tine.head._2,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          val request:Request = (List(tine.head),depth,job._1)
+          send(self,ref, RequestChain(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
-          val request:Request = (List(tine.head._2),0,job._1)
-          send(self,ref, RequestBlock(tine.head._2,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          val request:Request = (List(tine.head),0,job._1)
+          send(self,ref, RequestBlock(tine.head,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }
       }
     }
@@ -165,7 +165,7 @@ trait ChainSelection extends Members {
       collectLedger(subChain(localChain,prefix+1,globalSlot))
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
-        val ledger:TransactionSet = blocks.getTxs(id,serializer)
+        val ledger:TransactionSet = blocks.getTxs(id)
         wallet.add(ledger)
       }
       for (i <- prefix+1 to globalSlot) {
@@ -183,7 +183,7 @@ trait ChainSelection extends Members {
             }
           )
           localChain.update(id)
-          val blockLedger:TransactionSet = blocks.getTxs(id,serializer)
+          val blockLedger:TransactionSet = blocks.getTxs(id)
           for (trans<-blockLedger) {
             if (memPool.keySet.contains(trans.sid)) {
               memPool -= trans.sid
@@ -204,7 +204,7 @@ trait ChainSelection extends Members {
       candidateTines = newCandidateTines
       updateWallet
       trimMemPool
-      history.get(localChain.getLastActiveSlot(globalSlot)._2,serializer) match {
+      history.get(localChain.getLastActiveSlot(globalSlot)) match {
         case reorgState:(State,Eta) => {
           localState = reorgState._1
           eta = reorgState._2
@@ -229,7 +229,7 @@ trait ChainSelection extends Members {
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
         if (id._1 > -1) {
-          val blockLedger:TransactionSet = blocks.getTxs(id,serializer)
+          val blockLedger:TransactionSet = blocks.getTxs(id)
           for (trans <- blockLedger) {
             if (memPool.keySet.contains(trans.sid)){
               memPool -= trans.sid
@@ -261,7 +261,7 @@ trait ChainSelection extends Members {
     } else {
       dropTine
     }
-    assert(validateChainIds(localChain))
+    //assert(validateChainIds(localChain))
     chainStorage.store(localChain,localChainId,serializer)
   }
 
