@@ -10,7 +10,7 @@ import com.google.common.cache.{LoadingCache, CacheBuilder, CacheLoader}
 import scala.concurrent.duration.MINUTES
 
 class BlockStorage(dir:String) extends SimpleTypes {
-  import prosomo.primitives.Parameters.storageFlag
+  import prosomo.primitives.Parameters.{storageFlag,cacheSize}
   import prosomo.components.Serializer._
 
   private val runtime = Runtime.getRuntime
@@ -100,6 +100,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
   }
 
   def restore(key:ByteArrayWrapper):Option[Block] = {
+    println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
     blockHeaderStore.get(key) match {
       case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {
         case h:BlockHeader=> {

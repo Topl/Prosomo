@@ -12,7 +12,7 @@ import scala.concurrent.duration.MINUTES
 
 class History(dir:String) extends Types {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.storageFlag
+  import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
   val serializer:Serializer = new Serializer
 
@@ -44,6 +44,7 @@ class History(dir:String) extends Types {
 
   private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
     def load(id:SlotId):(State,Eta) = {
+      println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
       (
         stateStore.get(id._2) match {
           case Some(bytes:ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeState)) match {
@@ -61,7 +62,7 @@ class History(dir:String) extends Types {
   }
 
   private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(200)
+    .expireAfterAccess(10,MINUTES).maximumSize(cacheSize)
     .build[SlotId,(State,Eta)](stateLoader)
 
 
