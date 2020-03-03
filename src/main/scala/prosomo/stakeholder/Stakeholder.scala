@@ -3,10 +3,10 @@ package prosomo.stakeholder
 import akka.actor.{ActorPath, ActorRef, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{BlockStorage, Chain, ChainStorage, Serializer, SlotReorgHistory}
-import prosomo.history.History
+import prosomo.components.{Chain, Serializer}
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
-import prosomo.wallet.{Wallet, WalletStorage}
+import prosomo.wallet.Wallet
 
 import scala.math.BigInt
 import scala.util.Random
@@ -35,7 +35,7 @@ class Stakeholder(inputSeed:Array[Byte])
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
   val blocks:BlockStorage = new BlockStorage(storageDir)
-  val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
+  val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -44,7 +44,7 @@ class Stakeholder(inputSeed:Array[Byte])
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = new Wallet(keys.pkw,fee_r)
-  val history:History = new History(storageDir)
+  val history:StateStorage = new StateStorage(storageDir)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
   val phase:Double = rng.nextDouble

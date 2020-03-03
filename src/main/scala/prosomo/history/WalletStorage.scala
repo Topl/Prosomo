@@ -1,17 +1,17 @@
-package prosomo.wallet
+package prosomo.history
 
 import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.LSMStore
-import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{ByteStream, Ratio, SimpleTypes}
+import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import prosomo.components.Serializer
+import prosomo.primitives.{ByteStream, Ratio, SimpleTypes}
+import prosomo.wallet.Wallet
 
 
 class WalletStorage(dir:String) extends SimpleTypes {
-  import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
+  import prosomo.primitives.Parameters.storageFlag
 
   val checkPoint = ByteArrayWrapper(FastCryptographicHash("CHECKPOINT"))
 

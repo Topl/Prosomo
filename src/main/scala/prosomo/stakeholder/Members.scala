@@ -2,9 +2,9 @@ package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, ActorRef, Timers}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Mac, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, BlockStorage, Chain, ChainStorage, Serializer, SlotReorgHistory, Transaction}
-import prosomo.history.History
+import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
+import prosomo.components.{Block, Chain, Serializer, Transaction}
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
 import prosomo.wallet._
 
 import scala.math.BigInt
@@ -17,12 +17,12 @@ trait Members extends SimpleTypes with Actor with Timers {
   val storageDir:String
   val localChain:Chain
   val blocks:BlockStorage
-  val chainHistory:SlotReorgHistory
+  val chainHistory:SlotHistoryStorage
   val walletStorage:WalletStorage
   val vrf:Vrf
   val kes:Kes
   val sig:Sig
-  val history:History
+  val history:StateStorage
   val rng:Random
   val holderId:ActorPath
   val sessionId:Sid

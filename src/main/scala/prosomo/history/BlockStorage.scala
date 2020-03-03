@@ -1,18 +1,17 @@
-package prosomo.components
+package prosomo.history
 
 import java.io.File
 
-import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import prosomo.primitives.{ByteStream, SharedData, SimpleTypes}
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import com.oracle.truffle.api.dsl.Cached.Shared
+import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import prosomo.components.{Block, Serializer}
+import prosomo.primitives.{ByteStream, SharedData, SimpleTypes}
 
 import scala.concurrent.duration.MINUTES
 
 class BlockStorage(dir:String) extends SimpleTypes {
-  import prosomo.primitives.Parameters.{storageFlag,cacheSize}
   import prosomo.components.Serializer._
+  import prosomo.primitives.Parameters.storageFlag
 
   private val runtime = Runtime.getRuntime
   private val serializer = new Serializer
@@ -20,7 +19,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
   private var blockBodyStore:LSMStore = {
     val iFile = new File(s"$dir/blocks/body")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -32,7 +31,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
   private var blockHeaderStore:LSMStore = {
     val iFile = new File(s"$dir/blocks/header")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()

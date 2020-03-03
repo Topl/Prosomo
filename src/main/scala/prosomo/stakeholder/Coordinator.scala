@@ -12,9 +12,9 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
 import prosomo.cases._
 import prosomo.components._
-import prosomo.history.History
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
 import prosomo.primitives._
-import prosomo.wallet.{Wallet, WalletStorage}
+import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -46,13 +46,13 @@ class Coordinator(inputSeed:Array[Byte])
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Chain = new Chain
   val blocks:BlockStorage = new BlockStorage(storageDir)
-  val chainHistory:SlotReorgHistory = new SlotReorgHistory(storageDir)
+  val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
-  val history:History = new History(storageDir)
+  val history:StateStorage = new StateStorage(storageDir)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))

@@ -1,12 +1,13 @@
-package prosomo.components
+package prosomo.history
 
 import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, Types}
 
-class SlotReorgHistory(dir:String) extends Types {
+class SlotHistoryStorage(dir:String) extends Types {
   import prosomo.components.Serializer._
 
   //import prosomo.primitives.Parameters.storageFlag
@@ -69,7 +70,7 @@ class SlotReorgHistory(dir:String) extends Types {
     }
   }
 
-  def copy(srh:SlotReorgHistory):Unit = {
+  def copy(srh:SlotHistoryStorage):Unit = {
     this.data = srh.data
     this.blockReorgStore = srh.blockReorgStore
   }

@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.cases._
-import prosomo.components.{BlockStorage, SlotReorgHistory}
+import prosomo.history.{BlockStorage, SlotHistoryStorage}
 import prosomo.primitives.{Mac, Parameters}
 
 import scala.concurrent.Await
@@ -181,7 +181,7 @@ trait Messages extends Members {
           case _ => println("error")
         }
         value.h match {
-          case h:SlotReorgHistory => chainHistory.copy(h)
+          case h:SlotHistoryStorage => chainHistory.copy(h)
           case _ => println("error")
         }
       }

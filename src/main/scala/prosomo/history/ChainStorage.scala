@@ -1,15 +1,15 @@
-package prosomo.components
+package prosomo.history
 
 import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.LSMStore
-import io.iohk.iodb.ByteArrayWrapper
+import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import prosomo.components.{Chain, Serializer}
 import prosomo.primitives.{ByteStream, SimpleTypes}
 
 class ChainStorage(dir:String) extends SimpleTypes {
-  import prosomo.primitives.Parameters.storageFlag
   import prosomo.components.Serializer._
+  import prosomo.primitives.Parameters.storageFlag
 
   val checkPoint = ByteArrayWrapper(FastCryptographicHash("CHECKPOINT"))
 

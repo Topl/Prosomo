@@ -10,7 +10,7 @@ import scorex.crypto.encode.Base58
 
 import scala.concurrent.duration.MINUTES
 
-class History(dir:String) extends Types {
+class StateStorage(dir:String) extends Types {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
@@ -21,7 +21,7 @@ class History(dir:String) extends Types {
   val stateStore:LSMStore = {
     val iFile = new File(s"$dir/history/state")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -33,7 +33,7 @@ class History(dir:String) extends Types {
   val etaStore:LSMStore = {
     val iFile = new File(s"$dir/history/eta")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
