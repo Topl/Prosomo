@@ -3,9 +3,9 @@ package prosomo.history
 import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, Types}
+import prosomo.primitives.{ByteStream, LDBStore, Types}
 
 class SlotHistoryStorage(dir:String) extends Types {
   import prosomo.components.Serializer._
@@ -16,10 +16,10 @@ class SlotHistoryStorage(dir:String) extends Types {
 
   private var data:Map[Slot,List[BlockId]] = Map()
 
-  private var blockReorgStore:LSMStore = {
+  private var blockReorgStore:LDBStore = {
     val iFile = new File(s"$dir/history/reorg")
     iFile.mkdirs()
-    val store = new LSMStore(iFile)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -33,7 +33,7 @@ class SlotHistoryStorage(dir:String) extends Types {
   def update(slotId:SlotId,serializer: Serializer):Unit = if (storageFlag) {
     val blockSlotHash = hash(slotId._1,serializer)
     val slotList = get(blockSlotHash,serializer)
-    blockReorgStore.update(uuid,Seq(),Seq(blockSlotHash -> ByteArrayWrapper(serializer.getBytes(slotId._2::slotList))))
+    blockReorgStore.update(Seq(),Seq(blockSlotHash -> ByteArrayWrapper(serializer.getBytes(slotId._2::slotList))))
   } else if (!skipUpdate) {
     if (data.keySet.contains(slotId._1)) {
       val newList = slotId._2::data(slotId._1)

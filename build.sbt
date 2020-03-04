@@ -53,8 +53,9 @@ val testingDependencies = Seq(
   "net.databinder.dispatch" %% "dispatch-core" % "+" % "test"
 )
 
-resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/Desktop/ValkyrieInstrument"
+resolvers ++= Seq("Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/Desktop/ValkyrieInstrument")
 
+resolvers ++= Seq("Bintray" at "https://jcenter.bintray.com/")
 
 libraryDependencies ++= Seq(
   "com.chuusai" %% "shapeless" % "2.+",
@@ -64,6 +65,8 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "iodb" % "0.3.+",
+  "org.ethereum" % "leveldbjni-all" % "1.18.3",
+  "org.iq80.leveldb" % "leveldb" % "0.12",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.17" % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % "10.0.7",
   "net.databinder.dispatch" %% "dispatch-core" % "+" % "test",

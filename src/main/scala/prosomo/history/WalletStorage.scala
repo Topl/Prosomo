@@ -3,9 +3,9 @@ package prosomo.history
 import java.io.File
 
 import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, Ratio, SimpleTypes}
+import prosomo.primitives.{ByteStream, LDBStore, Ratio, SimpleTypes}
 import prosomo.wallet.Wallet
 
 
@@ -13,21 +13,15 @@ class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  val checkPoint = ByteArrayWrapper(FastCryptographicHash("CHECKPOINT"))
-
-  val walletStore:LSMStore = {
+  val walletStore:LDBStore = {
     val iFile = new File(s"$dir/wallet")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,maxFileSize = 1024)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
       }
     })
-    store.lastVersionID match {
-      case None => store.update(checkPoint,Seq(),Seq())
-      case _ =>
-    }
     store
   }
 
@@ -39,12 +33,14 @@ class WalletStorage(dir:String) extends SimpleTypes {
       out
     }
     walletStore.get(ByteArrayWrapper(FastCryptographicHash(pkw.data))) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeWallet)) match {
-        case w:Wallet if w.pkw == pkw => {
-          println("Recovered wallet")
-          w
+      case Some(bytes: ByteArrayWrapper) => {
+        serializer.fromBytes(new ByteStream(bytes.data,DeserializeWallet)) match {
+          case w:Wallet if w.pkw == pkw => {
+            println("Recovered wallet")
+            w
+          }
+          case _ => newWallet
         }
-        case _ => newWallet
       }
       case _ => newWallet
     }
@@ -58,8 +54,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
   def store(wallet:Wallet,serializer: Serializer):Unit  = if (storageFlag) {
     val wBytes = serializer.getBytes(wallet)
     val key = ByteArrayWrapper(FastCryptographicHash(wallet.pkw.data))
-    walletStore.rollback(checkPoint)
-    walletStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(wBytes)))
+    walletStore.update(Seq(),Seq(key -> ByteArrayWrapper(wBytes)))
   }
 
 }

@@ -3,9 +3,9 @@ package prosomo.history
 import java.io.File
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
-import prosomo.primitives.{ByteStream, SharedData, SimpleTypes}
+import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
 
 import scala.concurrent.duration.MINUTES
 
@@ -15,10 +15,10 @@ class BlockStorage(dir:String) extends SimpleTypes {
 
   private val serializer = new Serializer
 
-  private var blockBodyStore:LSMStore = {
+  private var blockBodyStore:LDBStore = {
     val iFile = new File(s"$dir/blocks/body")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -27,10 +27,10 @@ class BlockStorage(dir:String) extends SimpleTypes {
     store
   }
 
-  private var blockHeaderStore:LSMStore = {
+  private var blockHeaderStore:LDBStore = {
     val iFile = new File(s"$dir/blocks/header")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -58,13 +58,13 @@ class BlockStorage(dir:String) extends SimpleTypes {
 
   def add(block:Block):Unit = if (storageFlag) {
     val blockHeader = block.prosomoHeader
-    blockHeaderStore.update(block.id,Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
+    blockHeaderStore.update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
-      blockBodyStore.update(block.id,Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getGenesisBytes(
+      blockBodyStore.update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getGenesisBytes(
         block.body match {case txs:GenesisSet => {txs}}
       ))))
     } else {
-      blockBodyStore.update(block.id,Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(
+      blockBodyStore.update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(
         block.body match {case txs:TransactionSet => txs}
       ))))
     }
@@ -86,13 +86,13 @@ class BlockStorage(dir:String) extends SimpleTypes {
 
   def store(key:ByteArrayWrapper,block:Block) = {
     val blockHeader = block.prosomoHeader
-    blockHeaderStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
+    blockHeaderStore.update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
-      blockBodyStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
+      blockBodyStore.update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
         block.body match {case txs:GenesisSet => {txs}}
       ))))
     } else {
-      blockBodyStore.update(key,Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
+      blockBodyStore.update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
         block.body match {case txs:TransactionSet => txs}
       ))))
     }
@@ -155,7 +155,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
         case h:BlockHeader => true
         case None => false
       }
-      case _ => blockHeaderStore.versionIDExists(id._2)
+      case _ => blockHeaderStore.known(id._2)
     }
   } else {
     data.keySet.contains(id._2)

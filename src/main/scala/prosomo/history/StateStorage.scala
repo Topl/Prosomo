@@ -3,9 +3,9 @@ package prosomo.history
 import java.io.File
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, SharedData, Types}
+import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
 import scorex.crypto.encode.Base58
 
 import scala.concurrent.duration.MINUTES
@@ -18,22 +18,22 @@ class StateStorage(dir:String) extends Types {
 
   var idMap:Map[Hash,(State,Eta)] = Map()
 
-  val stateStore:LSMStore = {
+  val stateStore:LDBStore = {
     val iFile = new File(s"$dir/history/state")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    })
+    val store = new LDBStore(iFile)
+//    Runtime.getRuntime.addShutdownHook(new Thread() {
+//      override def run(): Unit = {
+//        store.close()
+//      }
+//    })
     store
   }
 
-  val etaStore:LSMStore = {
+  val etaStore:LDBStore = {
     val iFile = new File(s"$dir/history/eta")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,taskSchedulerDisabled=true,maxFileSize = 8 * 1024 * 1024)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
@@ -69,7 +69,7 @@ class StateStorage(dir:String) extends Types {
   def known(id:SlotId):Boolean = if (storageFlag) {
     stateCache.getIfPresent(id) match {
       case s:(State,Eta) => true
-      case _ => stateStore.versionIDExists(id._2)
+      case _ => stateStore.known(id._2)
     }
   } else {
     idMap.keySet.contains(id._2)
@@ -86,8 +86,8 @@ class StateStorage(dir:String) extends Types {
 
   def add(id:SlotId,ls:State,eta:Eta):Unit = if (storageFlag) {
     if (!known(id)) {
-      stateStore.update(id._2,Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
-      etaStore.update(id._2,Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
+      stateStore.update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
+      etaStore.update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
     }
     stateCache.put(id,(ls,eta))
   } else {

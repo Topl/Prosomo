@@ -2,30 +2,23 @@ package prosomo.history
 
 import java.io.File
 
-import bifrost.crypto.hash.FastCryptographicHash
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Chain, Serializer}
-import prosomo.primitives.{ByteStream, SimpleTypes}
+import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
 
 class ChainStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  val checkPoint = ByteArrayWrapper(FastCryptographicHash("CHECKPOINT"))
-
-  val chainStore:LSMStore = {
+  val chainStore:LDBStore = {
     val iFile = new File(s"$dir/history/chain")
     iFile.mkdirs()
-    val store = new LSMStore(iFile,maxFileSize = 1024)
+    val store = new LDBStore(iFile)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         store.close()
       }
     })
-    store.lastVersionID match {
-      case None => store.update(checkPoint,Seq(),Seq())
-      case _ =>
-    }
     store
   }
 
@@ -47,8 +40,7 @@ class ChainStorage(dir:String) extends SimpleTypes {
 
   def store(chain:Chain,cid:Hash,serializer: Serializer):Unit  = {
     val cBytes = serializer.getBytes(chain)
-    chainStore.rollback(checkPoint)
-    chainStore.update(cid,Seq(),Seq(cid -> ByteArrayWrapper(cBytes)))
+    chainStore.update(Seq(),Seq(cid -> ByteArrayWrapper(cBytes)))
   }
 
 }
