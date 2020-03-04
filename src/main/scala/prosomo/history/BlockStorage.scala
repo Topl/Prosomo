@@ -11,9 +11,8 @@ import scala.concurrent.duration.MINUTES
 
 class BlockStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.storageFlag
+  import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
-  private val runtime = Runtime.getRuntime
   private val serializer = new Serializer
 
   private var blockBodyStore:LSMStore = {
@@ -50,7 +49,7 @@ class BlockStorage(dir:String) extends SimpleTypes {
   }
 
   private val blockCache:LoadingCache[SlotId,Block] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(200)
+    .expireAfterAccess(10,MINUTES).maximumSize(cacheSize)
     .build[SlotId,Block](blockLoader)
 
   private var data:Map[ByteArrayWrapper,Block] = Map()
