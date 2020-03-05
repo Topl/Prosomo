@@ -1,59 +1,150 @@
 package prosomo
 
-import akka.actor.ActorSystem
-import prosomo.cases._
+import java.lang.management.ManagementFactory
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.io.StdIn
-import bifrost.BifrostApp
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.http.scaladsl.Http
+import akka.stream.ActorMaterializer
+import bifrost.api.http._
 import bifrost.crypto.hash.FastCryptographicHash
+import bifrost.forging.{Forger, ForgingSettings}
+import bifrost.history.BifrostSyncInfoMessageSpec
+import bifrost.network.message.{MessageSpec, _}
+import bifrost.network.peer.PeerManager
+import bifrost.network.{BifrostNodeViewSynchronizer, NetworkController, UPnP}
+import bifrost.utils.ScorexLogging
+import bifrost.{BifrostLocalInterface, BifrostNodeViewHolder}
+import com.sun.management.HotSpotDiagnosticMXBean
+import io.circe
+import prosomo.cases._
 import prosomo.primitives.Parameters.inputSeed
 import prosomo.stakeholder.Coordinator
-import scorex.crypto.encode.Base58
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.io.StdIn
+import scala.reflect.runtime.universe.{Type, _}
 
-class ProsomoBifrost(override val settingsFilename: String) extends BifrostApp(settingsFilename) {
+class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
-  val system = actorSystem
-  val coordinator = system.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
-  coordinator ! NewDataFile
-  coordinator ! Populate
-  coordinator ! Run
+  val ApplicationNameLimit = 50
 
-  if (true) {
-    println("-->Press ENTER to exit<--")
-    try StdIn.readLine()
-    finally {
-      system.terminate()
-    }
+  val settings = new ForgingSettings {
+    override val settingsJSON: Map[String, circe.Json] = settingsFromFile(settingsFilename)
   }
+  log.debug(s"Starting application with settings \n$settings")
 
-  Await.ready(system.whenTerminated, Duration.Inf)
-}
+  implicit val actorSystem = ActorSystem(settings.agentName)
 
-class Prosomo {
+  val additionalMessageSpecs: Seq[MessageSpec[_]] =
+    Seq(BifrostSyncInfoMessageSpec)
 
-  val system = ActorSystem("prosomo")
+  val upnp = new UPnP(settings)
+
+  val basicSpecs = Seq(GetPeersSpec,PeersSpec,InvSpec,RequestModifierSpec,ModifiersSpec)
+
+  val messagesHandler: MessageHandler = MessageHandler(basicSpecs ++ additionalMessageSpecs)
+
   println("Using seed: "+inputSeed)
-  val coordinator = system.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
+  val coordinator = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
   coordinator ! Run
+
+  //val nodeViewHolderRef: ActorRef = actorSystem.actorOf(Props(new BifrostNodeViewHolder(settings)))
+
+  //val forger: ActorRef = actorSystem.actorOf(Props(classOf[Forger], settings, nodeViewHolderRef))
+
+  //val localInterface: ActorRef = actorSystem.actorOf(
+  //  Props(classOf[BifrostLocalInterface], nodeViewHolderRef, forger, settings)
+  //)
+
+  //val nodeViewSynchronizer: ActorRef = actorSystem.actorOf(
+  //  Props(classOf[BifrostNodeViewSynchronizer],
+  //    networkController,
+  //    nodeViewHolderRef,
+  //    localInterface,
+  //    BifrostSyncInfoMessageSpec)
+  //)
+
+  val peerManagerRef = actorSystem.actorOf(Props(classOf[PeerManager], settings))
+
+  val nProps = Props(classOf[NetworkController], settings, messagesHandler, upnp, peerManagerRef)
+  val networkController = actorSystem.actorOf(nProps, "networkController")
+
+  val apiRoutes: Seq[ApiRoute] = Seq(
+    DebugApiRoute(settings, coordinator),
+    WalletApiRoute(settings, coordinator),
+    ProgramApiRoute(settings, coordinator, networkController),
+    AssetApiRoute(settings, coordinator),
+    UtilsApiRoute(settings),
+    NodeViewApiRoute(settings, coordinator)
+  )
+
+  val apiTypes: Seq[Type] = Seq(typeOf[UtilsApiRoute],
+    typeOf[DebugApiRoute],
+    typeOf[WalletApiRoute],
+    typeOf[ProgramApiRoute],
+    typeOf[AssetApiRoute],
+    typeOf[NodeViewApiRoute])
+
+  val combinedRoute = CompositeHttpService(actorSystem, apiTypes, apiRoutes, settings).compositeRoute
+
+  def run(): Unit = {
+    require(settings.agentName.length <= ApplicationNameLimit)
+
+    log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
+    log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
+    log.debug(s"RPC is allowed at 0.0.0.0:${settings.rpcPort}")
+
+    implicit val materializer = ActorMaterializer()
+    Http().bindAndHandle(combinedRoute, "0.0.0.0", settings.rpcPort)
+
+    //on unexpected shutdown
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run() {
+        log.error("Unexpected shutdown")
+        stopAll()
+      }
+    })
+  }
+
+  def stopAll(): Unit = synchronized {
+    log.info("Stopping network services")
+    if (settings.upnpEnabled) upnp.deletePort(settings.port)
+    networkController ! NetworkController.ShutdownNetwork
+
+    log.info("Stopping actors (incl. block generator)")
+    actorSystem.terminate().onComplete { _ =>
+
+      log.info("Exiting from the app...")
+      System.exit(0)
+    }
+  }
+
+  val vm_version = System.getProperty("java.vm.version")
+  System.out.printf("java.vm.version = %s%n", vm_version)
+
+  val bean = ManagementFactory.getPlatformMXBean(classOf[HotSpotDiagnosticMXBean])
+
+  val enableJVMCI = bean.getVMOption("EnableJVMCI")
+  System.out.println(enableJVMCI)
+
+  val useJVMCICompiler = bean.getVMOption("UseJVMCICompiler")
+  System.out.println(useJVMCICompiler)
+
+  val compiler = System.getProperty("jvmci.Compiler")
+  System.out.printf("jvmci.Compiler = %s%n", compiler)
 
   if (true) {
     println("-->Press ENTER to exit<--")
     try StdIn.readLine()
     finally {
-      system.terminate()
+      stopAll()
     }
   }
-
-  Await.ready(system.whenTerminated, Duration.Inf)
 }
 
 object Prosomo extends App {
   val input = args
-  //new ProsomoBifrost(Parameters.settingsFilename).run()
-  new Prosomo
+  new Prosomo(prosomo.primitives.Parameters.settingsFilename).run()
 }
