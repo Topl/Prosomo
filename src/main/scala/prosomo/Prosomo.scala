@@ -2,18 +2,17 @@ package prosomo
 
 import java.lang.management.ManagementFactory
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import bifrost.api.http._
 import bifrost.crypto.hash.FastCryptographicHash
-import bifrost.forging.{Forger, ForgingSettings}
+import bifrost.forging.ForgingSettings
 import bifrost.history.BifrostSyncInfoMessageSpec
 import bifrost.network.message.{MessageSpec, _}
 import bifrost.network.peer.PeerManager
-import bifrost.network.{BifrostNodeViewSynchronizer, NetworkController, UPnP}
+import bifrost.network.{NetworkController, UPnP}
 import bifrost.utils.ScorexLogging
-import bifrost.{BifrostLocalInterface, BifrostNodeViewHolder}
 import com.sun.management.HotSpotDiagnosticMXBean
 import io.circe
 import prosomo.cases._

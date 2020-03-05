@@ -19,6 +19,8 @@ test in assembly := {}
 
 val circeVersion = "0.7+"
 
+enablePlugins(JavaAppPackaging)
+
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.19",
   "org.bitlet" % "weupnp" % "0.1.+",
