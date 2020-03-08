@@ -19,11 +19,12 @@ class BlockStorage(dir:String) extends SimpleTypes {
     val iFile = new File(s"$dir/blocks/body")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
@@ -31,11 +32,12 @@ class BlockStorage(dir:String) extends SimpleTypes {
     val iFile = new File(s"$dir/blocks/header")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
@@ -101,23 +103,37 @@ class BlockStorage(dir:String) extends SimpleTypes {
   def restore(key:ByteArrayWrapper):Option[Block] = {
     SharedData.throwDiskWarning
     blockHeaderStore.get(key) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeBlockHeader)) match {
-        case h:BlockHeader=> {
-          blockBodyStore.get(key) match {
-            case Some(bytes:ByteArrayWrapper) => {
-              if (h._3 == 0) {
-                serializer.fromBytes(new ByteStream(bytes.data,DeserializeGenesisSet)) match {
-                  case txs:GenesisSet => Some(new Block(key,h,txs))
-                  case _ => None
-                }
-              } else {
-                serializer.fromBytes(new ByteStream(bytes.data,DeserializeTransactionSet)) match {
-                  case txs:TransactionSet => Some(new Block(key,h,txs))
-                  case _ => None
+      case Some(bytes: ByteArrayWrapper) => {
+        val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeBlockHeader)
+        serializer.fromBytes(byteStream) match {
+          case h:BlockHeader=> {
+            blockBodyStore.get(key) match {
+              case Some(bytes:ByteArrayWrapper) => {
+                if (h._3 == 0) {
+                  val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeGenesisSet)
+                  serializer.fromBytes(byteStream) match {
+                    case txs:GenesisSet => {
+                      val block = Block(key,h,txs)
+                      Some(block)
+                    }
+                    case _ => None
+                  }
+                } else {
+                  val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeTransactionSet)
+                  serializer.fromBytes(byteStream) match {
+                    case txs:TransactionSet => {
+                      val block = Block(key,h,txs)
+                      Some(block)
+                    }
+                    case _ => None
+                  }
                 }
               }
+              case None => {
+                val block = Block(key,h,None)
+                Some(block)
+              }
             }
-            case None => Some(new Block(key,h,None))
           }
         }
       }

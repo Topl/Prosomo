@@ -126,7 +126,7 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
     */
   def signTransaction(sk_s:PrivateKey, pk_s:PublicKeyW, pk_r:PublicKeyW, delta:BigInt, txCounter:Int,sig:Sig,rng:Random,serializer: Serializer): Transaction = {
     val sid:Sid = hash(rng.nextString(64),serializer)
-    val trans:Transaction = new Transaction(pk_s,pk_r,delta,sid,txCounter,sig.sign(sk_s,pk_r.data++delta.toByteArray++sid.data++serializer.getBytes(txCounter)))
+    val trans:Transaction = Transaction(pk_s,pk_r,delta,sid,txCounter,sig.sign(sk_s,pk_r.data++delta.toByteArray++sid.data++serializer.getBytes(txCounter)))
     trans
   }
 

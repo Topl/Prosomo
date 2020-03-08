@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.components.Chain
+import prosomo.components.Tine
 
 trait Operations extends Members {
 
@@ -19,7 +19,7 @@ trait Operations extends Members {
     * @param s slot to start search
     * @return last active slot found on chain c starting at slot s
     */
-  def lastActiveSlot(c:Chain, s:Slot): Slot = {
+  def lastActiveSlot(c:Tine, s:Slot): Slot = {
     var i:Slot = -1
     for (slot <- c.slots) {
       if (slot > i && slot <= s) i = slot
@@ -32,7 +32,7 @@ trait Operations extends Members {
     * @param c chain of block ids
     * @return total active slots
     */
-  def getActiveSlots(c:Chain): Int = {
+  def getActiveSlots(c:Tine): Int = {
     c.slots.size
   }
 
@@ -44,7 +44,7 @@ trait Operations extends Members {
     * @return all blocks in the interval t1 to t2, including blocks of t1 and t2
     */
 
-  def subChain(c:Chain, t1:Int, t2:Int): Chain = {
+  def subChain(c:Tine, t1:Int, t2:Int): Tine = {
     var t_lower:Int = 0
     var t_upper:Int = 0
     if (t1>0) t_lower = t1

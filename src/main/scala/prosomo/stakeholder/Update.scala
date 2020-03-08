@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
 import prosomo.cases.{GetTime, Hello, WriteFile}
-import prosomo.components.Chain
+import prosomo.components.Tine
 import prosomo.primitives.{KeyFile, Parameters, SharedData}
 import scorex.crypto.encode.Base58
 import akka.actor.Actor

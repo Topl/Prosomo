@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.{ActorPath, ActorRef, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Chain, Serializer}
+import prosomo.components.{Tine, Serializer}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
@@ -33,7 +33,7 @@ class Stakeholder(inputSeed:Array[Byte])
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
-  val localChain:Chain = new Chain
+  val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir)
   val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
@@ -77,11 +77,11 @@ class Stakeholder(inputSeed:Array[Byte])
   //slot time as determined from coordinator clock
   var globalSlot = 0
   //all tines that are pending built from new blocks that are received
-  var tines:Map[Int,(Chain,Int,Int,Int,ActorRef)] = Map()
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)] = Map()
   //counter for identifying tines
   var tineCounter = 0
   //completed tines waiting to be selected with maxvalid-bg
-  var candidateTines:Array[(Chain,Slot,Int)] = Array()
+  var candidateTines:Array[(Tine,Slot,Int)] = Array()
   //placeholder for genesis block
   var genBlockHeader: BlockHeader = _
   //placeholder for genesis block ID

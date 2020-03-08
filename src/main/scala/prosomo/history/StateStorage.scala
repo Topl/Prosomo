@@ -34,11 +34,12 @@ class StateStorage(dir:String) extends Types {
     val iFile = new File(s"$dir/history/eta")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
@@ -47,9 +48,12 @@ class StateStorage(dir:String) extends Types {
       SharedData.throwDiskWarning
       (
         stateStore.get(id._2) match {
-          case Some(bytes:ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeState)) match {
-            case s:State => s
-            case _ => Map()
+          case Some(bytes:ByteArrayWrapper) => {
+            val byteStream = new ByteStream(bytes.data,DeserializeState)
+            serializer.fromBytes(byteStream) match {
+              case s:State => s
+              case _ => Map()
+            }
           }
           case None => Map()
         },

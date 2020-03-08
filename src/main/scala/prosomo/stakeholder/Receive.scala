@@ -5,7 +5,7 @@ import java.io.BufferedWriter
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.cases._
-import prosomo.components.{Block, Chain, Serializer, Transaction}
+import prosomo.components.{Block, Tine, Serializer, Transaction}
 import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
 import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
@@ -58,7 +58,7 @@ trait Receive extends Members {
                   val newId = (bSlot, bHash)
                   send(self,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   val jobNumber = tineCounter
-                  tines += (jobNumber -> (Chain(newId),0,0,0,inbox(value.mac.sid)._1))
+                  tines += (jobNumber -> (Tine(newId),0,0,0,inbox(value.mac.sid)._1))
                   buildTine((jobNumber,tines(jobNumber)))
                   tineCounter += 1
                 }
@@ -234,10 +234,10 @@ trait Receive extends Members {
       globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       localSlot = globalSlot
       chainStorage.restore(localChainId,serializer) match {
-        case newChain:Chain if newChain.isEmpty => {
+        case newChain:Tine if newChain.isEmpty => {
           localChain.update((0,genBlockHash))
           chainHistory.update((0,genBlockHash),serializer)
-          updateLocalState(localState, Chain(localChain.get(0))) match {
+          updateLocalState(localState, Tine(localChain.get(0))) match {
             case value:State => localState = {
               value
             }
@@ -252,7 +252,7 @@ trait Receive extends Members {
           updateWallet
           trimMemPool
         }
-        case newChain:Chain if !newChain.isEmpty => {
+        case newChain:Tine if !newChain.isEmpty => {
           localChain.copy(newChain)
           val loadState = history.get(localChain.last) match {case data:(State,Eta) => data}
           localState = loadState._1
@@ -262,8 +262,6 @@ trait Receive extends Members {
       val genesisBlock = blocks.get((0,genBlockHash))
       assert(genBlockHash == hash(genesisBlock.prosomoHeader,serializer))
       println("Valid Genesis Block")
-      println("Local state balance:"   +   localState(keys.pkw)._1.toString)
-      assert(localState(keys.pkw)._1 > 0)
       sender() ! "done"
     }
 

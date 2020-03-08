@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorPath, ActorRef, Timers}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Chain, Serializer, Transaction}
+import prosomo.components.{Block, Tine, Serializer, Transaction}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
 import prosomo.wallet._
 
@@ -15,7 +15,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
-  val localChain:Chain
+  val localChain:Tine
   val blocks:BlockStorage
   val chainHistory:SlotHistoryStorage
   val walletStorage:WalletStorage
@@ -50,9 +50,9 @@ trait Members extends SimpleTypes with Actor with Timers {
   var inbox:Map[Sid,(ActorRef,PublicKeys)]
   var blocksForged:Int
   var globalSlot:Slot
-  var tines:Map[Int,(Chain,Int,Int,Int,ActorRef)]
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)]
   var tineCounter:Int
-  var candidateTines:Array[(Chain,Slot,Int)]
+  var candidateTines:Array[(Tine,Slot,Int)]
   var genBlockHeader:BlockHeader
   var genBlockHash:Hash
   var roundBlock:Int
@@ -71,11 +71,11 @@ trait Members extends SimpleTypes with Actor with Timers {
   case object timerKey
 
   def forgeBlock(forgerKeys:Keys):Unit
-  def updateTine(inputTine:Chain):(Chain,Slot)
+  def updateTine(inputTine:Tine):(Tine,Slot)
   def updateWallet:Unit
-  def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))):Unit
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRef))):Unit
   def maxValidBG:Unit
-  def validateChainIds(c:Chain):Boolean
+  def validateChainIds(c:Tine):Boolean
   def updateEpoch(slot:Slot,epochIn:Int):Int
   def updateStakingState(ep:Int):Unit
   def update:Unit
@@ -92,9 +92,9 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyTX(transaction: Transaction,sig:Sig,serializer: Serializer):Boolean
   def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Any
   def getParentId(b:BlockHeader):SlotId
-  def lastActiveSlot(c:Chain, s:Slot):Slot
-  def getActiveSlots(c:Chain):Int
-  def subChain(c:Chain, t1:Int, t2:Int):Chain
+  def lastActiveSlot(c:Tine, s:Slot):Slot
+  def getActiveSlots(c:Tine):Int
+  def subChain(c:Tine, t1:Int, t2:Int):Tine
   def phi(a:Ratio):Ratio
   def factorial(n: Int):Int
   def compare(y: Array[Byte],t: Ratio):Boolean
@@ -106,8 +106,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getBlockHeader(bid:SlotId):Any
   def getParentBlockHeader(b:BlockHeader):Any
   def getParentId(bid:SlotId):Any
-  def eta(c:Chain, ep:Int):Eta
-  def eta(c:Chain, ep:Int, etaP:Eta):Eta
+  def eta(c:Tine, ep:Int):Eta
+  def eta(c:Tine, ep:Int, etaP:Eta):Eta
   def diffuse(str: String,id: String,sk_sig: PrivateKey):String
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
   def verifyMac(input:Hash, mac:Mac):Boolean
@@ -124,12 +124,12 @@ trait Members extends SimpleTypes with Actor with Timers {
   def sendDiffuse(holderId:ActorPath, holders:List[ActorRef], command: Any):Unit
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
-  def verifyChain(c:Chain, gh:Hash):Boolean
-  def verifySubChain(tine:Chain, prefix:Slot):Boolean
+  def verifyChain(c:Tine, gh:Hash):Boolean
+  def verifySubChain(tine:Tine, prefix:Slot):Boolean
   def verifyTransaction(t:Transaction):Boolean
-  def updateLocalState(ls:State, c:Chain):Any
+  def updateLocalState(ls:State, c:Tine):Any
   def trimMemPool:Unit
-  def collectLedger(c:Chain):Unit
+  def collectLedger(c:Tine):Unit
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet
   def verifyStamp(value: String):Boolean
   def timeFlag[R](block: => R):R

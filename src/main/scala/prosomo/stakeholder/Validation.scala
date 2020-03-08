@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Chain, Transaction}
+import prosomo.components.{Block, Tine, Transaction}
 import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
 import scorex.crypto.encode.Base58
 
@@ -73,7 +73,7 @@ trait Validation extends Members {
     * @param gh genesis block hash
     * @return true if chain is valid, false otherwise
     */
-  def verifyChain(c:Chain, gh:Hash): Boolean = {
+  def verifyChain(c:Tine, gh:Hash): Boolean = {
     var bool = true
     var ep = -1
     var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
@@ -167,7 +167,7 @@ trait Validation extends Members {
     * @param tine chain to be verified
     * @return true if chain is valid, false otherwise
     */
-  def verifySubChain(tine:Chain, prefix:Slot): Boolean = {
+  def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
     val ep0 = prefix/epochLength
     var eta_Ep:Eta = Array()
@@ -223,7 +223,7 @@ trait Validation extends Members {
     }
 
     for (id <- tine.ordered) {
-      if (isValid) updateLocalState(ls,Chain(id)) match {
+      if (isValid) updateLocalState(ls,Tine(id)) match {
         case value:State => {
           ls = value
         }

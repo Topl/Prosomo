@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Chain, Transaction}
+import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.Parameters.fee_r
 import prosomo.primitives.{Parameters, SharedData}
 import scorex.crypto.encode.Base58
@@ -18,7 +18,7 @@ trait Ledger extends Members {
     * @param c chain of block ids
     * @return updated localstate
     */
-  def updateLocalState(ls:State, c:Chain): Any = {
+  def updateLocalState(ls:State, c:Tine): Any = {
     var nls:State = ls
     var isValid = true
     for (id <- c.ordered) {
@@ -108,7 +108,7 @@ trait Ledger extends Members {
     * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
     * @param c chain to collect transactions
     */
-  def collectLedger(c:Chain): Unit = {
+  def collectLedger(c:Tine): Unit = {
     for (id <- c.ordered) {
       for (trans <- blocks.getTxs(id)) {
         if (!memPool.keySet.contains(trans.sid)) {

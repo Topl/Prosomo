@@ -3,7 +3,7 @@ package prosomo.history
 import java.io.File
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Chain, Serializer}
+import prosomo.components.{Tine, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
 
 class ChainStorage(dir:String) extends SimpleTypes {
@@ -14,31 +14,35 @@ class ChainStorage(dir:String) extends SimpleTypes {
     val iFile = new File(s"$dir/history/chain")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
-  def restore(cid:Hash,serializer: Serializer):Chain = if (storageFlag) {
+  def restore(cid:Hash,serializer: Serializer):Tine = if (storageFlag) {
     chainStore.get(cid) match {
-      case Some(bytes: ByteArrayWrapper) => serializer.fromBytes(new ByteStream(bytes.data,DeserializeChain)) match {
-        case c:Chain => c
-        case _ => {
-          new Chain
+      case Some(bytes: ByteArrayWrapper) => {
+        val byteStream: ByteStream = new ByteStream(bytes.data,DeserializeChain)
+        serializer.fromBytes(byteStream) match {
+          case c:Tine => c
+          case _ => {
+            new Tine
+          }
         }
       }
       case None => {
-        new Chain
+        new Tine
       }
     }
   } else {
-    new Chain
+    new Tine
   }
 
-  def store(chain:Chain,cid:Hash,serializer: Serializer):Unit  = {
+  def store(chain:Tine, cid:Hash, serializer: Serializer):Unit  = {
     val cBytes = serializer.getBytes(chain)
     chainStore.update(Seq(),Seq(cid -> ByteArrayWrapper(cBytes)))
   }

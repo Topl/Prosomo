@@ -17,11 +17,12 @@ class WalletStorage(dir:String) extends SimpleTypes {
     val iFile = new File(s"$dir/wallet")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
@@ -34,7 +35,8 @@ class WalletStorage(dir:String) extends SimpleTypes {
     }
     walletStore.get(ByteArrayWrapper(FastCryptographicHash(pkw.data))) match {
       case Some(bytes: ByteArrayWrapper) => {
-        serializer.fromBytes(new ByteStream(bytes.data,DeserializeWallet)) match {
+        val byteStream = new ByteStream(bytes.data,DeserializeWallet)
+        serializer.fromBytes(byteStream) match {
           case w:Wallet if w.pkw == pkw => {
             println("Recovered wallet")
             w

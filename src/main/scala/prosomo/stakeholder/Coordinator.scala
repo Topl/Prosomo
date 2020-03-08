@@ -44,7 +44,7 @@ class Coordinator(inputSeed:Array[Byte])
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
-  val localChain:Chain = new Chain
+  val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir)
   val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
@@ -79,9 +79,9 @@ class Coordinator(inputSeed:Array[Byte])
   var inbox:Map[Sid,(ActorRef,PublicKeys)] = Map()
   var blocksForged = 0
   var globalSlot = 0
-  var tines:Map[Int,(Chain,Int,Int,Int,ActorRef)] = Map()
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)] = Map()
   var tineCounter = 0
-  var candidateTines:Array[(Chain,Slot,Int)] = Array()
+  var candidateTines:Array[(Tine,Slot,Int)] = Array()
   var genBlockHeader: BlockHeader = _
   var genBlockHash: Hash = ByteArrayWrapper(Array())
   var roundBlock: Int = 0
@@ -455,7 +455,7 @@ class Coordinator(inputSeed:Array[Byte])
         case "new_holder" => {
           println("Bootstrapping new holder...")
           val i = holders.length
-          val newHolder = context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder:" + bytes2hex(FastCryptographicHash(inputSeed+i.toString)))
+          val newHolder = context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder_" + i.toString)
           holders = holders++List(newHolder)
           sendAssertDone(routerRef,holders)
           sendAssertDone(newHolder,holders)
@@ -469,6 +469,7 @@ class Coordinator(inputSeed:Array[Byte])
           sendAssertDone(holders,Diffuse)
           sendAssertDone(newHolder,Initialize(L_s))
           sendAssertDone(newHolder,SetClock(t0))
+          println("Starting new holder")
           newHolder ! Run
         }
 

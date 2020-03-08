@@ -95,16 +95,17 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
     log.debug(s"RPC is allowed at 0.0.0.0:${settings.rpcPort}")
 
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer:ActorMaterializer = ActorMaterializer()
     Http().bindAndHandle(combinedRoute, "0.0.0.0", settings.rpcPort)
 
     //on unexpected shutdown
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run() {
         log.error("Unexpected shutdown")
         stopAll()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
   }
 
   def stopAll(): Unit = synchronized {

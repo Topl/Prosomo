@@ -3,12 +3,11 @@ package prosomo.components
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.SimpleTypes
 import scorex.crypto.encode.Base58
+import prosomo.primitives.Types._
 
 import scala.collection.immutable.ListMap
 
-class Chain extends SimpleTypes {
-
-  private var data:Map[Slot,BlockId] = Map()
+case class Tine(var data:Map[Slot,BlockId] = Map()) {
 
   def update(slotId:SlotId):Unit = if (!data.keySet.contains(slotId._1) && slotId._1 > -1) data += (slotId._1 -> slotId._2)
 
@@ -42,8 +41,8 @@ class Chain extends SimpleTypes {
     (minSlot,data(minSlot))
   }
 
-  def slice(minSlot:Slot,maxSlot:Slot):Chain = {
-    val out:Chain = new Chain
+  def slice(minSlot:Slot,maxSlot:Slot):Tine = {
+    val out:Tine = new Tine
     for (slot <- data.keySet) {
       if(slot >= minSlot && slot < maxSlot) out.update((slot,data(slot)))
     }
@@ -56,7 +55,7 @@ class Chain extends SimpleTypes {
     ListMap(data.toSeq.sortBy(_._1):_*).toArray
   }
 
-  def copy(c:Chain):Unit = {
+  def copy(c:Tine):Unit = {
     for (slot <- c.slots) {
       update(c.get(slot))
     }
@@ -80,8 +79,8 @@ class Chain extends SimpleTypes {
     }
   }
 
-  def ++(that:Chain):Chain = {
-    val out:Chain = new Chain
+  def ++(that:Tine):Tine = {
+    val out:Tine = new Tine
     val minThis = this.slots.min
     val minThat = that.slots.min
     if (minThis < minThat) {
@@ -93,30 +92,30 @@ class Chain extends SimpleTypes {
 
 }
 
-object Chain extends SimpleTypes {
+object Tine extends SimpleTypes {
 
-  def apply():Chain = new Chain
+  def apply():Tine = new Tine
 
-  def apply(id:SlotId):Chain = {
-    val out = new Chain
+  def apply(id:SlotId):Tine = {
+    val out = new Tine
     out.update(id)
     out
   }
 
-  def apply(ids:Array[SlotId]):Chain = {
-    val out = new Chain
+  def apply(ids:Array[SlotId]):Tine = {
+    val out = new Tine
     for (id<-ids) out.update(id)
     out
   }
 
-  def apply(ids:Map[Slot,BlockId]):Chain = {
-    val out = new Chain
+  def apply(ids:Map[Slot,BlockId]):Tine = {
+    val out = new Tine
     out.setData(ids)
     out
   }
 
-  def apply(c:Chain): Chain = {
-    val out = new Chain
+  def apply(c:Tine): Tine = {
+    val out = new Tine
     out.copy(c)
     out
   }

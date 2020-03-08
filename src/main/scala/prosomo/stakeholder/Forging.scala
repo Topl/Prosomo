@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
-import prosomo.components.{Block, Chain}
+import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters.{genesisBytes, initStakeMax, initStakeMin, printFlag, stakeDistribution, stakeScale}
 import prosomo.primitives.{Mac, Keys, MalkinKey, Ratio, SharedData}
 import scorex.crypto.encode.Base58
@@ -40,7 +40,7 @@ trait Forging extends Members {
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
       val block = new Block(hb,b,txs)
       blocks.add(block)
-      updateLocalState(localState, Chain((slot,block.id))) match {
+      updateLocalState(localState, Tine((slot,block.id))) match {
         case forgedState:State => {
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(self,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
@@ -48,7 +48,7 @@ trait Forging extends Members {
           blocksForged += 1
           val jobNumber = tineCounter
           tineCounter += 1
-          candidateTines = candidateTines ++ Array((Chain((slot,block.id)),slot-1,jobNumber))
+          candidateTines = candidateTines ++ Array((Tine((slot,block.id)),slot-1,jobNumber))
         }
         case _ => {
           SharedData.throwError(holderIndex)

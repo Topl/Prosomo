@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.ActorRef
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{RequestBlock, RequestChain, SendTx}
-import prosomo.components.{Chain, Transaction}
+import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
 import scorex.crypto.encode.Base58
 
@@ -12,9 +12,9 @@ import scala.util.control.Breaks.{break, breakable}
 trait ChainSelection extends Members {
   import Parameters._
 
-  def updateTine(inputTine:Chain): (Chain,Slot) = {
+  def updateTine(inputTine:Tine): (Tine,Slot) = {
     var foundAncestor = true
-    var tine:Chain = Chain(inputTine)
+    var tine:Tine = Tine(inputTine)
     var prefix:Slot = 0
     if (localChain.get(tine.head._1) == tine.head) {
       (tine,-1)
@@ -23,15 +23,15 @@ trait ChainSelection extends Members {
         while(foundAncestor) {
           getParentId(tine.head) match {
             case pb:SlotId => {
-              tine = Chain(pb) ++ tine
+              tine = Tine(pb) ++ tine
               if (tine.head == localChain.get(tine.head._1)) {
                 prefix = tine.head._1
-                tine = Chain(tine.ordered.tail)
+                tine = Tine(tine.ordered.tail)
                 break
               }
               if (tine.head._1 == 0) {
                 prefix = 0
-                tine = Chain(tine.ordered.tail)
+                tine = Tine(tine.ordered.tail)
                 break
               }
             }
@@ -88,10 +88,10 @@ trait ChainSelection extends Members {
     walletStorage.store(wallet,serializer)
   }
 
-  def buildTine(job:(Int,(Chain,Int,Int,Int,ActorRef))): Unit = {
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRef))): Unit = {
     val entry = job._2
     var foundAncestor = true
-    var tine:Chain = Chain(entry._1)
+    var tine:Tine = Tine(entry._1)
     var counter:Int = entry._2
     val previousLen:Int = entry._3
     val totalTries:Int = entry._4
@@ -101,15 +101,15 @@ trait ChainSelection extends Members {
       while(foundAncestor) {
         getParentId(tine.head) match {
           case pb:SlotId => {
-            tine = Chain(pb) ++ tine
+            tine = Tine(pb) ++ tine
             if (tine.head == localChain.get(tine.head._1)) {
               prefix = tine.head._1
-              tine = Chain(tine.ordered.tail)
+              tine = Tine(tine.ordered.tail)
               break
             }
             if (tine.head._1 == 0) {
               prefix = 0
-              tine = Chain(tine.ordered.tail)
+              tine = Tine(tine.ordered.tail)
               break
             }
           }
@@ -153,7 +153,7 @@ trait ChainSelection extends Members {
   /**main chain selection routine, maxvalid-bg*/
   def maxValidBG = {
     val prefix:Slot = candidateTines.last._2
-    val tine:Chain = Chain(candidateTines.last._1)
+    val tine:Tine = Tine(candidateTines.last._1)
     val job:Int = candidateTines.last._3
     val tineMaxSlot = tine.last._1
     val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
@@ -194,9 +194,9 @@ trait ChainSelection extends Members {
         }
       }
       candidateTines = candidateTines.dropRight(1)
-      var newCandidateTines:Array[(Chain,Slot,Int)] = Array()
+      var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- candidateTines) {
-        val newTine = updateTine(Chain(entry._1.last))
+        val newTine = updateTine(Tine(entry._1.last))
         if (newTine._2 > 0) {
           newCandidateTines = newCandidateTines ++ Array((newTine._1,newTine._2,entry._3))
         }
@@ -264,7 +264,7 @@ trait ChainSelection extends Members {
     chainStorage.store(localChain,localChainId,serializer)
   }
 
-  def validateChainIds(c:Chain):Boolean = {
+  def validateChainIds(c:Tine):Boolean = {
     var pid = c.head
     var out = true
     for (id <- c.ordered.tail) {

@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
 import bifrost.crypto.hash.FastCryptographicHash
-import prosomo.components.Chain
+import prosomo.components.Tine
 import prosomo.primitives.Ratio
 
 import scala.math.BigInt
@@ -91,7 +91,7 @@ trait Staking extends Members {
     * @param ep epoch derived from time step
     * @return hash nonce
     */
-  def eta(c:Chain, ep:Int): Eta = {
+  def eta(c:Tine, ep:Int): Eta = {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
@@ -118,7 +118,7 @@ trait Staking extends Members {
     * @param etaP previous eta
     * @return hash nonce
     */
-  def eta(c:Chain, ep:Int, etaP:Eta): Eta = {
+  def eta(c:Tine, ep:Int, etaP:Eta): Eta = {
     //println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {

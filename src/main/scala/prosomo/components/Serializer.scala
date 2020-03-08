@@ -47,7 +47,7 @@ class Serializer extends SimpleTypes {
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
-  def getBytes(chain:Chain):Array[Byte] = sChain(chain)
+  def getBytes(chain:Tine):Array[Byte] = sChain(chain)
   def getBytes(wallet:Wallet):Array[Byte] = sWallet(wallet)
   def getBytes(malkinKey:MalkinKey):Array[Byte] = sMalkinKey(malkinKey)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
@@ -143,11 +143,11 @@ class Serializer extends SimpleTypes {
 
   private def dRatio(stream: ByteStream):Ratio = {
     val out1len = stream.getInt
-    val out1Bytes = stream.get(out1len)
-    val out1 = dBigInt(new ByteStream(out1Bytes,Deserialize))
+    val out1Bytes = new ByteStream(stream.get(out1len),Deserialize)
+    val out1 = dBigInt(out1Bytes)
     val out2len = stream.getInt
-    val out2Bytes = stream.get(out2len)
-    val out2 = dBigInt(new ByteStream(out2Bytes,Deserialize))
+    val out2Bytes = new ByteStream(stream.get(out2len),Deserialize)
+    val out2 = dBigInt(out2Bytes)
     val out = new Ratio(
         out1,
         out2
@@ -204,12 +204,12 @@ class Serializer extends SimpleTypes {
     val out1 = ByteArrayWrapper(stream.get(pkw_length))
     val out2 = ByteArrayWrapper(stream.get(pkw_length))
     val out3len = stream.getInt
-    val out3Bytes = stream.get(out3len)
-    val out3 = dBigInt(new ByteStream(out3Bytes,stream.caseObject))
+    val out3Bytes = new ByteStream(stream.get(out3len),stream.caseObject)
+    val out3 = dBigInt(out3Bytes)
     val out4 = ByteArrayWrapper(stream.get(sid_length))
     val out5 = stream.getInt
     val out6 = stream.get(sig_length)
-    val out = new Transaction(
+    val out = Transaction(
       out1,
       out2,
       out3,
@@ -235,9 +235,10 @@ class Serializer extends SimpleTypes {
     val out1 = stream.get(hash_length)
     val out2 = ByteArrayWrapper(stream.get(pkw_length))
     val out3len = stream.getInt
-    val out3Bytes = stream.get(out3len)
-    val out3 = dBigInt(new ByteStream(out3Bytes,stream.caseObject))
-    val out4 = dMac(new ByteStream(stream.get(mac_length),stream.caseObject))
+    val out3Bytes = new ByteStream(stream.get(out3len),stream.caseObject)
+    val out3 = dBigInt(out3Bytes)
+    val out4Bytes = new ByteStream(stream.get(mac_length),stream.caseObject)
+    val out4 = dMac(out4Bytes)
     val out = (
       out1,
       out2,
@@ -265,16 +266,17 @@ class Serializer extends SimpleTypes {
 
   private def dBlockHeader(stream:ByteStream):BlockHeader = {
     val out1 = ByteArrayWrapper(stream.get(hash_length))
-    val out2 = dMac(new ByteStream(stream.get(mac_length),DeserializeMac))
+    val out2Bytes = new ByteStream(stream.get(mac_length),DeserializeMac)
+    val out2 = dMac(out2Bytes)
     val out3 = stream.getInt
     val out4len = stream.getInt
-    val out4Bytes = stream.get(out4len)
-    val out4 = dCert(new ByteStream(out4Bytes,DeserializeBlockHeader))
+    val out4Bytes = new ByteStream(stream.get(out4len),DeserializeBlockHeader)
+    val out4 = dCert(out4Bytes)
     val out5 = stream.get(rho_length)
     val out6 = stream.get(pi_length)
     val out7len = stream.getInt
-    val out7Bytes = stream.get(out7len)
-    val out7 = dKesSignature(new ByteStream(out7Bytes,DeserializeBlockHeader))
+    val out7Bytes = new ByteStream(stream.get(out7len),DeserializeBlockHeader)
+    val out7 = dKesSignature(out7Bytes)
     val out8 = stream.get(pk_length)
     val out9 = stream.getInt
     val out10 = stream.getInt
@@ -313,10 +315,12 @@ class Serializer extends SimpleTypes {
     val out4 = stream.get(pk_length)
     val lenRatio = stream.getInt
     val ratioBytes = stream.get(lenRatio)
-    val out5 = dRatio(new ByteStream(ratioBytes,DeserializeBlockHeader))
+    val out5Bytes = new ByteStream(ratioBytes,DeserializeBlockHeader)
+    val out5 = dRatio(out5Bytes)
     val lenString = stream.getInt
     val stringBytes = stream.get(lenString)
-    val out6 = dString(new ByteStream(stringBytes,DeserializeBlockHeader))
+    val out6Bytes = new ByteStream(stringBytes,DeserializeBlockHeader)
+    val out6 = dString(out6Bytes)
     val out = (
       out1,
       out2,
@@ -371,8 +375,10 @@ class Serializer extends SimpleTypes {
     while (i < numEntry) {
       val pkw = ByteArrayWrapper(stream.get(pkw_length))
       val biLen = stream.getInt
-      val bi = dBigInt(new ByteStream(stream.get(biLen),stream.caseObject))
-      val bool = dBoolean(new ByteStream(stream.get(4),stream.caseObject))
+      val biBytes = new ByteStream(stream.get(biLen),stream.caseObject)
+      val bi = dBigInt(biBytes)
+      val boolBytes = new ByteStream(stream.get(4),stream.caseObject)
+      val bool = dBoolean(boolBytes)
       val int = stream.getInt
       out += (pkw -> (bi,bool,int))
       i += 1
@@ -393,8 +399,8 @@ class Serializer extends SimpleTypes {
     var i = 0
     while (i < numTx) {
       val outLen = stream.getInt
-      val outBytes = stream.get(outLen)
-      out = out ++ Seq(dTransaction(new ByteStream(outBytes,stream.caseObject)))
+      val outBytes = new ByteStream(stream.get(outLen),stream.caseObject)
+      out = out ++ Seq(dTransaction(outBytes))
       i += 1
     }
     assert(out.length == numTx)
@@ -413,8 +419,8 @@ class Serializer extends SimpleTypes {
     var i = 0
     while (i < numTx) {
       val outLen = stream.getInt
-      val outBytes = stream.get(outLen)
-      out = out ++ Seq(dGen(new ByteStream(outBytes,stream.caseObject)))
+      val outBytes = new ByteStream(stream.get(outLen),stream.caseObject)
+      out = out ++ Seq(dGen(outBytes))
       i += 1
     }
     assert(out.length == numTx)
@@ -422,11 +428,11 @@ class Serializer extends SimpleTypes {
     out
   }
 
-  private def sChain(chain:Chain):Array[Byte] = {
+  private def sChain(chain:Tine):Array[Byte] = {
     Ints.toByteArray(chain.length) ++ Bytes.concat(chain.getData.map(getBytes):_*)
   }
 
-  private def dChain(stream: ByteStream):Chain = {
+  private def dChain(stream: ByteStream):Tine = {
     val numEntries = stream.getInt
     var out:Map[Slot,BlockId] = Map()
     var i = 0
@@ -438,7 +444,7 @@ class Serializer extends SimpleTypes {
     }
     assert(out.keySet.size == numEntries)
     assert(stream.empty)
-    Chain(out)
+    Tine(out)
   }
 
   private def sMalkinKey(key: MalkinKey):Array[Byte] = {
@@ -454,11 +460,11 @@ class Serializer extends SimpleTypes {
 
   private def dMalkinKey(stream:ByteStream):MalkinKey = {
     val out1len = stream.getInt
-    val out1Bytes = stream.get(out1len)
-    val out1 = dTree(new ByteStream(out1Bytes,stream.caseObject))
+    val out1Bytes = new ByteStream(stream.get(out1len),stream.caseObject)
+    val out1 = dTree(out1Bytes)
     val out2len = stream.getInt
-    val out2Bytes = stream.get(out2len)
-    val out2 = dTree(new ByteStream(out2Bytes,stream.caseObject))
+    val out2Bytes = new ByteStream(stream.get(out2len),stream.caseObject)
+    val out2 = dTree(out2Bytes)
     val out3len = stream.getInt
     val out3 = stream.get(out3len)
     val out4 = stream.get(pk_length)
@@ -545,7 +551,8 @@ class Serializer extends SimpleTypes {
     while (i < numEntries) {
       val sid:Sid = ByteArrayWrapper(stream.get(sid_length))
       val tx_len = stream.getInt
-      val tx:Transaction = dTransaction(new ByteStream(stream.get(tx_len),stream.caseObject))
+      val txBytes = new ByteStream(stream.get(tx_len),stream.caseObject)
+      val tx:Transaction = dTransaction(txBytes)
       out += (sid->tx)
       i += 1
     }
@@ -578,24 +585,32 @@ class Serializer extends SimpleTypes {
   private def dWallet(stream: ByteStream):Wallet = {
     val out1:ByteArrayWrapper = ByteArrayWrapper(stream.get(pkw_length))
     val out2len = stream.getInt
-    val out2:Ratio = dRatio(new ByteStream(stream.get(out2len),stream.caseObject))
-    var out = new Wallet(out1,out2)
+    val out2Bytes = new ByteStream(stream.get(out2len),stream.caseObject)
+    val out2:Ratio = dRatio(out2Bytes)
+    val out = Wallet(out1,out2)
     val out3len = stream.getInt
-    out.pendingTxsOut = dTxMap(new ByteStream(stream.get(out3len),stream.caseObject))
+    val b1 =new ByteStream(stream.get(out3len),stream.caseObject)
+    out.pendingTxsOut = dTxMap(b1)
     val out4len = stream.getInt
-    out.availableBalance = dBigInt(new ByteStream(stream.get(out4len),stream.caseObject))
+    val b2 = new ByteStream(stream.get(out4len),stream.caseObject)
+    out.availableBalance = dBigInt(b2)
     val out5len = stream.getInt
-    out.totalBalance = dBigInt(new ByteStream(stream.get(out5len),stream.caseObject))
+    val b3 = new ByteStream(stream.get(out5len),stream.caseObject)
+    out.totalBalance = dBigInt(b3)
     out.txCounter = stream.getInt
     out.confirmedTxCounter = stream.getInt
     val out8len = stream.getInt
-    out.netStake = dBigInt(new ByteStream(stream.get(out8len),stream.caseObject))
+    val b4 = new ByteStream(stream.get(out8len),stream.caseObject)
+    out.netStake = dBigInt(b4)
     val out9len = stream.getInt
-    out.netStake0 = dBigInt(new ByteStream(stream.get(out9len),stream.caseObject))
+    val b5 = new ByteStream(stream.get(out9len),stream.caseObject)
+    out.netStake0 = dBigInt(b5)
     val out10len = stream.getInt
-    out.issueState = dState(new ByteStream(stream.get(out10len),stream.caseObject))
+    val b6 = new ByteStream(stream.get(out10len),stream.caseObject)
+    out.issueState = dState(b6)
     val out11len = stream.getInt
-    out.confirmedState = dState(new ByteStream(stream.get(out11len),stream.caseObject))
+    val b7 = new ByteStream(stream.get(out11len),stream.caseObject)
+    out.confirmedState = dState(b7)
     assert(stream.empty)
     out
   }

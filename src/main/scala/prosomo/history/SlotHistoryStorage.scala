@@ -20,11 +20,12 @@ class SlotHistoryStorage(dir:String) extends Types {
     val iFile = new File(s"$dir/history/reorg")
     iFile.mkdirs()
     val store = new LDBStore(iFile)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
+    val newThread = new Thread() {
       override def run(): Unit = {
         store.close()
       }
-    })
+    }
+    Runtime.getRuntime.addShutdownHook(newThread)
     store
   }
 
@@ -49,7 +50,8 @@ class SlotHistoryStorage(dir:String) extends Types {
     val blockSlotHash = hash(slot,serializer)
     blockReorgStore.get(blockSlotHash) match {
       case Some(bytes: ByteArrayWrapper) => {
-        serializer.fromBytes(new ByteStream(bytes.data,DeserializeIdList)) match {case idl:List[BlockId] => idl}
+        val byteStream = new ByteStream(bytes.data,DeserializeIdList)
+        serializer.fromBytes(byteStream) match {case idl:List[BlockId] => idl}
       }
       case None => List(ByteArrayWrapper(Array()))
     }
@@ -64,7 +66,8 @@ class SlotHistoryStorage(dir:String) extends Types {
   private def get(blockSlotHash:Hash,serializer: Serializer):List[BlockId] = {
     blockReorgStore.get(blockSlotHash) match {
       case Some(bytes: ByteArrayWrapper) => {
-        serializer.fromBytes(new ByteStream(bytes.data,DeserializeIdList)) match {case idl:List[BlockId] => idl}
+        val byteStream = new ByteStream(bytes.data,DeserializeIdList)
+        serializer.fromBytes(byteStream) match {case idl:List[BlockId] => idl}
       }
       case _ => List(ByteArrayWrapper(Array()))
     }
