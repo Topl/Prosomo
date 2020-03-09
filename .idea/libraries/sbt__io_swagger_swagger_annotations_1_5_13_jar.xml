@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: io.swagger:swagger-annotations:1.5.13:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.swagger/swagger-annotations/bundles/swagger-annotations-1.5.13.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.swagger/swagger-annotations/srcs/swagger-annotations-1.5.13-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

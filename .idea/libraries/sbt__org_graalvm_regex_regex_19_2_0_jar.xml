@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: org.graalvm.regex:regex:19.2.0:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.graalvm.regex/regex/jars/regex-19.2.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.graalvm.regex/regex/srcs/regex-19.2.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

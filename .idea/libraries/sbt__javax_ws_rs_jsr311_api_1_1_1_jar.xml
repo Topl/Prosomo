@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: javax.ws.rs:jsr311-api:1.1.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/javax.ws.rs/jsr311-api/jars/jsr311-api-1.1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/javax.ws.rs/jsr311-api/srcs/jsr311-api-1.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

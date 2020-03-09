@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sbt: io.swagger:swagger-scala-module_2.12:1.0.4:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.swagger/swagger-scala-module_2.12/jars/swagger-scala-module_2.12-1.0.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.swagger/swagger-scala-module_2.12/srcs/swagger-scala-module_2.12-1.0.4-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
