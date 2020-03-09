@@ -45,14 +45,14 @@ class Coordinator(inputSeed:Array[Byte])
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Tine = new Tine
-  val blocks:BlockStorage = new BlockStorage(storageDir)
-  val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
+  val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
+  //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
-  val history:StateStorage = new StateStorage(storageDir)
+  val history:StateStorage = new StateStorage(storageDir,serializer)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
@@ -63,7 +63,7 @@ class Coordinator(inputSeed:Array[Byte])
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
-  var wallet:Wallet = new Wallet(keys.pkw,fee_r)
+  var wallet:Wallet = Wallet(keys.pkw,fee_r)
   var chainUpdateLock = false
   var routerRef:ActorRef = _
   var localState:State = Map()
@@ -842,12 +842,13 @@ class Coordinator(inputSeed:Array[Byte])
                     }.asJson
                   ).asJson
                 }
-              }.asJson,
-              "history" -> chainHistory.get(i,serializer).map{
-                case value:BlockId => Map(
-                  "id" -> Base58.encode(value.data).asJson
-                ).asJson
               }.asJson
+//              ,
+//              "history" -> chainHistory.get(i,serializer).map{
+//                case value:BlockId => Map(
+//                  "id" -> Base58.encode(value.data).asJson
+//                ).asJson
+//              }.asJson
             ).asJson
           }.asJson
         ).asJson

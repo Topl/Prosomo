@@ -34,8 +34,8 @@ class Stakeholder(inputSeed:Array[Byte])
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Tine = new Tine
-  val blocks:BlockStorage = new BlockStorage(storageDir)
-  val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
+  val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
+  //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -44,7 +44,7 @@ class Stakeholder(inputSeed:Array[Byte])
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = new Wallet(keys.pkw,fee_r)
-  val history:StateStorage = new StateStorage(storageDir)
+  val history:StateStorage = new StateStorage(storageDir,serializer)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
   val phase:Double = rng.nextDouble

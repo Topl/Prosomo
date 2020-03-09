@@ -3,35 +3,34 @@ package prosomo.primitives
 import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.iq80.leveldb._
+import org.fusesource.leveldbjni.JniDBFactory
+import org.iq80.leveldb.impl.Iq80DBFactory._
+
 import io.iohk.iodb.ByteArrayWrapper
 
-class LDBStore(file:File) {
+class LDBStore(dir:String) {
+
   private val lock:ReentrantReadWriteLock = new ReentrantReadWriteLock()
-  private val database:DB = {
 
-    val nativeFactory = "org.fusesource.leveldbjni.JniDBFactory"
-    val javaFactory = "org.iq80.leveldb.impl.Iq80DBFactory"
+  val iFile = new File(dir)
+  iFile.mkdirs()
+  //jniFactoryName = "org.fusesource.leveldbjni.JniDBFactory"
+  //javaFactoryName = "org.iq80.leveldb.impl.Iq80DBFactory"
+  val op = new Options()
+  op.createIfMissing(true)
+  op.paranoidChecks(true)
+  op.blockSize(1 * 1024 * 1024)
+  op.cacheSize(4 * 1024 * 1024)
+  op.maxOpenFiles(10)
+  var database:DB = factory.open(iFile, op)
+//  val newThread = new Thread() {
+//    override def run(): Unit = {
+//      database.close()
+//    }
+//  }
+//  Runtime.getRuntime.addShutdownHook(newThread)
 
-    def loadFactory(loader: ClassLoader, factoryName: String): Option[DBFactory] =
-      try Some(loader.loadClass(factoryName).getConstructor().newInstance().asInstanceOf[DBFactory])
-      catch {case e: Throwable => None}
-    lazy val factory: DBFactory = {
-      val loaders = List(ClassLoader.getSystemClassLoader, this.getClass.getClassLoader)
-      val factories = List(nativeFactory, javaFactory)
-      val pairs = loaders.view
-        .zip(factories)
-        .flatMap { case (loader, factoryName) =>
-          loadFactory(loader, factoryName).map(factoryName -> _)
-        }
-      val (name, factory) = pairs.headOption.getOrElse(
-        throw new RuntimeException(s"Could not load any of the factory classes: $nativeFactory, $javaFactory")
-      )
-      factory
-    }
-    val op = new Options()
-    op.createIfMissing(true)
-    factory.open(file, op)
-  }
+  //database.suspendCompactions()
 
   def get(key:ByteArrayWrapper):Option[ByteArrayWrapper] = {
     lock.readLock().lock()

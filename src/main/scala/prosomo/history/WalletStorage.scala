@@ -13,23 +13,12 @@ class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  val walletStore:LDBStore = {
-    val iFile = new File(s"$dir/wallet")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-    val newThread = new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
-    store
-  }
+  val walletStore:LDBStore = new LDBStore(s"$dir/wallet")
 
   def restore(serializer: Serializer,pkw:ByteArrayWrapper,fee_r:Ratio):Wallet = if (storageFlag) {
     def newWallet:Wallet = {
       println("New wallet")
-      val out = new Wallet(pkw,fee_r)
+      val out = Wallet(pkw,fee_r)
       store(out,serializer)
       out
     }
@@ -48,7 +37,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
     }
   } else {
     println("New wallet")
-    new Wallet(pkw,fee_r)
+    Wallet(pkw,fee_r)
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString

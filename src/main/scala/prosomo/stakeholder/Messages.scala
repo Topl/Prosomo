@@ -181,8 +181,8 @@ trait Messages extends Members {
           case _ => println("error")
         }
         value.h match {
-          case h:SlotHistoryStorage => chainHistory.copy(h)
-          case _ => println("error")
+          //case h:SlotHistoryStorage => chainHistory.copy(h)
+          case _ => //println("error")
         }
       }
       case _ => println("error")

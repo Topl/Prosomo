@@ -173,7 +173,7 @@ trait ChainSelection extends Members {
         val id = tine.get(i)
         if (id._1 > -1) {
           assert(id._1 == i)
-          chainHistory.update(id,serializer)
+          //chainHistory.update(id,serializer)
           assert(
             getParentId(id) match {
               case pid:SlotId => {
@@ -190,7 +190,7 @@ trait ChainSelection extends Members {
             }
           }
         } else {
-          chainHistory.update((-1,ByteArrayWrapper(Array())),serializer)
+          //chainHistory.update((-1,ByteArrayWrapper(Array())),serializer)
         }
       }
       candidateTines = candidateTines.dropRight(1)

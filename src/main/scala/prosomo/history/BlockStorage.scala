@@ -1,7 +1,5 @@
 package prosomo.history
 
-import java.io.File
-
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
@@ -9,37 +7,13 @@ import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
 
 import scala.concurrent.duration.MINUTES
 
-class BlockStorage(dir:String) extends SimpleTypes {
+class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
-  private val serializer = new Serializer
+  private var blockBodyStore:LDBStore = new LDBStore(s"$dir/blocks/body")
 
-  private var blockBodyStore:LDBStore = {
-    val iFile = new File(s"$dir/blocks/body")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-    val newThread = new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
-    store
-  }
-
-  private var blockHeaderStore:LDBStore = {
-    val iFile = new File(s"$dir/blocks/header")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-    val newThread = new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
-    store
-  }
+  private var blockHeaderStore:LDBStore = new LDBStore(s"$dir/blocks/header")
 
   private val blockLoader:CacheLoader[SlotId,Block] = new CacheLoader[SlotId,Block] {
     def load(id:SlotId):Block = {

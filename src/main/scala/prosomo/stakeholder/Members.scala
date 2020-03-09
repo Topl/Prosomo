@@ -17,7 +17,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val storageDir:String
   val localChain:Tine
   val blocks:BlockStorage
-  val chainHistory:SlotHistoryStorage
+//  val chainHistory:SlotHistoryStorage
   val walletStorage:WalletStorage
   val vrf:Vrf
   val kes:Kes

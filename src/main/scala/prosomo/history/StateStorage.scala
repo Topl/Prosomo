@@ -10,38 +10,15 @@ import scorex.crypto.encode.Base58
 
 import scala.concurrent.duration.MINUTES
 
-class StateStorage(dir:String) extends Types {
+class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
-  val serializer:Serializer = new Serializer
-
   var idMap:Map[Hash,(State,Eta)] = Map()
 
-  val stateStore:LDBStore = {
-    val iFile = new File(s"$dir/history/state")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-//    Runtime.getRuntime.addShutdownHook(new Thread() {
-//      override def run(): Unit = {
-//        store.close()
-//      }
-//    })
-    store
-  }
+  val stateStore:LDBStore = new LDBStore(s"$dir/history/state")
 
-  val etaStore:LDBStore = {
-    val iFile = new File(s"$dir/history/eta")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-    val newThread = new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
-    store
-  }
+  val etaStore:LDBStore = new LDBStore(s"$dir/history/eta")
 
   private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
     def load(id:SlotId):(State,Eta) = {

@@ -16,18 +16,7 @@ class SlotHistoryStorage(dir:String) extends Types {
 
   private var data:Map[Slot,List[BlockId]] = Map()
 
-  private var blockReorgStore:LDBStore = {
-    val iFile = new File(s"$dir/history/reorg")
-    iFile.mkdirs()
-    val store = new LDBStore(iFile)
-    val newThread = new Thread() {
-      override def run(): Unit = {
-        store.close()
-      }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
-    store
-  }
+  private var blockReorgStore:LDBStore = new LDBStore(s"$dir/history/reorg")
 
   def uuid = ByteArrayWrapper(FastCryptographicHash(java.util.UUID.randomUUID.toString))
 

@@ -236,7 +236,7 @@ trait Receive extends Members {
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {
           localChain.update((0,genBlockHash))
-          chainHistory.update((0,genBlockHash),serializer)
+          //chainHistory.update((0,genBlockHash),serializer)
           updateLocalState(localState, Tine(localChain.get(0))) match {
             case value:State => localState = {
               value
@@ -391,7 +391,7 @@ trait Receive extends Members {
     }
 
     case RequestBlockTree => {
-      sender() ! GetBlockTree(blocks,chainHistory)
+      sender() ! GetBlockTree(blocks,0)
     }
 
 
