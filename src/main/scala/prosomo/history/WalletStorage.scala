@@ -13,7 +13,11 @@ class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  val walletStore:LDBStore = new LDBStore(s"$dir/wallet")
+  var walletStore:LDBStore = new LDBStore(s"$dir/wallet")
+
+  def refresh():Unit = {
+    walletStore.refresh()
+  }
 
   def restore(serializer: Serializer,pkw:ByteArrayWrapper,fee_r:Ratio):Wallet = if (storageFlag) {
     def newWallet:Wallet = {

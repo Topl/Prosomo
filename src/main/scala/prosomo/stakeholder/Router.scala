@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.Random
 
-class Router(seed:Array[Byte]) extends Actor
+class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
   with Types
   with Timers {
   import Parameters._
@@ -28,6 +28,7 @@ class Router(seed:Array[Byte]) extends Actor
   var globalSlot:Slot = 0
   var localSlot:Slot = 0
   var coordinatorRef:ActorRef = _
+  var networkController:ActorRef = inputRef(0)
   var t0:Long = 0
   var ts:Long = 0
   var roundDone = true
@@ -363,5 +364,5 @@ class Router(seed:Array[Byte]) extends Actor
 }
 
 object Router {
-  def props(seed:Array[Byte]): Props = Props(new Router(seed))
+  def props(seed:Array[Byte],ref:Seq[ActorRef]): Props = Props(new Router(seed,ref))
 }

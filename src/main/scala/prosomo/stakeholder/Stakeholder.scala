@@ -110,6 +110,7 @@ class Stakeholder(inputSeed:Array[Byte])
   var covert:Boolean = false
   //toggle for nothing-at-stake forging
   var forgeAll:Boolean = false
+
 }
 
 object Stakeholder {

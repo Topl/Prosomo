@@ -27,7 +27,7 @@ import scala.util.{Random, Try}
   * sends messages to participants to execute a round
   */
 
-class Coordinator(inputSeed:Array[Byte])
+class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   extends ChainSelection
     with Forging
     with Ledger
@@ -65,7 +65,7 @@ class Coordinator(inputSeed:Array[Byte])
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = Wallet(keys.pkw,fee_r)
   var chainUpdateLock = false
-  var routerRef:ActorRef = _
+  var routerRef:ActorRef = inputRef(0)
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -178,7 +178,6 @@ class Coordinator(inputSeed:Array[Byte])
       println(s"S = $slotWindow")
       println(s"f = $f_s")
       println("Populating")
-      routerRef = context.actorOf(Router.props(FastCryptographicHash(inputSeed+"router")), "Router")
       var i = -1
       holders = List.fill(numHolders){
         i+=1
@@ -895,5 +894,5 @@ class Coordinator(inputSeed:Array[Byte])
 }
 
 object Coordinator {
-  def props(inputSeed:Array[Byte]): Props = Props(new Coordinator(inputSeed))
+  def props(inputSeed:Array[Byte],ref:Seq[ActorRef]): Props = Props(new Coordinator(inputSeed,ref))
 }

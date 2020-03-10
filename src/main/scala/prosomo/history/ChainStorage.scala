@@ -10,7 +10,11 @@ class ChainStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  val chainStore:LDBStore = new LDBStore(s"$dir/history/chain")
+  var chainStore:LDBStore = new LDBStore(s"$dir/history/chain")
+
+  def refresh():Unit = {
+    chainStore.refresh()
+  }
 
   def restore(cid:Hash,serializer: Serializer):Tine = if (storageFlag) {
     chainStore.get(cid) match {

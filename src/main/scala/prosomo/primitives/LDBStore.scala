@@ -19,10 +19,11 @@ class LDBStore(dir:String) {
   val op = new Options()
   op.createIfMissing(true)
   op.paranoidChecks(true)
-  op.blockSize(1 * 1024 * 1024)
-  op.cacheSize(4 * 1024 * 1024)
+  op.blockSize(4 * 1024 * 1024)
+  op.cacheSize(0)
   op.maxOpenFiles(10)
   var database:DB = factory.open(iFile, op)
+
 //  val newThread = new Thread() {
 //    override def run(): Unit = {
 //      database.close()
@@ -31,6 +32,16 @@ class LDBStore(dir:String) {
 //  Runtime.getRuntime.addShutdownHook(newThread)
 
   //database.suspendCompactions()
+
+  def refresh():Unit = {
+    lock.readLock().lock()
+    try {
+      database.close()
+      database = factory.open(iFile, op)
+    } finally {
+      lock.readLock().unlock()
+    }
+  }
 
   def get(key:ByteArrayWrapper):Option[ByteArrayWrapper] = {
     lock.readLock().lock()

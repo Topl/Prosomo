@@ -11,9 +11,14 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.{storageFlag,cacheSize}
 
+  private var blockHeaderStore:LDBStore = new LDBStore(s"$dir/blocks/header")
+
   private var blockBodyStore:LDBStore = new LDBStore(s"$dir/blocks/body")
 
-  private var blockHeaderStore:LDBStore = new LDBStore(s"$dir/blocks/header")
+  def refresh():Unit = {
+    blockBodyStore.refresh()
+    blockHeaderStore.refresh()
+  }
 
   private val blockLoader:CacheLoader[SlotId,Block] = new CacheLoader[SlotId,Block] {
     def load(id:SlotId):Block = {

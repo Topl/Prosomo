@@ -4,6 +4,7 @@ import java.io.BufferedWriter
 
 import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
+import scala.concurrent.duration._
 import prosomo.cases._
 import prosomo.components.{Block, Tine, Serializer, Transaction}
 import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
@@ -270,7 +271,15 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(timerKey, GetTime, updateTime)
+        timers.startPeriodicTimer(Refresh,Refresh,slotT*100 millis)
       }
+    }
+
+    case Refresh => {
+      blocks.refresh
+      chainStorage.refresh
+      history.refresh
+      walletStorage.refresh
     }
 
     case GetTime => {

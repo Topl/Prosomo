@@ -1,5 +1,11 @@
 -Xms512M
--Xmx4096M
+-Xmx8192M
 -Xss2M
--XX:MaxMetaspaceSize=1024M
-
+-XX:MaxMetaspaceSize=2048M
+-XX:PermSize=512m
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+-XX:ParallelGCThreads=8
+-XX:ConcGCThreads=8
+-XX:InitiatingHeapOccupancyPercent=90
+-XX:G1HeapRegionSize=2

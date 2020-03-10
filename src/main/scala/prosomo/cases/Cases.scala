@@ -27,6 +27,7 @@ case object NextSlot
 case object EndStep
 case object RequestPositionData
 case object GetBalance
+case object Refresh
 
 //signed messages between holders, messages from remote
 case class Hello(id:ActorRef, mac:Mac)

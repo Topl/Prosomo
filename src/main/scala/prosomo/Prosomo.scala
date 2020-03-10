@@ -2,52 +2,48 @@ package prosomo
 
 import java.lang.management.ManagementFactory
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
+import bifrost.{BifrostLocalInterface, BifrostNodeViewHolder}
 import bifrost.api.http._
 import bifrost.crypto.hash.FastCryptographicHash
-import bifrost.forging.ForgingSettings
+import bifrost.forging.{Forger, ForgingSettings}
 import bifrost.history.BifrostSyncInfoMessageSpec
 import bifrost.network.message.{MessageSpec, _}
 import bifrost.network.peer.PeerManager
-import bifrost.network.{NetworkController, UPnP}
+import bifrost.network.{BifrostNodeViewSynchronizer, NetworkController, UPnP}
 import bifrost.utils.ScorexLogging
 import com.sun.management.HotSpotDiagnosticMXBean
 import io.circe
 import prosomo.cases._
 import prosomo.primitives.Parameters.inputSeed
-import prosomo.stakeholder.Coordinator
+import prosomo.stakeholder.{Coordinator, Router}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.io.StdIn
 import scala.reflect.runtime.universe.{Type, _}
 
 class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
   val ApplicationNameLimit = 50
 
-  val settings = new ForgingSettings {
+  val settings:ForgingSettings = new ForgingSettings {
     override val settingsJSON: Map[String, circe.Json] = settingsFromFile(settingsFilename)
   }
   log.debug(s"Starting application with settings \n$settings")
 
-  implicit val actorSystem = ActorSystem(settings.agentName)
+  implicit val actorSystem:ActorSystem = ActorSystem(settings.agentName)
 
   val additionalMessageSpecs: Seq[MessageSpec[_]] =
     Seq(BifrostSyncInfoMessageSpec)
 
-  val upnp = new UPnP(settings)
+  val upnp:UPnP = new UPnP(settings)
 
   val basicSpecs = Seq(GetPeersSpec,PeersSpec,InvSpec,RequestModifierSpec,ModifiersSpec)
 
   val messagesHandler: MessageHandler = MessageHandler(basicSpecs ++ additionalMessageSpecs)
 
   println("Using seed: "+inputSeed)
-  val coordinator = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed)), "Coordinator")
-  coordinator ! NewDataFile
-  coordinator ! Populate
-  coordinator ! Run
 
   //val nodeViewHolderRef: ActorRef = actorSystem.actorOf(Props(new BifrostNodeViewHolder(settings)))
 
@@ -65,21 +61,27 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
   //    BifrostSyncInfoMessageSpec)
   //)
 
-  val peerManagerRef = actorSystem.actorOf(Props(classOf[PeerManager], settings))
+  val peerManagerRef:ActorRef = actorSystem.actorOf(Props(classOf[PeerManager], settings))
 
-  val nProps = Props(classOf[NetworkController], settings, messagesHandler, upnp, peerManagerRef)
-  val networkController = actorSystem.actorOf(nProps, "networkController")
+  val networkController:ActorRef = actorSystem.actorOf(Props(classOf[NetworkController], settings, messagesHandler, upnp, peerManagerRef), "networkController")
 
-  val apiRoutes: Seq[ApiRoute] = Seq(
-    DebugApiRoute(settings, coordinator),
-    WalletApiRoute(settings, coordinator),
-    ProgramApiRoute(settings, coordinator, networkController),
-    AssetApiRoute(settings, coordinator),
+  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkController)), "Router")
+
+  val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
+  coordinator ! NewDataFile
+  coordinator ! Populate
+  coordinator ! Run
+
+  val apiRoutes:Seq[ApiRoute] = Seq(
+    DebugApiRoute(settings, routerRef),
+    WalletApiRoute(settings, routerRef),
+    ProgramApiRoute(settings, routerRef, networkController),
+    AssetApiRoute(settings, routerRef),
     UtilsApiRoute(settings),
-    NodeViewApiRoute(settings, coordinator)
+    NodeViewApiRoute(settings, routerRef)
   )
 
-  val apiTypes: Seq[Type] = Seq(typeOf[UtilsApiRoute],
+  val apiTypes:Seq[Type] = Seq(typeOf[UtilsApiRoute],
     typeOf[DebugApiRoute],
     typeOf[WalletApiRoute],
     typeOf[ProgramApiRoute],
@@ -87,6 +89,20 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
     typeOf[NodeViewApiRoute])
 
   val combinedRoute = CompositeHttpService(actorSystem, apiTypes, apiRoutes, settings).compositeRoute
+
+  val vm_version = System.getProperty("java.vm.version")
+  System.out.printf("java.vm.version = %s%n", vm_version)
+
+  val bean = ManagementFactory.getPlatformMXBean(classOf[HotSpotDiagnosticMXBean])
+
+  val enableJVMCI = bean.getVMOption("EnableJVMCI")
+  System.out.println(enableJVMCI)
+
+  val useJVMCICompiler = bean.getVMOption("UseJVMCICompiler")
+  System.out.println(useJVMCICompiler)
+
+  val compiler = System.getProperty("jvmci.Compiler")
+  System.out.printf("jvmci.Compiler = %s%n", compiler)
 
   def run(): Unit = {
     require(settings.agentName.length <= ApplicationNameLimit)
@@ -121,27 +137,6 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
     }
   }
 
-  val vm_version = System.getProperty("java.vm.version")
-  System.out.printf("java.vm.version = %s%n", vm_version)
-
-  val bean = ManagementFactory.getPlatformMXBean(classOf[HotSpotDiagnosticMXBean])
-
-  val enableJVMCI = bean.getVMOption("EnableJVMCI")
-  System.out.println(enableJVMCI)
-
-  val useJVMCICompiler = bean.getVMOption("UseJVMCICompiler")
-  System.out.println(useJVMCICompiler)
-
-  val compiler = System.getProperty("jvmci.Compiler")
-  System.out.printf("jvmci.Compiler = %s%n", compiler)
-
-  if (true) {
-    println("-->Press ENTER to exit<--")
-    try StdIn.readLine()
-    finally {
-      stopAll()
-    }
-  }
 }
 
 object Prosomo extends App {

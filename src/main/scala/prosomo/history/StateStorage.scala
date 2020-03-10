@@ -16,9 +16,14 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
 
   var idMap:Map[Hash,(State,Eta)] = Map()
 
-  val stateStore:LDBStore = new LDBStore(s"$dir/history/state")
+  var stateStore:LDBStore = new LDBStore(s"$dir/history/state")
 
-  val etaStore:LDBStore = new LDBStore(s"$dir/history/eta")
+  var etaStore:LDBStore = new LDBStore(s"$dir/history/eta")
+
+  def refresh():Unit = {
+    stateStore.refresh()
+    etaStore.refresh()
+  }
 
   private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
     def load(id:SlotId):(State,Eta) = {
