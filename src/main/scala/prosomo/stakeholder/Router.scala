@@ -447,8 +447,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
 
   private def registerNC: Receive = {
     case Register => {
-      println("<-----------------------")
-
       networkController ! NetworkController.RegisterMessagesHandler(messageSpecs, self)
       sender() ! "done"
     }
