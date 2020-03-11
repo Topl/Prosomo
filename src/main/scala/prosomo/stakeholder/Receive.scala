@@ -271,7 +271,7 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        timers.startPeriodicTimer(Refresh,Refresh,slotT*100 millis)
+        context.system.scheduler.scheduleOnce(slotT*((3600.0 * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
       }
     }
 
@@ -280,6 +280,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
+      context.system.scheduler.scheduleOnce(slotT*3600 millis,self,Refresh)(context.system.dispatcher,self)
     }
 
     case GetTime => {
