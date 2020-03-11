@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.ActorRef
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{RequestBlock, RequestChain, SendTx}
+import prosomo.cases.{RequestBlock, RequestBlocks, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
 import scorex.crypto.encode.Base58
@@ -140,7 +140,7 @@ trait ChainSelection extends Members {
             tineMaxDepth
           }
           val request:Request = (List(tine.head),depth,job._1)
-          send(self,ref, RequestChain(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(self,ref, RequestBlocks(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
           val request:Request = (List(tine.head),0,job._1)

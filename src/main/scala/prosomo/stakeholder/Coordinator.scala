@@ -172,6 +172,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   def populate: Receive ={
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
+      sendAssertDone(routerRef,Register)
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
       println(s"K = $k_s")
@@ -239,7 +240,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
       for (holder<-rng.shuffle(holders)) {
         holder ! Run
       }
-      if (!useFencing) timers.startPeriodicTimer(timerKey, ReadCommand, commandUpdateTime)
+      if (!useFencing) timers.startPeriodicTimer(TimerKey, ReadCommand, commandUpdateTime)
     }
   }
 

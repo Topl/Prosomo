@@ -68,7 +68,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var covert:Boolean
   var forgeAll:Boolean
 
-  case object timerKey
+  case object TimerKey
 
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):(Tine,Slot)

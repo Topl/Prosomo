@@ -78,7 +78,7 @@ trait Receive extends Members {
     }
 
     /**block passing, returned blocks are added to block database*/
-    case value:ReturnBlock => {
+    case value:ReturnBlocks => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           def blockToId(b:Block):SlotId = (b.slot,b.id)
@@ -117,12 +117,12 @@ trait Receive extends Members {
             val ref = inbox(value.mac.sid)._1
             if (blocks.known_then_load(value.id)) {
               val returnedBlock:List[Block] = List(blocks.get(value.id))
-              send(self,ref,ReturnBlock(returnedBlock,signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(self,ref,ReturnBlocks(returnedBlock,signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
               if (holderIndex == SharedData.printingHolder && printFlag) {
                 println("Holder " + holderIndex.toString + " Returned Block")
               }
             } else {
-              send(self,ref,ReturnBlock(List(),signMac(hash((List(),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(self,ref,ReturnBlocks(List(),signMac(hash((List(),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
             }
           } else {println("error: request block invalid mac")}
         }
@@ -133,7 +133,7 @@ trait Receive extends Members {
     }
 
     /**block passing, parent ids are requested with increasing depth of chain upto a finite number of attempts*/
-    case value:RequestChain => {
+    case value:RequestBlocks => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           val request:Request = (List(value.id),value.depth,value.job)
@@ -156,7 +156,7 @@ trait Receive extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Returned Blocks")
             }
-            send(self,ref,ReturnBlock(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+            send(self,ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
           } else {println("error:chain request mac invalid")}
         }
       }
@@ -270,7 +270,7 @@ trait Receive extends Members {
     case Run => {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
-        timers.startPeriodicTimer(timerKey, GetTime, updateTime)
+        timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
         timers.startPeriodicTimer(Refresh,Refresh,slotT*100 millis)
       }
     }

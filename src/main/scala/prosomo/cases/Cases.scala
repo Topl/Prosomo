@@ -28,14 +28,15 @@ case object EndStep
 case object RequestPositionData
 case object GetBalance
 case object Refresh
+case object Register
 
 //signed messages between holders, messages from remote
-case class Hello(id:ActorRef, mac:Mac)
-case class SendBlock(block:Block,mac:Mac)
-case class RequestBlock(id:SlotId, mac:Mac, job:Int)
-case class RequestChain(id:SlotId, depth:Int, mac:Mac, job:Int)
-case class ReturnBlock(blocks:List[Block], mac:Mac, job:Int)
 case class DiffuseData(ref:ActorRef,pks:PublicKeys,mac:Mac)
+case class Hello(id:ActorRef,mac:Mac)
+case class RequestBlock(id:SlotId,mac:Mac,job:Int)
+case class RequestBlocks(id:SlotId,depth:Int,mac:Mac,job:Int)
+case class ReturnBlocks(blocks:List[Block],mac:Mac,job:Int)
+case class SendBlock(block:Block,mac:Mac)
 case class SendTx(transaction:Transaction)
 
 //messages between coordinator/router and holders

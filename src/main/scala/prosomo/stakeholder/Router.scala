@@ -3,16 +3,39 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorRef, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
+import bifrost.LocalInterface.{LocallyGeneratedModifier, LocallyGeneratedTransaction}
+import bifrost.NodeViewModifier
+import bifrost.blocks.BifrostBlock
+import bifrost.consensus.History.HistoryComparisonResult
+import bifrost.history.{BifrostHistory, BifrostSyncInfo}
+import bifrost.mempool.BifrostMemPool
+import bifrost.network.{ConnectedPeer, NetworkController}
+import bifrost.network.NetworkController.DataFromPeer
+import bifrost.network.message.BasicMsgDataTypes.ModifiersData
+import bifrost.network.message.ModifiersSpec
+import bifrost.scorexMod.GenericNodeViewHolder
+import bifrost.scorexMod.GenericNodeViewHolder.{CurrentSyncInfo, CurrentView, GetCurrentView, GetSyncInfo, OtherNodeSyncingStatus}
+import bifrost.scorexMod.GenericNodeViewSynchronizer.{CompareViews, GetLocalObjects, ModifiersFromRemote, OtherNodeSyncingInfo, RequestFromLocal, ResponseFromLocal}
+import bifrost.state.BifrostState
+import bifrost.transaction.Transaction
+import bifrost.transaction.bifrostTransaction.BifrostTransaction
+import bifrost.transaction.box.BifrostBox
+import bifrost.transaction.box.proposition.ProofOfKnowledgeProposition
+import bifrost.transaction.state.PrivateKey25519
+import bifrost.wallet.BWallet
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Parameters, SharedData, Types}
+import prosomo.remote._
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
+import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.Random
+
 
 class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
   with Types
@@ -40,7 +63,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
   var transactionCounter:Int = 0
   var holderKeys:Map[ActorRef,PublicKeyW] = Map()
 
-  private case object timerKey
+  private case object TimerKey
 
   /**
     * Sends commands one by one to list of stakeholders
@@ -223,7 +246,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     }
   }
 
-  def receive: Receive = {
+  def routerReceive: Receive = {
 
     case value:Map[ActorRef,PublicKeyW] => {
       holderKeys = value
@@ -320,7 +343,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     }
 
     case Run => {
-      timers.startPeriodicTimer(timerKey, Update, 1 nano)
+      timers.startPeriodicTimer(TimerKey, Update, 1 nano)
       coordinatorRef ! NextSlot
     }
 
@@ -361,6 +384,89 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     println("Elapsed time: " + tString + " s")
     result
   }
+
+  type P = ProofOfKnowledgeProposition[PrivateKey25519]
+  type TX = BifrostTransaction
+  type PMOD = BifrostBlock
+  type BX = BifrostBox
+  type SI = BifrostSyncInfo
+  type HIS = BifrostHistory
+  type MS = BifrostState
+  type VL = BWallet
+  type MP = BifrostMemPool
+
+  private def handleSubscribe: Receive = {
+    case GenericNodeViewHolder.Subscribe(events) =>
+  }
+
+  private def compareViews: Receive = {
+    case CompareViews(sid, modifierTypeId, modifierIds) =>
+  }
+
+  private def readLocalObjects: Receive = {
+    case GetLocalObjects(sid, modifierTypeId, modifierIds) =>
+  }
+
+  private def processRemoteModifiers: Receive = {
+    case ModifiersFromRemote(remote, modifierTypeId, remoteObjects) =>
+  }
+
+  private def processLocallyGeneratedModifiers: Receive = {
+    case lt: LocallyGeneratedTransaction[P, TX] =>
+
+    case lm: LocallyGeneratedModifier[P, TX, PMOD] =>
+  }
+
+  private def getCurrentInfo: Receive = {
+    case GetCurrentView =>
+  }
+
+  private def compareSyncInfo: Receive = {
+    case OtherNodeSyncingInfo(remote, syncInfo:SI) =>
+  }
+
+  private def getSyncInfo: Receive = {
+    case GetSyncInfo =>
+  }
+
+  private def dataFromPeer: Receive = {
+    case DataFromPeer(spec, data: ModifiersData@unchecked, remote)
+      if spec.messageCode == ModifiersSpec.messageCode => {
+
+    }
+  }
+
+  val messageSpecs = Seq(
+    DiffuseDataSpec,
+    HelloSpec,
+    RequestBlockSpec,
+    RequestBlocksSpec,
+    ReturnBlocksSpec,
+    SendBlockSpec,
+    SendTxSpec
+  )
+
+  private def registerNC: Receive = {
+    case Register => {
+      networkController ! NetworkController.RegisterMessagesHandler(messageSpecs, self)
+      sender() ! "done"
+    }
+  }
+
+  def receive: Receive =
+    routerReceive orElse
+      registerNC orElse
+      handleSubscribe orElse
+      compareViews orElse
+      readLocalObjects orElse
+      processRemoteModifiers orElse
+      processLocallyGeneratedModifiers orElse
+      getCurrentInfo orElse
+      getSyncInfo orElse
+      compareSyncInfo orElse {
+      case a: Any =>
+    }
+
 }
 
 object Router {
