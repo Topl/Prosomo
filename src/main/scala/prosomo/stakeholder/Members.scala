@@ -1,10 +1,10 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor, ActorPath, ActorRef, Timers}
+import akka.actor.{Actor, ActorPath, Timers}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Tine, Serializer, Transaction}
-import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.wallet._
 
 import scala.math.BigInt
@@ -12,6 +12,7 @@ import scala.util.Random
 
 trait Members extends SimpleTypes with Actor with Timers {
 
+  implicit val routerRef:ActorRefWrapper
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
@@ -41,16 +42,15 @@ trait Members extends SimpleTypes with Actor with Timers {
   var memPool:MemPool
   var holderIndex:Int
   var diffuseSent:Boolean
-  var routerRef:ActorRef
   var chainUpdateLock:Boolean
-  var holders: List[ActorRef]
-  var gossipers: List[ActorRef]
+  var holders: List[ActorRefWrapper]
+  var gossipers: List[ActorRefWrapper]
   var gOff:Int
   var numHello:Int
-  var inbox:Map[Sid,(ActorRef,PublicKeys)]
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)]
   var blocksForged:Int
   var globalSlot:Slot
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)]
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)]
   var tineCounter:Int
   var candidateTines:Array[(Tine,Slot,Int)]
   var genBlockHeader:BlockHeader
@@ -62,7 +62,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var currentEpoch:Int
   var updating:Boolean
   var actorStalled:Boolean
-  var coordinatorRef:ActorRef
+  var coordinatorRef:ActorRefWrapper
   var txCounter:Int
   var adversary:Boolean
   var covert:Boolean
@@ -73,15 +73,15 @@ trait Members extends SimpleTypes with Actor with Timers {
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):(Tine,Slot)
   def updateWallet:Unit
-  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRef))):Unit
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG:Unit
   def validateChainIds(c:Tine):Boolean
   def updateEpoch(slot:Slot,epochIn:Int):Int
   def updateStakingState(ep:Int):Unit
   def update:Unit
-  def hash(input:ActorRef,serializer: Serializer): Hash
+  def hash(input:ActorRefWrapper, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
-  def hash(input:(ActorRef,PublicKeys),serializer: Serializer):Hash
+  def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer):Hash
   def hashGenEntry(input:(Array[Byte], ByteArrayWrapper, BigInt),serializer: Serializer):Hash
   def hash(input:BlockHeader,serializer: Serializer):Hash
   def hash(input:Transaction,serializer: Serializer):Hash
@@ -111,17 +111,17 @@ trait Members extends SimpleTypes with Actor with Timers {
   def diffuse(str: String,id: String,sk_sig: PrivateKey):String
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
   def verifyMac(input:Hash, mac:Mac):Boolean
-  def gossipSet(id:ActorPath,h:List[ActorRef]):List[ActorRef]
-  def send(sender:ActorRef,holder:ActorRef,command: Any):Unit
-  def send(sender:ActorRef,holders:List[ActorRef],command: Any):Unit
-  def sendAssertDone(holders:List[ActorRef], command: Any):Unit
-  def sendAssertDone(holder:ActorRef, command: Any):Unit
-  def getGossipers(holders:List[ActorRef]):Map[ActorRef,List[ActorRef]]
-  def getStakingState(holder:ActorRef):State
-  def getBlockTree(holder:ActorRef):Unit
-  def getPositionData(router:ActorRef):(Map[ActorRef,(Double,Double)],Map[(ActorRef,ActorRef),Long])
-  def collectKeys(holders:List[ActorRef], command: Any, input: Map[String,String]): Map[String,String]
-  def sendDiffuse(holderId:ActorPath, holders:List[ActorRef], command: Any):Unit
+  def gossipSet(id:ActorPath,h:List[ActorRefWrapper]):List[ActorRefWrapper]
+  def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any):Unit
+  def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any):Unit
+  def sendAssertDone(holders:List[ActorRefWrapper], command: Any):Unit
+  def sendAssertDone(holder:ActorRefWrapper, command: Any):Unit
+  def getGossipers(holders:List[ActorRefWrapper]):Map[ActorRefWrapper,List[ActorRefWrapper]]
+  def getStakingState(holder:ActorRefWrapper):State
+  def getBlockTree(holder:ActorRefWrapper):Unit
+  def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])
+  def collectKeys(holders:List[ActorRefWrapper], command: Any, input: Map[String,String]): Map[String,String]
+  def sendDiffuse(holderId:ActorPath, holders:List[ActorRefWrapper], command: Any):Unit
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
   def verifyChain(c:Tine, gh:Hash):Boolean

@@ -3,7 +3,6 @@ package prosomo.remote
 import prosomo.primitives.Types._
 import prosomo.primitives.Mac
 import prosomo.components.{Block,Transaction}
-import akka.actor.ActorRef
 
 object SpecTypes {
   /*

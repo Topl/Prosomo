@@ -2,13 +2,11 @@ package prosomo.stakeholder
 
 import java.io.BufferedWriter
 
-import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import scala.concurrent.duration._
 import prosomo.cases._
 import prosomo.components.{Block, Tine, Serializer, Transaction}
 import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
-import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
@@ -32,7 +30,7 @@ trait Receive extends Members {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
               memPool += (value.transaction.sid->(value.transaction,0))
-              send(self,gossipers, SendTx(value.transaction))
+              send(ActorRefWrapper(self),gossipers, SendTx(value.transaction))
             }
           }
         }
@@ -57,7 +55,7 @@ trait Receive extends Members {
                 if (bSlot <= globalSlot) {
                   //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
-                  send(self,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+                  send(ActorRefWrapper(self),gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   val jobNumber = tineCounter
                   tines += (jobNumber -> (Tine(newId),0,0,0,inbox(value.mac.sid)._1))
                   buildTine((jobNumber,tines(jobNumber)))
@@ -117,12 +115,12 @@ trait Receive extends Members {
             val ref = inbox(value.mac.sid)._1
             if (blocks.known_then_load(value.id)) {
               val returnedBlock:List[Block] = List(blocks.get(value.id))
-              send(self,ref,ReturnBlocks(returnedBlock,signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlock,signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
               if (holderIndex == SharedData.printingHolder && printFlag) {
                 println("Holder " + holderIndex.toString + " Returned Block")
               }
             } else {
-              send(self,ref,ReturnBlocks(List(),signMac(hash((List(),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              send(ActorRefWrapper(self),ref,ReturnBlocks(List(),signMac(hash((List(),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
             }
           } else {println("error: request block invalid mac")}
         }
@@ -156,7 +154,7 @@ trait Receive extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Returned Blocks")
             }
-            send(self,ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+            send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
           } else {println("error:chain request mac invalid")}
         }
       }
@@ -177,7 +175,7 @@ trait Receive extends Members {
                 txCounter += 1
                 //setOfTxs += (trans.sid->trans.nonce)
                 memPool += (trans.sid->(trans,0))
-                send(self,gossipers, SendTx(trans))
+                send(ActorRefWrapper(self),gossipers, SendTx(trans))
               }
               case _ => //{println("Holder "+holderIndex.toString+" tx issue failed")}
             }
@@ -200,7 +198,7 @@ trait Receive extends Members {
             if (!gossipers.contains(value.id) && inbox.keySet.contains(value.mac.sid)) {
               //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Adding Gossiper")}
               if (inbox(value.mac.sid)._1 == value.id) gossipers = gossipers ++ List(value.id)
-              send(self,value.id,Hello(self,signMac(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+              send(ActorRefWrapper(self),value.id,Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
           }
         }
@@ -216,7 +214,7 @@ trait Receive extends Members {
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
-      sendDiffuse(holderId, holders, DiffuseData(self,keys.publicKeys,signMac(hash((self,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+      sendDiffuse(holderId, holders, DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
       sender() ! "done"
     }
 
@@ -271,7 +269,7 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        context.system.scheduler.scheduleOnce(slotT*((3600.0 * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(slotT*((1800.0 * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
       }
     }
 
@@ -280,7 +278,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
-      context.system.scheduler.scheduleOnce(slotT*3600 millis,self,Refresh)(context.system.dispatcher,self)
+      context.system.scheduler.scheduleOnce(slotT*1800 millis,self,Refresh)(context.system.dispatcher,self)
     }
 
     case GetTime => {
@@ -299,7 +297,7 @@ trait Receive extends Members {
     }
 
     /**accepts list of other holders from coordinator */
-    case list:List[ActorRef] => {
+    case list:List[ActorRefWrapper] => {
       holders = list
       if (useGossipProtocol) {
         gossipers = List()
@@ -308,7 +306,7 @@ trait Receive extends Members {
       }
       var i = 0
       for (holder <- holders) {
-        if (self == holder) holderIndex = i
+        if (self.path == holder.path) holderIndex = i
         i += 1
       }
       sender() ! "done"
@@ -332,16 +330,10 @@ trait Receive extends Members {
       sender() ! "done"
     }
 
-    /**accepts router ref*/
-    case value:RouterRef => {
-      routerRef = value.ref
-      sender() ! "done"
-    }
-
     /**sets new list of holders resets gossipers*/
     case value:Party => {
       value.list match {
-        case list: List[ActorRef] => {
+        case list: List[ActorRefWrapper] => {
           holders = list
           if (useGossipProtocol) {
             gossipers = List()

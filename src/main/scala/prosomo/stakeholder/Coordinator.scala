@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{ActorPath, ActorRef, Props}
+import akka.actor.{ActorPath, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
@@ -12,7 +12,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
 import prosomo.cases._
 import prosomo.components._
-import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
 import prosomo.wallet.Wallet
 import scorex.crypto.encode.Base58
@@ -27,7 +27,7 @@ import scala.util.{Random, Try}
   * sends messages to participants to execute a round
   */
 
-class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
+class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   extends ChainSelection
     with Forging
     with Ledger
@@ -41,6 +41,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
     with Validation
 {
   import Parameters._
+  implicit val routerRef:ActorRefWrapper = inputRef(0)
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
@@ -65,21 +66,20 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = Wallet(keys.pkw,fee_r)
   var chainUpdateLock = false
-  var routerRef:ActorRef = inputRef(0)
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
   var memPool:MemPool = Map()
   var holderIndex:Int = -1
   var diffuseSent = false
-  var holders: List[ActorRef] = List()
-  var gossipers: List[ActorRef] = List()
+  var holders: List[ActorRefWrapper] = List()
+  var gossipers: List[ActorRefWrapper] = List()
   var gOff = 0
   var numHello = 0
-  var inbox:Map[Sid,(ActorRef,PublicKeys)] = Map()
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
   var blocksForged = 0
   var globalSlot = 0
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)] = Map()
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
   var tineCounter = 0
   var candidateTines:Array[(Tine,Slot,Int)] = Array()
   var genBlockHeader: BlockHeader = _
@@ -91,7 +91,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   var currentEpoch = -1
   var updating = false
   var actorStalled = false
-  var coordinatorRef:ActorRef = _
+  var coordinatorRef:ActorRefWrapper = _
   var txCounter = 0
   var adversary:Boolean = false
   var covert:Boolean = false
@@ -110,8 +110,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
   var genBlock:Block = _
   var roundDone = true
-  var parties: List[List[ActorRef]] = List()
-  var holderKeys:Map[ActorRef,PublicKeyW] = Map()
+  var parties: List[List[ActorRefWrapper]] = List()
+  var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
   var t:Slot = 0
   var tp:Long = 0
   var actorPaused = false
@@ -119,7 +119,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
   var genKeys:Map[String,String] = Map()
   var fileWriter:Any = 0
   var graphWriter:Any = 0
-  var gossipersMap:Map[ActorRef,List[ActorRef]] = Map()
+  var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
 
   def readFile(filename: String): Seq[String] = {
@@ -182,22 +182,21 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
       var i = -1
       holders = List.fill(numHolders){
         i+=1
-        context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder_" + i.toString)
+        ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),inputRef.map(_.actorRef)), "Holder_" + i.toString))
       }
       println("Sending holders list")
       sendAssertDone(List(routerRef),holders)
       sendAssertDone(holders,holders)
       println("Sending holders coordinator ref")
-      sendAssertDone(holders,RouterRef(routerRef))
-      sendAssertDone(holders,CoordRef(self))
+      sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
       println("Getting holder keys")
       genKeys = collectKeys(holders,RequestKeys,genKeys)
       assert(!containsDuplicates(genKeys))
       val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
       blocks.restore(genBlockKey) match {
         case Some(b:Block) => {
-          genBlock = new Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-          def refMapKey(ref:ActorRef) = {
+          genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
+          def refMapKey(ref:ActorRefWrapper) = {
             val pkw = ByteArrayWrapper(
               hex2bytes(genKeys(s"${ref.path}").split(";")(0))
                 ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
@@ -212,7 +211,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
         case None => {
           println("Forge Genesis Block")
           forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-            case out:(Block,Map[ActorRef,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
+            case out:(Block,Map[ActorRefWrapper,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
           }
           blocks.store(genBlockKey,genBlock)
         }
@@ -231,7 +230,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
       sendAssertDone(holders,Diffuse)
       println("Starting")
       sendAssertDone(holders,Initialize(L_s))
-      if (useFencing) sendAssertDone(routerRef,CoordRef(self))
+      if (useFencing) sendAssertDone(routerRef,CoordRef(ActorRefWrapper(self)))
       println("Run")
       restoreTimeInfo
       sendAssertDone(holders,SetClock(t0))
@@ -308,7 +307,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
     }
   }
 
-  def issueTx(holder1:ActorRef,holder2:ActorRef,delta:BigInt):Unit = {
+  def issueTx(holder1:ActorRefWrapper, holder2:ActorRefWrapper, delta:BigInt):Unit = {
     holder1 ! IssueTx((holderKeys(holder2),delta))
     transactionCounter += 1
   }
@@ -455,15 +454,18 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
         case "new_holder" => {
           println("Bootstrapping new holder...")
           val i = holders.length
-          val newHolder = context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString)), "Holder_" + i.toString)
+          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),inputRef.map(_.actorRef)), "Holder_" + i.toString))
           holders = holders++List(newHolder)
           sendAssertDone(routerRef,holders)
           sendAssertDone(newHolder,holders)
-          sendAssertDone(newHolder,RouterRef(routerRef))
-          sendAssertDone(newHolder,CoordRef(self))
+          sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
           sendAssertDone(newHolder,GenBlock(genBlock))
           val newHolderKeys = collectKeys(List(newHolder),RequestKeys,Map())
-          val newHolderKeyW = ByteArrayWrapper(hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(0))++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(1))++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(2)))
+          val newHolderKeyW = ByteArrayWrapper(
+            hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(0))
+              ++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(1))
+              ++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(2))
+          )
           holderKeys += (newHolder-> newHolderKeyW)
           sendAssertDone(holders,Party(holders,true))
           sendAssertDone(holders,Diffuse)
@@ -502,9 +504,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
               out
             }
 
-            var holders1:List[ActorRef] = List()
+            var holders1:List[ActorRefWrapper] = List()
             var net1:BigInt = 0
-            var holders2:List[ActorRef] = List()
+            var holders2:List[ActorRefWrapper] = List()
             var net2:BigInt = 0
             for (holder <- rng.shuffle(holders)) {
               val holderStake = stakingState(holderKeys(holder))._1
@@ -545,9 +547,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
               }
               out
             }
-            var holders1:List[ActorRef] = List()
+            var holders1:List[ActorRefWrapper] = List()
             var net1:BigInt = 0
-            var holders2:List[ActorRef] = List()
+            var holders2:List[ActorRefWrapper] = List()
             var net2:BigInt = 0
             for (holder <- rng.shuffle(holders)) {
               val holderStake = stakingState(holderKeys(holder))._1
@@ -586,8 +588,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
             val hIndex1s:String = data.split("_")(0)
             val hIndex2s:String = data.split("_")(1)
             val deltas:String = data.split("_")(2)
-            val holder1:ActorRef = holders(hIndex1s.toInt)
-            val holder2:ActorRef = holders(hIndex2s.toInt)
+            val holder1:ActorRefWrapper = holders(hIndex1s.toInt)
+            val holder2:ActorRefWrapper = holders(hIndex2s.toInt)
             val delta:BigInt = BigInt(deltas)
             issueTx(holder1,holder2,delta)
           }
@@ -722,7 +724,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
     }
   }
 
-  def printTree(holder:ActorRef):Unit = {
+  def printTree(holder:ActorRefWrapper):Unit = {
     var tn = 0
     if (useFencing) {
       tn = t
@@ -736,7 +738,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
       }
     }
     getBlockTree(holder)
-    val positionData:(Map[ActorRef,(Double,Double)],Map[(ActorRef,ActorRef),Long]) = getPositionData(routerRef)
+    val positionData:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) = getPositionData(routerRef)
     val dateString = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString.replace(":", "-")
     val uid = uuid
     val holderIndex = holders.indexOf(holder)
@@ -789,12 +791,12 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
           ).asJson,
           "position" -> Map(
             "delay" -> positionData._2.map{
-              case value: ((ActorRef,ActorRef),Long) => {
+              case value: ((ActorRefWrapper,ActorRefWrapper),Long) => {
                 Array(holders.indexOf(value._1._1).asJson,holders.indexOf(value._1._2).asJson,value._2.asJson)
               }
             }.asJson,
             "coordinates" -> positionData._1.map{
-              case value:(ActorRef,(Double,Double)) => {
+              case value:(ActorRefWrapper,(Double,Double)) => {
                 Map(holders.indexOf(value._1).toString -> Array(value._2._1.asJson,value._2._2.asJson)).asJson
               }
             }.asJson
@@ -895,5 +897,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRef])
 }
 
 object Coordinator {
-  def props(inputSeed:Array[Byte],ref:Seq[ActorRef]): Props = Props(new Coordinator(inputSeed,ref))
+  def props(inputSeed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
+    Props(new Coordinator(inputSeed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
 }

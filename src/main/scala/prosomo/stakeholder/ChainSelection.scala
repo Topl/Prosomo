@@ -1,11 +1,8 @@
 package prosomo.stakeholder
 
-import akka.actor.ActorRef
-import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{RequestBlock, RequestBlocks, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
-import scorex.crypto.encode.Base58
 
 import scala.util.control.Breaks.{break, breakable}
 
@@ -83,19 +80,19 @@ trait ChainSelection extends Members {
     }
     for (trans:Transaction <- wallet.getPending(localState)) {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(self,gossipers, SendTx(trans))
+      send(ActorRefWrapper(self),gossipers, SendTx(trans))
     }
     walletStorage.store(wallet,serializer)
   }
 
-  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRef))): Unit = {
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = {
     val entry = job._2
     var foundAncestor = true
     var tine:Tine = Tine(entry._1)
     var counter:Int = entry._2
     val previousLen:Int = entry._3
     val totalTries:Int = entry._4
-    val ref:ActorRef = entry._5
+    val ref:ActorRefWrapper = entry._5
     var prefix:Slot = 0
     breakable{
       while(foundAncestor) {
@@ -140,11 +137,11 @@ trait ChainSelection extends Members {
             tineMaxDepth
           }
           val request:Request = (List(tine.head),depth,job._1)
-          send(self,ref, RequestBlocks(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(ActorRefWrapper(self),ref, RequestBlocks(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
           val request:Request = (List(tine.head),0,job._1)
-          send(self,ref, RequestBlock(tine.head,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(ActorRefWrapper(self),ref, RequestBlock(tine.head,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }
       }
     }

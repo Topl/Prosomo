@@ -1,6 +1,6 @@
 package prosomo.cases
 
-import akka.actor.ActorRef
+import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
 import prosomo.primitives.Mac
@@ -31,8 +31,8 @@ case object Refresh
 case object Register
 
 //signed messages between holders, messages from remote
-case class DiffuseData(ref:ActorRef,pks:PublicKeys,mac:Mac)
-case class Hello(id:ActorRef,mac:Mac)
+case class DiffuseData(ref:ActorRefWrapper, pks:PublicKeys, mac:Mac)
+case class Hello(id:ActorRefWrapper, mac:Mac)
 case class RequestBlock(id:SlotId,mac:Mac,job:Int)
 case class RequestBlocks(id:SlotId,depth:Int,mac:Mac,job:Int)
 case class ReturnBlocks(blocks:List[Block],mac:Mac,job:Int)
@@ -41,8 +41,7 @@ case class SendTx(transaction:Transaction)
 
 //messages between coordinator/router and holders
 case class GetSlot(s:Int)
-case class CoordRef(ref: ActorRef)
-case class RouterRef(ref:ActorRef)
+case class CoordRef(ref: ActorRefWrapper)
 case class GetTime(t1:Long)
 case class Initialize(tMax:Int)
 case class SetClock(t0:Long)

@@ -1,11 +1,10 @@
 package prosomo.stakeholder
 
-import akka.actor.{ActorPath, ActorRef}
-import akka.pattern.ask
+import akka.actor.ActorPath
 import akka.util.Timeout
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.cases._
-import prosomo.history.{BlockStorage, SlotHistoryStorage}
+import prosomo.history.BlockStorage
 import prosomo.primitives.{Mac, Parameters}
 
 import scala.concurrent.Await
@@ -33,7 +32,7 @@ trait Messages extends Members {
     * @return signed mac
     */
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Mac = {
-    new Mac(data,id,sig.sign(sk_sig,data.data++id.data),pk_sig)
+    Mac(data,id,sig.sign(sk_sig,data.data++id.data),pk_sig)
   }
 
   /**
@@ -52,8 +51,8 @@ trait Messages extends Members {
     * @param h list of holders
     * @return list of gossipers
     */
-  def gossipSet(id:ActorPath,h:List[ActorRef]):List[ActorRef] = {
-    var out:List[ActorRef] = List()
+  def gossipSet(id:ActorPath,h:List[ActorRefWrapper]):List[ActorRefWrapper] = {
+    var out:List[ActorRefWrapper] = List()
     for (holder <- rng.shuffle(h)) {
       if (holder.path != id && out.length < numGossipers) {
         out = holder::out
@@ -67,7 +66,7 @@ trait Messages extends Members {
     * @param holder actor list
     * @param command object to be sent
     */
-  def send(sender:ActorRef,holder:ActorRef,command: Any) = {
+  def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
       routerRef ! (sender,holder,command)
     } else if (useFencing) {
@@ -82,7 +81,7 @@ trait Messages extends Members {
     * @param holders actor list
     * @param command object to be sent
     */
-  def send(sender:ActorRef,holders:List[ActorRef],command: Any) = {
+  def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any) = {
     for (holder <- holders){
       if (useRouting && !useFencing) {
         routerRef ! (sender, holder, command)
@@ -99,7 +98,7 @@ trait Messages extends Members {
     * @param holders actor list
     * @param command object to be sent
     */
-  def sendAssertDone(holders:List[ActorRef], command: Any) = {
+  def sendAssertDone(holders:List[ActorRefWrapper], command: Any) = {
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
       val future = holder ? command
@@ -113,7 +112,7 @@ trait Messages extends Members {
     * @param holder
     * @param command
     */
-  def sendAssertDone(holder:ActorRef, command: Any) = {
+  def sendAssertDone(holder:ActorRefWrapper, command: Any) = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? command
     val result = Await.result(future, timeout.duration)
@@ -125,8 +124,8 @@ trait Messages extends Members {
     * @param holders
     * @return map of actor ref to its list of gossipers
     */
-  def getGossipers(holders:List[ActorRef]):Map[ActorRef,List[ActorRef]] = {
-    var gossipersMap:Map[ActorRef,List[ActorRef]] = Map()
+  def getGossipers(holders:List[ActorRefWrapper]):Map[ActorRefWrapper,List[ActorRefWrapper]] = {
+    var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
       val future = holder ? RequestGossipers
@@ -134,7 +133,7 @@ trait Messages extends Members {
       result match {
         case value:GetGossipers => {
           value.list match {
-            case l:List[ActorRef] => gossipersMap += (holder->l)
+            case l:List[ActorRefWrapper] => gossipersMap += (holder->l)
             case _ => println("error")
           }
         }
@@ -149,7 +148,7 @@ trait Messages extends Members {
     * @param holder
     * @return
     */
-  def getStakingState(holder:ActorRef):State = {
+  def getStakingState(holder:ActorRefWrapper):State = {
     var state:State = Map()
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestState
@@ -170,7 +169,7 @@ trait Messages extends Members {
     * sets the local chain history and block data to the holders
     * @param holder actor to get data from
     */
-  def getBlockTree(holder:ActorRef) = {
+  def getBlockTree(holder:ActorRefWrapper) = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestBlockTree
     val result = Await.result(future, timeout.duration)
@@ -189,14 +188,14 @@ trait Messages extends Members {
     }
   }
 
-  def getPositionData(router:ActorRef):(Map[ActorRef,(Double,Double)],Map[(ActorRef,ActorRef),Long]) = {
+  def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = router ? RequestPositionData
     val result = Await.result(future, timeout.duration)
     result match {
       case value:GetPositionData => {
         value.s match {
-          case data:(Map[ActorRef,(Double,Double)],Map[(ActorRef,ActorRef),Long]) => {
+          case data:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) => {
             data
           }
         }
@@ -211,7 +210,7 @@ trait Messages extends Members {
     * @param input map of holder data
     * @return map of holder data
     */
-  def collectKeys(holders:List[ActorRef], command: Any, input: Map[String,String]): Map[String,String] = {
+  def collectKeys(holders:List[ActorRefWrapper], command: Any, input: Map[String,String]): Map[String,String] = {
     var list:Map[String,String] = input
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
@@ -232,7 +231,7 @@ trait Messages extends Members {
     * @param holders
     * @param command
     */
-  def sendDiffuse(holderId:ActorPath, holders:List[ActorRef], command: Any) = {
+  def sendDiffuse(holderId:ActorPath, holders:List[ActorRefWrapper], command: Any) = {
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
       if (holder.path != holderId) {

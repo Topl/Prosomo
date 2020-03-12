@@ -1,6 +1,6 @@
 package prosomo.primitives
 
-import akka.actor.ActorRef
+import prosomo.stakeholder.ActorRefWrapper
 import bifrost.crypto.hash.FastCryptographicHash
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
@@ -13,7 +13,7 @@ trait Types extends SimpleTypes {
     * @return wrapped byte array
     */
 
-  def hash(input:ActorRef,serializer: Serializer): Hash = {
+  def hash(input:ActorRefWrapper, serializer: Serializer): Hash = {
     hash(input.path.toString,serializer)
   }
 
@@ -21,7 +21,7 @@ trait Types extends SimpleTypes {
     hash(input.toString+"SLOT_HASH",serializer)
   }
 
-  def hash(input:(ActorRef,PublicKeys),serializer: Serializer): Hash = {
+  def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer): Hash = {
     ByteArrayWrapper(
       FastCryptographicHash(
         Bytes.concat(

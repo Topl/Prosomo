@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor, ActorRef, Props, Timers}
+import akka.actor.{Actor, ActorPath, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import bifrost.LocalInterface.{LocallyGeneratedModifier, LocallyGeneratedTransaction}
@@ -37,21 +37,22 @@ import scala.math.BigInt
 import scala.util.Random
 
 
-class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
+class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   with Types
   with Timers {
   import Parameters._
   val serializer:Serializer = new Serializer
-  var holders:List[ActorRef] = List()
+  var holders:List[ActorRefWrapper] = List()
+  var remoteHolders:List[ActorPath] = List()
   val rng = new Random(BigInt(seed).toLong)
-  var holdersPosition:Map[ActorRef,(Double,Double)] = Map()
-  var distanceMap:Map[(ActorRef,ActorRef),Long] = Map()
-  var holderMessages:Map[Slot,Map[Long,Map[ActorRef,Map[BigInt,(ActorRef,ActorRef,Any)]]]] = Map()
-  var holderReady:Map[ActorRef,Boolean] = Map()
+  var holdersPosition:Map[ActorRefWrapper,(Double,Double)] = Map()
+  var distanceMap:Map[(ActorRefWrapper,ActorRefWrapper),Long] = Map()
+  var holderMessages:Map[Slot,Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]]] = Map()
+  var holderReady:Map[ActorRefWrapper,Boolean] = Map()
   var globalSlot:Slot = 0
   var localSlot:Slot = 0
-  var coordinatorRef:ActorRef = _
-  var networkController:ActorRef = inputRef(0)
+  var coordinatorRef:ActorRefWrapper = _
+  var networkController:ActorRefWrapper = inputRef(0)
   var t0:Long = 0
   var ts:Long = 0
   var roundDone = true
@@ -61,7 +62,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
   var txRoundCounter = 0
   var maxDelay:Double = 0
   var transactionCounter:Int = 0
-  var holderKeys:Map[ActorRef,PublicKeyW] = Map()
+  var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
 
   private case object TimerKey
 
@@ -70,7 +71,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     * @param holders actor list
     * @param command object to be sent
     */
-  def sendAssertDone(holders:List[ActorRef], command: Any) = {
+  def sendAssertDone(holders:List[ActorRefWrapper], command: Any) = {
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
       val future = holder ? command
@@ -84,7 +85,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     * @param holder
     * @param command
     */
-  def sendAssertDone(holder:ActorRef, command: Any) = {
+  def sendAssertDone(holder:ActorRefWrapper, command: Any) = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? command
     val result = Await.result(future, timeout.duration)
@@ -106,12 +107,12 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     }
   }
 
-  def reset(holder:ActorRef):Unit = {
+  def reset(holder:ActorRefWrapper):Unit = {
     if (holderReady.keySet.contains(holder)) holderReady -= holder
     holderReady += (holder->false)
   }
 
-  def delay(sender:ActorRef,recip:ActorRef,data:Any):FiniteDuration = {
+  def delay(sender:ActorRefWrapper, recip:ActorRefWrapper, data:Any):FiniteDuration = {
     if (!distanceMap.keySet.contains((sender,recip))) {
       distanceMap += ((sender,recip)->(delay_ms_km*1.0e6*Distance.calculate(
         holdersPosition(sender)._1,
@@ -135,11 +136,11 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     } else {
       holderMessages -= globalSlot
       ts = next_message_t
-      var queue:Map[ActorRef,Map[BigInt,(ActorRef,ActorRef,Any)]] = slotMessages(ts)
+      var queue:Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]] = slotMessages(ts)
       slotMessages -= ts
       for (holder <- rng.shuffle(holders)) {
         if (queue.keySet.contains(holder)) {
-          var messageMap:Map[BigInt,(ActorRef,ActorRef,Any)] = queue(holder)
+          var messageMap:Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)] = queue(holder)
           queue -= holder
           val message = ListMap(messageMap.toSeq.sortBy(_._1):_*).head
           messageMap -= message._1
@@ -155,7 +156,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
               case _ => " "
             }
           )
-          context.system.scheduler.scheduleOnce(0 nano,r,c)(context.system.dispatcher,s)
+          context.system.scheduler.scheduleOnce(0 nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
           if (messageMap.nonEmpty) queue += (holder->messageMap)
         }
       }
@@ -175,7 +176,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
         val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
-        context.system.scheduler.scheduleOnce(0 nano,holder1,IssueTx((holderKeys(holder2),delta)))(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(0 nano,holder1.actorRef,IssueTx((holderKeys(holder2),delta)))(context.system.dispatcher,self)
       }
     }
   }
@@ -248,12 +249,12 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
 
   def routerReceive: Receive = {
 
-    case value:Map[ActorRef,PublicKeyW] => {
+    case value:Map[ActorRefWrapper,PublicKeyW] => {
       holderKeys = value
       sender() ! "done"
     }
 
-    case flag:(ActorRef,String) => {
+    case flag:(ActorRefWrapper,String) => {
       val (ref,value) = flag
 //      if (value == "updateChain" || value == "passData") {if (printSteps) println(value+" "+holders.indexOf(sender).toString)
 //        for (holder<-holders) {
@@ -269,7 +270,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
 
 
     /** accepts list of other holders from coordinator */
-    case list:List[ActorRef] => {
+    case list:List[ActorRefWrapper] => {
       holders = list
       for (holder<-holders) {
         if (!holdersPosition.keySet.contains(holder)) {
@@ -293,7 +294,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
     }
 
     /** adds delay to routed message*/
-    case newMessage:(ActorRef,ActorRef,Any) => {
+    case newMessage:(ActorRefWrapper,ActorRefWrapper,Any) => {
       val (s,r,c) = newMessage
       if (false) c match {
         case value:SendBlock => Base58.encode(value.block.id.data)
@@ -305,18 +306,17 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
         )
         case _ =>
       }
-
-      context.system.scheduler.scheduleOnce(delay(s,r,c),r,c)(context.system.dispatcher,sender())
+      context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
     }
 
-    case newIdMessage:(BigInt,ActorRef,ActorRef,Any) => {
+    case newIdMessage:(BigInt,ActorRefWrapper,ActorRefWrapper,Any) => {
       val (uid,s,r,c) = newIdMessage
       val newMessage = (s,r,c)
       val nsDelay = delay(s,r,c)
       val messageDelta:Slot = ((nsDelay.toNanos+ts)/(slotT*1000000)).toInt
       val priority:Long = (nsDelay.toNanos+ts)%(slotT*1000000)
       val offsetSlot = globalSlot+messageDelta
-      val messages:Map[Long,Map[ActorRef,Map[BigInt,(ActorRef,ActorRef,Any)]]] = if (holderMessages.keySet.contains(offsetSlot)) {
+      val messages:Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]] = if (holderMessages.keySet.contains(offsetSlot)) {
         var m = holderMessages(offsetSlot)
         holderMessages -= offsetSlot
         if (m.keySet.contains(priority)) {
@@ -469,5 +469,5 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRef]) extends Actor
 }
 
 object Router {
-  def props(seed:Array[Byte],ref:Seq[ActorRef]): Props = Props(new Router(seed,ref))
+  def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props = Props(new Router(seed,ref.map(ActorRefWrapper.routerRef(_))))
 }

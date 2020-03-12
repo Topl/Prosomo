@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.cases.{GetTime, Hello, WriteFile}
+import prosomo.cases.{Hello, WriteFile}
 import prosomo.components.Tine
 import prosomo.primitives.{KeyFile, Parameters, SharedData}
 import scorex.crypto.encode.Base58
@@ -95,7 +95,7 @@ trait Update extends Members {
               gOff = newOff
             }
             if (gossipers.length < numGossipers + gOff && numHello < 1) {
-              send(self,rng.shuffle(holders.filter(_!=self)),Hello(self,signMac(hash(self,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+              send(ActorRefWrapper(self),rng.shuffle(holders.filter(_!=ActorRefWrapper(self))),Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
               numHello += 1
             } else if (gossipers.length > numGossipers + gOff) {
               gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)

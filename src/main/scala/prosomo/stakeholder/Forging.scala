@@ -1,6 +1,5 @@
 package prosomo.stakeholder
 
-import akka.actor.ActorRef
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
@@ -38,12 +37,12 @@ trait Forging extends Members {
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
-      val block = new Block(hb,b,txs)
+      val block = Block(hb,b,txs)
       blocks.add(block)
       updateLocalState(localState, Tine((slot,block.id))) match {
         case forgedState:State => {
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
-          send(self,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+          send(ActorRefWrapper(self),gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter
@@ -67,7 +66,7 @@ trait Forging extends Members {
                     sk_sig:PublicKey,
                     sk_vrf:PublicKey,
                     sk_kes:MalkinKey
-                   ): (Block,Map[ActorRef,PublicKeyW]) = {
+                   ): (Block,Map[ActorRefWrapper,PublicKeyW]) = {
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0
@@ -76,9 +75,9 @@ trait Forging extends Members {
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    var holderKeys:Map[ActorRef,PublicKeyW] = Map()
+    var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
     val genesisEntries: GenesisSet = holders.map{
-      case ref:ActorRef => {
+      case ref:ActorRefWrapper => {
         val initStake = {
           val out = stakeDistribution match {
             case "random" => {initStakeMax*rng.nextDouble}

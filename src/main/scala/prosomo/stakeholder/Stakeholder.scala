@@ -1,10 +1,10 @@
 package prosomo.stakeholder
 
-import akka.actor.{ActorPath, ActorRef, Props}
+import akka.actor.{ActorPath, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Tine, Serializer}
-import prosomo.history.{BlockStorage, ChainStorage, StateStorage, SlotHistoryStorage, WalletStorage}
+import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
 
@@ -16,7 +16,7 @@ import scala.util.Random
   * sends the coordinator the public key upon instantiation and gets the genesis block from coordinator
   */
 
-class Stakeholder(inputSeed:Array[Byte])
+class Stakeholder(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   extends ChainSelection
   with Forging
   with Ledger
@@ -30,6 +30,7 @@ class Stakeholder(inputSeed:Array[Byte])
   with Validation
 {
   import Parameters.{dataFileDir,fee_r}
+  implicit val routerRef:ActorRefWrapper = inputRef(0)
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
@@ -55,7 +56,6 @@ class Stakeholder(inputSeed:Array[Byte])
   //empty keyfile, doesn't write anything to disk
   var keyFile:KeyFile = KeyFile.empty
   var chainUpdateLock = false
-  var routerRef:ActorRef = _
   var localState:State = Map()
   var eta:Eta = Array()
   var stakingState:State = Map()
@@ -63,21 +63,21 @@ class Stakeholder(inputSeed:Array[Byte])
   var holderIndex:Int = -1
   var diffuseSent = false
   //list of all or some of the stakeholders, including self, that the stakeholder is aware of
-  var holders: List[ActorRef] = List()
+  var holders: List[ActorRefWrapper] = List()
   //list of stakeholders that all new blocks and transactions are sent to
-  var gossipers: List[ActorRef] = List()
+  var gossipers: List[ActorRefWrapper] = List()
   //gossipers offset
   var gOff = 0
   //number of tries to issue hello in slots
   var numHello = 0
   //map of all session IDs and public keys associated with holders in holder list
-  var inbox:Map[Sid,(ActorRef,PublicKeys)] = Map()
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
   //total number of times this stakeholder was elected slot leader
   var blocksForged = 0
   //slot time as determined from coordinator clock
   var globalSlot = 0
   //all tines that are pending built from new blocks that are received
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRef)] = Map()
+  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
   //counter for identifying tines
   var tineCounter = 0
   //completed tines waiting to be selected with maxvalid-bg
@@ -101,7 +101,7 @@ class Stakeholder(inputSeed:Array[Byte])
   //lock for stalling stakeholder
   var actorStalled = false
   //ref of coordinator actor
-  var coordinatorRef:ActorRef = _
+  var coordinatorRef:ActorRefWrapper = _
   //total number of transactions issued
   var txCounter = 0
   //toggle if holder is adversary
@@ -110,10 +110,10 @@ class Stakeholder(inputSeed:Array[Byte])
   var covert:Boolean = false
   //toggle for nothing-at-stake forging
   var forgeAll:Boolean = false
-
 }
 
 object Stakeholder {
-  def props(seed:Array[Byte]): Props = Props(new Stakeholder(seed))
+  def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
+    Props(new Stakeholder(seed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
 }
 
