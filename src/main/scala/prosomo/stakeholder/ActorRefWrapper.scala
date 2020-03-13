@@ -23,7 +23,7 @@ case class ActorRefWrapper(
         this.routerRef == that.routerRef &&
         this.remote == that.remote
       }
-      case _=> false
+      case _ => false
     }
 
   override def hashCode: Int = {
@@ -38,15 +38,15 @@ case class ActorRefWrapper(
 
   def path:akka.actor.ActorPath = actorPath
 
-  def ! (that:Any)(implicit sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Unit = if (!this.remote) {
-    this.actorRef ! that
-  } else {
+  def ! (that:Any)(implicit sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Unit = if (this.remote) {
     routerRef ! (actorPath,that)
-  }
-  def ? (that:Any)(implicit timeout: Timeout, sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Future[Any] = if (!this.remote) {
-    this.actorRef ? that
   } else {
+    this.actorRef ! that
+  }
+  def ? (that:Any)(implicit timeout: Timeout, sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Future[Any] = if (this.remote) {
     routerRef ? (actorPath,that)
+  } else {
+    this.actorRef ? that
   }
 
 }

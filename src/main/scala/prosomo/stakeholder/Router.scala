@@ -1,23 +1,19 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, Props, Timers}
-import akka.pattern.ask
 import akka.util.Timeout
 import bifrost.LocalInterface.{LocallyGeneratedModifier, LocallyGeneratedTransaction}
-import bifrost.NodeViewModifier
 import bifrost.blocks.BifrostBlock
-import bifrost.consensus.History.HistoryComparisonResult
 import bifrost.history.{BifrostHistory, BifrostSyncInfo}
 import bifrost.mempool.BifrostMemPool
-import bifrost.network.{ConnectedPeer, NetworkController}
-import bifrost.network.NetworkController.DataFromPeer
+import bifrost.network.NetworkController._
 import bifrost.network.message.BasicMsgDataTypes.ModifiersData
-import bifrost.network.message.ModifiersSpec
+import bifrost.network.message._
+import bifrost.network._
 import bifrost.scorexMod.GenericNodeViewHolder
-import bifrost.scorexMod.GenericNodeViewHolder.{CurrentSyncInfo, CurrentView, GetCurrentView, GetSyncInfo, OtherNodeSyncingStatus}
-import bifrost.scorexMod.GenericNodeViewSynchronizer.{CompareViews, GetLocalObjects, ModifiersFromRemote, OtherNodeSyncingInfo, RequestFromLocal, ResponseFromLocal}
+import bifrost.scorexMod.GenericNodeViewHolder.{GetCurrentView, GetSyncInfo}
+import bifrost.scorexMod.GenericNodeViewSynchronizer.{CompareViews, GetLocalObjects, ModifiersFromRemote, OtherNodeSyncingInfo}
 import bifrost.state.BifrostState
-import bifrost.transaction.Transaction
 import bifrost.transaction.bifrostTransaction.BifrostTransaction
 import bifrost.transaction.box.BifrostBox
 import bifrost.transaction.box.proposition.ProofOfKnowledgeProposition
@@ -26,15 +22,15 @@ import bifrost.wallet.BWallet
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Parameters, SharedData, Types}
-import prosomo.remote._
+import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestBlocksType, ReturnBlocksType, SendBlockType, SendTxType}
+import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.crypto.encode.Base58
 
 import scala.collection.immutable.ListMap
-import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.math.BigInt
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 
 class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
@@ -63,6 +59,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var maxDelay:Double = 0
   var transactionCounter:Int = 0
   var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
+  var pathToPeer:Map[ActorPath,ConnectedPeer] = Map()
 
   private case object TimerKey
 
@@ -94,14 +91,14 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   def holdersReady:Boolean = {
     var bool = true
-    for (holder <- holders){
+    for (holder <- holders.filterNot(_.remote)){
       bool &&= holderReady(holder)
     }
     bool
   }
 
   def reset:Unit = {
-    for (holder <- holders){
+    for (holder <- holders.filterNot(_.remote)){
       if (holderReady.keySet.contains(holder)) holderReady -= holder
       holderReady += (holder->false)
     }
@@ -138,7 +135,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       ts = next_message_t
       var queue:Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]] = slotMessages(ts)
       slotMessages -= ts
-      for (holder <- rng.shuffle(holders)) {
+      for (holder <- rng.shuffle(holders.filterNot(_.remote))) {
         if (queue.keySet.contains(holder)) {
           var messageMap:Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)] = queue(holder)
           queue -= holder
@@ -156,7 +153,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
               case _ => " "
             }
           )
-          context.system.scheduler.scheduleOnce(0 nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
+          if (!r.remote) context.system.scheduler.scheduleOnce(0 nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
           if (messageMap.nonEmpty) queue += (holder->messageMap)
         }
       }
@@ -168,7 +165,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   /**randomly picks two holders and creates a transaction between the two*/
   def issueTx = {
     for (i <- 0 to txProbability.floor.toInt) {
-      val holder1 = rng.shuffle(holders).head
+      val holder1 = rng.shuffle(holders.filterNot(_.remote)).head
       val r = rng.nextDouble
       if (r<txProbability%1.0) {
         val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
@@ -196,7 +193,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         roundStep = "updateSlot"
         if (printSteps) println("--------start----------")
         reset
-        sendAssertDone(holders,GetSlot(globalSlot))
+        sendAssertDone(holders.filterNot(_.remote),GetSlot(globalSlot))
       } else {
         roundStep match {
           case "updateSlot" => {
@@ -219,7 +216,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   roundStep = "endStep"
                   if (printSteps) println("---------end-----------")
                   reset
-                  for (holder<-holders) {
+                  for (holder<-holders.filterNot(_.remote)) {
                     holder ! "endStep"
                   }
                 }
@@ -227,7 +224,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             } else {
               if (firstDataPass) {
                 if (printSteps) println("---------first-----------")
-                for (holder<-holders) {
+                for (holder<-holders.filterNot(_.remote)) {
                   holder ! "passData"
                 }
                 firstDataPass = false
@@ -268,17 +265,16 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       }
     }
 
-
     /** accepts list of other holders from coordinator */
     case list:List[ActorRefWrapper] => {
       holders = list
-      for (holder<-holders) {
+      for (holder<-holders.filterNot(_.remote)) {
         if (!holdersPosition.keySet.contains(holder)) {
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
         }
       }
       if (useFencing) {
-        for (holder<-holders) {
+        for (holder<-holders.filterNot(_.remote)) {
           if (!holderReady.keySet.contains(holder)) {
             holderReady += (holder->false)
           }
@@ -291,22 +287,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case NextSlot => {
       if (roundDone) globalSlot += 1
       roundDone = false
-    }
-
-    /** adds delay to routed message*/
-    case newMessage:(ActorRefWrapper,ActorRefWrapper,Any) => {
-      val (s,r,c) = newMessage
-      if (false) c match {
-        case value:SendBlock => Base58.encode(value.block.id.data)
-        case value:SendTx => println(
-          holders.indexOf(s),
-          holders.indexOf(r),
-          c.getClass,
-          Base58.encode(value.transaction.sid.data)
-        )
-        case _ =>
-      }
-      context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
     }
 
     case newIdMessage:(BigInt,ActorRefWrapper,ActorRefWrapper,Any) => {
@@ -428,10 +408,61 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case GetSyncInfo =>
   }
 
-  private def dataFromPeer: Receive = {
-    case DataFromPeer(spec, data: ModifiersData@unchecked, remote)
-      if spec.messageCode == ModifiersSpec.messageCode => {
+  private def messageFromPeer: Receive = {
+    case DataFromPeer(spec, data, remote) => {
 
+    }
+
+  }
+
+
+  private def messageFromLocal: Receive = {
+    /** adds delay to locally routed message*/
+    case newMessage:(ActorRefWrapper,ActorRefWrapper,Any) => {
+      val (s,r,c) = newMessage
+      context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
+    }
+
+    case newMessage:(ActorPath,Any) => {
+      val (r,c) = newMessage
+      c match {
+        case c:DiffuseData => {
+          val content:DiffuseDataType = Some((c.ref.path.toString,c.pks,c.mac))
+          toNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
+        }
+        case c:Hello => {
+          val content:HelloDataType = Some((c.id.path.toString,c.mac))
+          toNetwork[HelloDataType,HelloSpec.type](HelloSpec,content,r)
+        }
+        case c:RequestBlock => {
+          val content:RequestBlockType = Some((c.id,c.mac,c.job))
+          toNetwork[RequestBlockType,RequestBlockSpec.type](RequestBlockSpec,content,r)
+        }
+        case c:RequestBlocks => {
+          val content:RequestBlocksType = Some((c.id,c.depth,c.mac,c.job))
+          toNetwork[RequestBlocksType,RequestBlocksSpec.type](RequestBlocksSpec,content,r)
+        }
+        case c:ReturnBlocks => {
+          val content:ReturnBlocksType = Some((c.blocks,c.mac,c.job))
+          toNetwork[ReturnBlocksType,ReturnBlocksSpec.type](ReturnBlocksSpec,content,r)
+        }
+        case c:SendBlock => {
+          val content:SendBlockType = Some((c.block,c.mac))
+          toNetwork[SendBlockType,SendBlockSpec.type](SendBlockSpec,content,r)
+        }
+        case c:SendTx => {
+          val content:SendTxType = Some(c.transaction)
+          toNetwork[SendTxType,SendTxSpec.type](SendTxSpec,content,r)
+        }
+      }
+    }
+  }
+
+  private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ActorPath):Unit = {
+    Try{spec.toBytes(c)} match {
+      case Success(bytes:Array[Byte]) =>
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeer(pathToPeer(r)))
+      case _ =>
     }
   }
 
@@ -455,6 +486,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   def receive: Receive =
     routerReceive orElse
       registerNC orElse
+      messageFromLocal orElse
+      messageFromPeer orElse
       handleSubscribe orElse
       compareViews orElse
       readLocalObjects orElse

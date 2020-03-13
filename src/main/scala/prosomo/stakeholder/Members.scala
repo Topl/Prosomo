@@ -13,6 +13,7 @@ import scala.util.Random
 trait Members extends SimpleTypes with Actor with Timers {
 
   implicit val routerRef:ActorRefWrapper
+  val holderIndex:Int
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
@@ -40,7 +41,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   var eta:Eta
   var stakingState:State
   var memPool:MemPool
-  var holderIndex:Int
   var diffuseSent:Boolean
   var chainUpdateLock:Boolean
   var holders: List[ActorRefWrapper]

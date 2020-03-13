@@ -3,7 +3,6 @@ package prosomo.primitives
 import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.iq80.leveldb._
-import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import io.iohk.iodb.ByteArrayWrapper
@@ -23,15 +22,6 @@ class LDBStore(dir:String) {
   op.cacheSize(0)
   op.maxOpenFiles(10)
   var database:DB = factory.open(iFile, op)
-
-//  val newThread = new Thread() {
-//    override def run(): Unit = {
-//      database.close()
-//    }
-//  }
-//  Runtime.getRuntime.addShutdownHook(newThread)
-
-  //database.suspendCompactions()
 
   def refresh():Unit = {
     lock.readLock().lock()

@@ -71,8 +71,14 @@ object Parameters {
   val timeScale:Double = config.getDouble("params.timeScale")
   //use network delay parameterization if true
   val useDelayParam:Boolean = config.getBoolean("params.useDelayParam")
+  //set to true if this is a remote instance, false to forge genesis block locally
+  val remoteInstance:Boolean = config.getBoolean("params.remoteInstance")
   //number of stakeholders
   val numHolders:Int = config.getInt("params.numHolders")
+  //minumum index of local holders, set to -1 for all local
+  val holderIndexMin:Int = config.getInt("params.holderIndexMin")
+  //maximum index of local holders, set to -1 for all local
+  val holderIndexMax:Int = config.getInt("params.holderIndexMax")
   //duration of slot in milliseconds
   val slotT:Long = (config.getInt("params.slotT")*timeScale).toLong
   //delay in milliseconds per kilometer in router model
@@ -193,6 +199,7 @@ object Parameters {
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeed
   val storageFlag:Boolean = config.getBoolean("params.storageFlag")
   val cacheSize:Int = config.getInt("params.cacheSize")
+  val refreshInterval:Int = config.getInt("params.refreshInterval")
   val stakeDistribution:String = config.getString("params.stakeDistribution")
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")

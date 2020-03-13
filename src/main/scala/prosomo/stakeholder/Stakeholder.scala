@@ -16,7 +16,11 @@ import scala.util.Random
   * sends the coordinator the public key upon instantiation and gets the genesis block from coordinator
   */
 
-class Stakeholder(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
+class Stakeholder(
+                   inputSeed:Array[Byte],
+                   override val holderIndex:Int,
+                   inputRef:Seq[ActorRefWrapper]
+                 )
   extends ChainSelection
   with Forging
   with Ledger
@@ -60,7 +64,6 @@ class Stakeholder(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var eta:Eta = Array()
   var stakingState:State = Map()
   var memPool:MemPool = Map()
-  var holderIndex:Int = -1
   var diffuseSent = false
   //list of all or some of the stakeholders, including self, that the stakeholder is aware of
   var holders: List[ActorRefWrapper] = List()
@@ -113,7 +116,7 @@ class Stakeholder(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 }
 
 object Stakeholder {
-  def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Stakeholder(seed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
+  def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
 }
 

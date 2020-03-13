@@ -269,7 +269,7 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        context.system.scheduler.scheduleOnce(slotT*((1800.0 * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
       }
     }
 
@@ -278,7 +278,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
-      context.system.scheduler.scheduleOnce(slotT*1800 millis,self,Refresh)(context.system.dispatcher,self)
+      context.system.scheduler.scheduleOnce(slotT*refreshInterval millis,self,Refresh)(context.system.dispatcher,self)
     }
 
     case GetTime => {
@@ -303,11 +303,6 @@ trait Receive extends Members {
         gossipers = List()
       } else {
         gossipers = gossipSet(holderId,holders)
-      }
-      var i = 0
-      for (holder <- holders) {
-        if (self.path == holder.path) holderIndex = i
-        i += 1
       }
       sender() ! "done"
     }

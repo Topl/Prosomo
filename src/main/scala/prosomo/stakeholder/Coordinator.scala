@@ -42,6 +42,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 {
   import Parameters._
   implicit val routerRef:ActorRefWrapper = inputRef(0)
+  override val holderIndex = -1
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
@@ -70,7 +71,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var eta:Eta = Array()
   var stakingState:State = Map()
   var memPool:MemPool = Map()
-  var holderIndex:Int = -1
   var diffuseSent = false
   var holders: List[ActorRefWrapper] = List()
   var gossipers: List[ActorRefWrapper] = List()
@@ -169,7 +169,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     bw.close()
   }
 
-  def populate: Receive ={
+  def startHolder(i:Int) =
+    ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+
+  def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
       sendAssertDone(routerRef,Register)
@@ -179,48 +182,80 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       println(s"S = $slotWindow")
       println(s"f = $f_s")
       println("Populating")
-      var i = -1
-      holders = List.fill(numHolders){
-        i+=1
-        ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),inputRef.map(_.actorRef)), "Holder_" + i.toString))
+      if (remoteInstance && holderIndexMin > -1 && holderIndexMax > -1) {
+        holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
+      } else if (holderIndexMin > -1 && holderIndexMax > -1) {
+        holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
+      } else {
+        holders = List.range(0,numHolders).map(startHolder)
       }
-      println("Sending holders list")
-      sendAssertDone(List(routerRef),holders)
-      sendAssertDone(holders,holders)
-      println("Sending holders coordinator ref")
-      sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
-      println("Getting holder keys")
-      genKeys = collectKeys(holders,RequestKeys,genKeys)
-      assert(!containsDuplicates(genKeys))
-      val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
-      blocks.restore(genBlockKey) match {
-        case Some(b:Block) => {
-          genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-          def refMapKey(ref:ActorRefWrapper) = {
-            val pkw = ByteArrayWrapper(
-              hex2bytes(genKeys(s"${ref.path}").split(";")(0))
-                ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
-                ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
-            )
-            holderKeys += (ref-> pkw)
-          }
-          holders.map(refMapKey(_))
-          verifyBlock(genBlock)
-          println("Recovered Genesis Block")
-        }
-        case None => {
-          println("Forge Genesis Block")
-          forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-            case out:(Block,Map[ActorRefWrapper,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
-          }
-          blocks.store(genBlockKey,genBlock)
-        }
-      }
-      println("Send GenBlock")
-      sendAssertDone(holders,GenBlock(genBlock))
-      println("Send Router Keys")
-      sendAssertDone(routerRef,holderKeys)
+      if (!remoteInstance) setupLocal
     }
+  }
+
+  def setupRemote:Unit = {
+    println("Sending holders list")
+    sendAssertDone(List(routerRef),holders)
+    sendAssertDone(holders,holders)
+    println("Sending holders coordinator ref")
+    sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
+    val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
+    blocks.restore(genBlockKey) match {
+      case Some(b:Block) => {
+        genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
+        def refMapKey(ref:ActorRefWrapper) = {
+          val pkw = ByteArrayWrapper(
+            hex2bytes(genKeys(s"${ref.path}").split(";")(0))
+              ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
+              ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
+          )
+          holderKeys += (ref-> pkw)
+        }
+        holders.map(refMapKey(_))
+        verifyBlock(genBlock)
+        println("Recovered Genesis Block")
+      }
+      case None =>
+    }
+  }
+
+  def setupLocal:Unit = {
+    println("Sending holders list")
+    sendAssertDone(List(routerRef),holders)
+    sendAssertDone(holders,holders)
+    println("Sending holders coordinator ref")
+    sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
+    println("Getting holder keys")
+    genKeys = collectKeys(holders,RequestKeys,genKeys)
+    assert(!containsDuplicates(genKeys))
+    val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
+    blocks.restore(genBlockKey) match {
+      case Some(b:Block) => {
+        genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
+        def refMapKey(ref:ActorRefWrapper) = {
+          val pkw = ByteArrayWrapper(
+            hex2bytes(genKeys(s"${ref.path}").split(";")(0))
+              ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
+              ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
+          )
+          holderKeys += (ref-> pkw)
+        }
+        holders.map(refMapKey(_))
+        verifyBlock(genBlock)
+        println("Recovered Genesis Block")
+      }
+      case None => {
+        println("Forge Genesis Block")
+        forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+          case out:(Block,Map[ActorRefWrapper,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
+        }
+        blocks.store(genBlockKey,genBlock)
+      }
+    }
+    println("Send GenBlock")
+    sendAssertDone(holders,GenBlock(genBlock))
+    println("Send Router Keys")
+    sendAssertDone(routerRef,holderKeys)
   }
 
   def run:Receive = {
@@ -295,7 +330,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   /**randomly picks two holders and creates a transaction between the two*/
   def issueRandTx:Unit = {
     for (i <- 0 to txProbability.floor.toInt) {
-      val holder1 = rng.shuffle(holders).head
+      val holder1 = rng.shuffle(holders.filterNot(_.remote)).head
       val r = rng.nextDouble
       if (r<txProbability%1.0) {
         val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
@@ -454,7 +489,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         case "new_holder" => {
           println("Bootstrapping new holder...")
           val i = holders.length
-          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),inputRef.map(_.actorRef)), "Holder_" + i.toString))
+          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
           holders = holders++List(newHolder)
           sendAssertDone(routerRef,holders)
           sendAssertDone(newHolder,holders)

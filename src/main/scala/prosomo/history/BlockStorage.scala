@@ -24,7 +24,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     def load(id:SlotId):Block = {
       restore(id._2) match {
         case Some(b:Block) => b
-        case None => new Block(id._2,None,None)
+        case None => Block(id._2,None,None)
       }
     }
   }
