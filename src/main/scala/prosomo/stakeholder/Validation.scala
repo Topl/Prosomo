@@ -78,8 +78,8 @@ trait Validation extends Members {
     var ep = -1
     var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
     var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
-    var eta_Ep: Eta = eta(c, 0)
-    var stakingState: State = Map()
+    var eta_Ep: Eta = eta_from_genesis(c, 0)
+    var staking_state_tine: State = Map()
     var pid:SlotId = (0,gh)
     var i = 0
 
@@ -115,11 +115,11 @@ trait Validation extends Members {
       while(i<=slot) {
         if (i/epochLength > ep) {
           ep = i/epochLength
-          eta_Ep = eta(c, ep, eta_Ep)
-          updateLocalState(
-            if(ep ==1) {Map()} else {stakingState}
-            ,subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)) match {
-            case value:State =>  stakingState = value
+          eta_Ep = eta_from_tine(c, ep, eta_Ep)
+          val toUpdate:State = if(ep == 0 || ep == 1) {Map()} else {staking_state_tine}
+          val epochChain = subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)
+          updateLocalState(toUpdate,epochChain) match {
+            case value:State =>  staking_state_tine = value
             case _ => {
               println("Error: encountered invalid ledger in local chain")
               bool &&= false
@@ -128,7 +128,7 @@ trait Validation extends Members {
         }
         i+=1
       }
-      alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), stakingState)
+      alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
       tr_Ep = phi(alpha_Ep)
       bool &&= (
         hash(parent,serializer) == h0
@@ -169,158 +169,126 @@ trait Validation extends Members {
     */
   def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
-    val ep0 = prefix/epochLength
-    var eta_Ep:Eta = Array()
-    var ls:State = Map()
 
-    history.get(localChain.getLastActiveSlot(prefix)) match {
+    val candidateTine = subChain(localChain, 0, prefix) ++ tine
+
+    history.get(candidateTine.getLastActiveSlot(prefix)) match {
       case value:(State,Eta) => {
-        ls = value._1
-        eta_Ep = value._2
-      }
-      case _ => isValid &&= false
-    }
+        val ep_prefix = prefix/epochLength
+        val eta_prefix = value._2
+        val ls_prefix = value._1
+        var ep = ep_prefix
+        var eta_tine:Eta = eta_prefix
+        var ls:State = ls_prefix
+        var staking_state_tine: State = getStakingState(ep_prefix,candidateTine)
+        var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
+        var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
+        var currentSlot = prefix+1
+        var pid:SlotId = candidateTine.getLastActiveSlot(prefix)
+        breakable{
+          for (id <- tine.ordered) {
+            updateLocalState(ls,id) match {
+              case newState:State => {
+                getBlockHeader(id) match {
+                  case block:BlockHeader => {
+                    getParentBlockHeader(block) match {
+                      case parent:BlockHeader => {
+                        if (getParentId(block) == pid) {
+                          val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
+                          val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert
+                          while(currentSlot<=slot) {
+                            updateEpoch(currentSlot,ep,eta_tine,candidateTine) match {
+                              case result:(Int,Eta) if result._1 > ep => {
+                                ep = result._1
+                                eta_tine = result._2
+                                staking_state_tine = getStakingState(ep,candidateTine)
+                              }
+                              case _ =>
+                            }
+                            currentSlot+=1
+                          }
+                          alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),staking_state_tine)
+                          tr_Ep = phi(alpha_Ep)
+                          isValid &&= (
+                            hash(parent,serializer) == h0
+                              && verifyBlockHeader(block)
+                              && parent._3 == ps
+                              && parent._9+1 == bn
+                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
+                              && vrf.vrfProofToHash(pi).deep == rho.deep
+                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
+                              && vrf.vrfProofToHash(pi_y).deep == y.deep
+                              && tr_Ep == tr_c
+                              && compare(y, tr_Ep)
+                            )
 
-    var stakingState: State = {
-      if (ep0 > 1) {
-        history.get(localChain.getLastActiveSlot((ep0-1)*epochLength)) match {
-          case value:(State,Eta) => {
-            value._1
-          }
-          case _ => {
-            println("Error: staking state recovery failed")
-            isValid &&= false
-            Map()
-          }
-        }
-      } else {
-        history.get(localChain.get(0)) match {
-          case value:(State,Eta) => {
-            value._1
-          }
-          case _ => {
-            println("Error: staking genesis state recovery failed")
-            isValid &&= false
-            Map()
-          }
-        }
-      }
-    }
-
-    var ep = ep0
-    var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
-    var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
-    var pid:SlotId = (0,ByteArrayWrapper(Array()))
-    var i = prefix+1
-    breakable{
-      for (id<-tine.ordered) {
-        if (!id._2.data.isEmpty) {
-          pid = getParentId(id) match {case value:SlotId => value}
-          break()
-        }
-      }
-      isValid &&= false
-    }
-
-    for (id <- tine.ordered) {
-      if (isValid) updateLocalState(ls,Tine(id)) match {
-        case value:State => {
-          ls = value
-        }
-        case _ => {
-          isValid &&= false
-          println("Error: encountered invalid ledger in tine")
-        }
-      }
-      if (isValid) getBlockHeader(id) match {
-        case b:BlockHeader => {
-          getParentBlockHeader(b) match {
-            case pb:BlockHeader => {
-              isValid &&= getParentId(b) == pid
-              if (isValid) {
-                compareBlocks(pb,b)
-                pid = id
-              }
-            }
-            case _ => {
-              println("Error: parent id mismatch in tine")
-              isValid &&= false
-            }
-          }
-        }
-        case _ =>
-      }
-      if (isValid) history.add(id,ls,eta_Ep)
-    }
-
-    def compareBlocks(parent:BlockHeader, block:BlockHeader) = {
-      val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
-      val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert
-      while(i<=slot) {
-        if (i/epochLength > ep) {
-          ep = i/epochLength
-          if (ep0 + 1 == ep) {
-            eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
-            stakingState = {
-              val eps = (ep - 1) * epochLength
-              history.get(localChain.getLastActiveSlot(eps)) match {
-                case value:(State,Eta) => {
-                  value._1
-                }
-                case _ => {
-                  isValid &&= false
-                  Map()
+                          if (isValid) {
+                            history.add(id,newState,eta_tine)
+                            ls = newState
+                            pid = id
+                          } else {
+                            print("error: Holder "+holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
+                            println(Seq(
+                              hash(parent,serializer) == h0 //1
+                              , verifyBlockHeader(block) //2
+                              , parent._3 == ps //3
+                              , parent._9+1 == bn //4
+                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("NONCE"),pi) //5
+                              , vrf.vrfProofToHash(pi).deep == rho.deep //6
+                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
+                              , vrf.vrfProofToHash(pi_y).deep == y.deep //8
+                              , tr_Ep == tr_c //9
+                              , compare(y,tr_Ep) //10
+                            ))
+                            println(s"Holder $holderIndex, ep: $ep, eta_tine: ${Base58.encode(eta_tine)}")
+                            println(info)
+                            break()
+                          }
+                        } else {
+                          println("error: parent id mismatch")
+                          println(s"pid ${Base58.encode(pid._2.data)}")
+                          println(s"id ${Base58.encode(id._2.data)}")
+                          isValid &&= false
+                          break()
+                        }
+                      }
+                      case _ => {
+                        println("error: could not recover parent header")
+                        isValid &&= false
+                        break()
+                      }
+                    }
+                  }
+                  case _ => {
+                    println("error: encountered invalid header in tine")
+                    isValid &&= false
+                    break()
+                  }
                 }
               }
-            }
-          } else {
-            eta_Ep = eta(subChain(localChain, 0, prefix) ++ tine, ep, eta_Ep)
-            updateLocalState(stakingState, subChain(subChain(localChain, 0, prefix) ++ tine, (i / epochLength) * epochLength - 2 * epochLength + 1, (i / epochLength) * epochLength - epochLength)) match {
-              case value:State => stakingState = value
-              case _ => println("Error: encountered invalid ledger in tine")
+              case _ => {
+                println("error: encountered invalid ledger in tine")
+                isValid &&= false
+                break()
+              }
             }
           }
         }
-        i+=1
       }
-      alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),stakingState)
-      tr_Ep = phi(alpha_Ep)
-      isValid &&= (
-        hash(parent,serializer) == h0
-          && verifyBlockHeader(block)
-          && parent._3 == ps
-          && parent._9+1 == bn
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
-          && vrf.vrfProofToHash(pi).deep == rho.deep
-          && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
-          && vrf.vrfProofToHash(pi_y).deep == y.deep
-          && tr_Ep == tr_c
-          && compare(y, tr_Ep)
-        )
-      if(!isValid){
-        print("Error: Holder "+holderIndex.toString+" ");print(slot);print(" ")
-        println(Seq(
-          hash(parent,serializer) == h0 //1
-          , verifyBlockHeader(block) //2
-          , parent._3 == ps //3
-          , parent._9+1 == bn //4
-          , vrf.vrfVerify(pk_vrf,eta_Ep++serializer.getBytes(slot)++serializer.getBytes("NONCE"),pi) //5
-          , vrf.vrfProofToHash(pi).deep == rho.deep //6
-          , vrf.vrfVerify(pk_vrf,eta_Ep++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
-          , vrf.vrfProofToHash(pi_y).deep == y.deep //8
-          , tr_Ep == tr_c //9
-          , compare(y,tr_Ep) //10
-        ))
-        println("Holder "+holderIndex.toString+" Epoch:"+(slot/epochLength).toString+"\n"+"Eta:"+Base58.encode(eta_Ep))
-        println(info)
+      case _ => {
+        println("error: could not recover prefix state")
+        isValid &&= false
       }
     }
 
     if(!isValid) SharedData.throwError(holderIndex)
     if (SharedData.error) {
-      for (id<-(subChain(localChain,0,prefix)++tine).ordered) {
-        if (id._1 > -1) println("H:"+holderIndex.toString+"S:"+id._1.toString+"ID:"+Base58.encode(id._2.data))
-      }
+      println(s"Prefix: $prefix")
+      println(s"Epoch Prefix ${prefix/epochLength}")
+      println("Local chain:")
+      localChain.print
+      println("Tine:")
+      tine.print
     }
     isValid
   }

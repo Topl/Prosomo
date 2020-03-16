@@ -39,7 +39,7 @@ trait Forging extends Members {
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
       val block = Block(hb,b,txs)
       blocks.add(block)
-      updateLocalState(localState, Tine((slot,block.id))) match {
+      updateLocalState(localState, (slot,block.id)) match {
         case forgedState:State => {
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(ActorRefWrapper(self),gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
@@ -47,7 +47,7 @@ trait Forging extends Members {
           blocksForged += 1
           val jobNumber = tineCounter
           tineCounter += 1
-          candidateTines = candidateTines ++ Array((Tine((slot,block.id)),slot-1,jobNumber))
+          candidateTines = candidateTines ++ Array((Tine((slot,block.id),rho),slot-1,jobNumber))
         }
         case _ => {
           SharedData.throwError(holderIndex)
@@ -104,7 +104,7 @@ trait Forging extends Members {
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
-    (new Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries),holderKeys)
+    (Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries),holderKeys)
   }
 
 }

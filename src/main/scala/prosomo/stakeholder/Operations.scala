@@ -99,4 +99,11 @@ trait Operations extends Members {
     }
   }
 
+  def getNonce(id:SlotId):Rho = {
+    getBlockHeader(id) match {
+      case header:BlockHeader => header._5
+      case _ => Array()
+    }
+  }
+
 }

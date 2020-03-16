@@ -88,6 +88,74 @@ trait Ledger extends Members {
     }
   }
 
+  def updateLocalState(ls:State, id:SlotId):Any = {
+    var nls:State = ls
+    var isValid = true
+    if (isValid) getBlockHeader(id) match {
+      case b:BlockHeader => {
+        val (_,_,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
+        val (pk_vrf,_,_,pk_sig,_,_) = cert
+        val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+        var validForger = true
+        if (slot == 0) {
+          val genesisSet:GenesisSet = blocks.getGenSet(id)
+          if (genesisSet.isEmpty) isValid = false
+          if (isValid) for (entry <- genesisSet) {
+            if (ByteArrayWrapper(entry._1) == genesisBytes && verifyMac(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
+              val delta = entry._3
+              val netStake:BigInt = 0
+              val newStake:BigInt = netStake + delta
+              val pk_g:PublicKeyW = entry._2
+              if(nls.keySet.contains(pk_g)) {
+                isValid = false
+                nls -= pk_g
+              }
+              nls += (pk_g -> (newStake,true,0))
+            }
+          }
+        } else {
+          //apply forger reward
+          if (nls.keySet.contains(pk_f)) {
+            val netStake: BigInt = nls(pk_f)._1
+            val txC:Int = nls(pk_f)._3
+            val newStake: BigInt = netStake + forgerReward
+            nls -= pk_f
+            nls += (pk_f -> (newStake,true,txC))
+          } else {
+            validForger = false
+          }
+          //apply transactions
+          if (validForger) {
+            for (trans <- blocks.getTxs(id)) {
+              if (verifyTransaction(trans)) {
+                applyTransaction(trans, nls, pk_f, fee_r) match {
+                  case value: State => {
+                    nls = value
+                  }
+                  case _ => isValid = false
+                }
+              } else {
+                isValid = false
+              }
+            }
+          } else {
+            isValid = false
+          }
+        }
+      }
+      case _ =>
+    }
+    if (!isValid) {
+      println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
+      SharedData.throwError(holderIndex)
+    }
+    if (isValid) {
+      nls
+    } else {
+      0
+    }
+  }
+
   def trimMemPool: Unit = {
     val mp = memPool
     for (entry <- mp) {

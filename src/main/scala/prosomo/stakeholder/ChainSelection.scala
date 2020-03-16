@@ -13,22 +13,22 @@ trait ChainSelection extends Members {
     var foundAncestor = true
     var tine:Tine = Tine(inputTine)
     var prefix:Slot = 0
-    if (localChain.get(tine.head._1) == tine.head) {
+    if (localChain.get(tine.least._1) == tine.least) {
       (tine,-1)
     } else {
       breakable{
         while(foundAncestor) {
-          getParentId(tine.head) match {
+          getParentId(tine.least) match {
             case pb:SlotId => {
-              tine = Tine(pb) ++ tine
-              if (tine.head == localChain.get(tine.head._1)) {
-                prefix = tine.head._1
-                tine = Tine(tine.ordered.tail)
+              tine = Tine(pb,getNonce(pb)) ++ tine
+              if (tine.least == localChain.get(tine.least._1)) {
+                prefix = tine.least._1
+                tine.remove(prefix)
                 break
               }
-              if (tine.head._1 == 0) {
+              if (tine.least._1 == 0) {
                 prefix = 0
-                tine = Tine(tine.ordered.tail)
+                tine.remove(prefix)
                 break
               }
             }
@@ -96,17 +96,17 @@ trait ChainSelection extends Members {
     var prefix:Slot = 0
     breakable{
       while(foundAncestor) {
-        getParentId(tine.head) match {
+        getParentId(tine.least) match {
           case pb:SlotId => {
-            tine = Tine(pb) ++ tine
-            if (tine.head == localChain.get(tine.head._1)) {
-              prefix = tine.head._1
-              tine = Tine(tine.ordered.tail)
+            tine = Tine(pb,getNonce(pb)) ++ tine
+            if (tine.least == localChain.get(tine.least._1)) {
+              prefix = tine.least._1
+              tine.remove(prefix)
               break
             }
-            if (tine.head._1 == 0) {
+            if (tine.least._1 == 0) {
               prefix = 0
-              tine = Tine(tine.ordered.tail)
+              tine.remove(prefix)
               break
             }
           }
@@ -136,12 +136,12 @@ trait ChainSelection extends Members {
           } else {
             tineMaxDepth
           }
-          val request:Request = (List(tine.head),depth,job._1)
-          send(ActorRefWrapper(self),ref, RequestBlocks(tine.head,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          val request:Request = (List(tine.least),depth,job._1)
+          send(ActorRefWrapper(self),ref, RequestBlocks(tine.least,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
-          val request:Request = (List(tine.head),0,job._1)
-          send(ActorRefWrapper(self),ref, RequestBlock(tine.head,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          val request:Request = (List(tine.least),0,job._1)
+          send(ActorRefWrapper(self),ref, RequestBlock(tine.least,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }
       }
     }
@@ -151,10 +151,30 @@ trait ChainSelection extends Members {
   def maxValidBG = {
     val prefix:Slot = candidateTines.last._2
     val tine:Tine = Tine(candidateTines.last._1)
-    val job:Int = candidateTines.last._3
     val tineMaxSlot = tine.last._1
     val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
     val bnl = {getBlockHeader(localChain.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
+
+    val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
+      true
+    } else {
+      val slotsTine = getActiveSlots(subChain(tine,prefix+1,prefix+1+slotWindow))
+      val slotsLocal = getActiveSlots(subChain(localChain,prefix+1,prefix+1+slotWindow))
+      slotsLocal < slotsTine
+    }
+
+    if (bestChain) {
+      if (verifySubChain(tine,localChain.lastActiveSlot(prefix))) {
+        adoptTine
+        chainStorage.store(localChain,localChainId,serializer)
+      } else {
+        println("error: invalid best chain")
+        candidateTines = candidateTines.dropRight(1)
+        SharedData.throwError(holderIndex)
+      }
+    } else {
+      dropTine
+    }
 
     def adoptTine:Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
@@ -179,7 +199,7 @@ trait ChainSelection extends Members {
               case _ => false
             }
           )
-          localChain.update(id)
+          localChain.update(id,getNonce(id))
           val blockLedger:TransactionSet = blocks.getTxs(id)
           for (trans<-blockLedger) {
             if (memPool.keySet.contains(trans.sid)) {
@@ -190,18 +210,8 @@ trait ChainSelection extends Members {
           //chainHistory.update((-1,ByteArrayWrapper(Array())),serializer)
         }
       }
-      candidateTines = candidateTines.dropRight(1)
-      var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
-      for (entry <- candidateTines) {
-        val newTine = updateTine(Tine(entry._1.last))
-        if (newTine._2 > 0) {
-          newCandidateTines = newCandidateTines ++ Array((newTine._1,newTine._2,entry._3))
-        }
-      }
-      candidateTines = newCandidateTines
-      updateWallet
-      trimMemPool
-      history.get(localChain.getLastActiveSlot(globalSlot)) match {
+      val lastSlot = localChain.lastActiveSlot(globalSlot)
+      history.get(localChain.get(lastSlot)) match {
         case reorgState:(State,Eta) => {
           localState = reorgState._1
           eta = reorgState._2
@@ -212,14 +222,32 @@ trait ChainSelection extends Members {
           SharedData.throwError(holderIndex)
         }
       }
-      var epoch = localChain.lastActiveSlot(globalSlot) / epochLength
-      updateStakingState(epoch)
-      for (slot <- localChain.lastActiveSlot(globalSlot) to globalSlot) {
-        updateEpoch(slot,epoch) match {
-          case ep:Int if ep > epoch => epoch = ep
+      var epoch = lastSlot / epochLength
+      for (slot <- lastSlot to globalSlot) {
+        updateEpoch(slot,epoch,eta,localChain) match {
+          case result:(Int,Eta) if result._1 > epoch => {
+            epoch = result._1
+            eta = result._2
+            stakingState = getStakingState(epoch,localChain)
+            keys.alpha = relativeStake(keys.pkw,stakingState)
+            keys.threshold = phi(keys.alpha)
+          }
           case _ =>
         }
       }
+      assert(currentEpoch == epoch)
+      updateWallet
+      trimMemPool
+      candidateTines = candidateTines.dropRight(1)
+      var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
+      for (entry <- candidateTines) {
+        val bid:SlotId = entry._1.last
+        val newTine = updateTine(Tine(bid,getNonce(bid)))
+        if (newTine._2 > 0) {
+          newCandidateTines = newCandidateTines ++ Array((newTine._1,newTine._2,entry._3))
+        }
+      }
+      candidateTines = newCandidateTines
     }
 
     def dropTine:Unit = {
@@ -237,32 +265,11 @@ trait ChainSelection extends Members {
       candidateTines = candidateTines.dropRight(1)
     }
 
-    var trueChain = false
 
-    if(tineMaxSlot - prefix < k_s && bnl < bnt) {
-      trueChain = true
-    } else {
-      val slotsTine = getActiveSlots(subChain(tine,prefix+1,prefix+1+slotWindow))
-      val slotsLocal = getActiveSlots(subChain(localChain,prefix+1,prefix+1+slotWindow))
-      if (slotsLocal < slotsTine) {
-        trueChain = true
-      }
-    }
-
-    if (trueChain) {
-      trueChain &&= verifySubChain(tine,prefix)
-    }
-
-    if (trueChain) {
-      adoptTine
-    } else {
-      dropTine
-    }
-    chainStorage.store(localChain,localChainId,serializer)
   }
 
   def validateChainIds(c:Tine):Boolean = {
-    var pid = c.head
+    var pid = c.least
     var out = true
     for (id <- c.ordered.tail) {
       getParentId(id) match {

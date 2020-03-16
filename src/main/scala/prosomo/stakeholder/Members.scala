@@ -76,8 +76,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG:Unit
   def validateChainIds(c:Tine):Boolean
-  def updateEpoch(slot:Slot,epochIn:Int):Int
-  def updateStakingState(ep:Int):Unit
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
+  def getStakingState(ep:Int,chain:Tine):State
   def update:Unit
   def hash(input:ActorRefWrapper, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
@@ -106,8 +106,9 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getBlockHeader(bid:SlotId):Any
   def getParentBlockHeader(b:BlockHeader):Any
   def getParentId(bid:SlotId):Any
-  def eta(c:Tine, ep:Int):Eta
-  def eta(c:Tine, ep:Int, etaP:Eta):Eta
+  def getNonce(id:SlotId):Rho
+  def eta_from_genesis(c:Tine, ep:Int):Eta
+  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta):Eta
   def diffuse(str: String,id: String,sk_sig: PrivateKey):String
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
   def verifyMac(input:Hash, mac:Mac):Boolean
@@ -128,6 +129,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifySubChain(tine:Tine, prefix:Slot):Boolean
   def verifyTransaction(t:Transaction):Boolean
   def updateLocalState(ls:State, c:Tine):Any
+  def updateLocalState(ls:State, id:SlotId):Any
   def trimMemPool:Unit
   def collectLedger(c:Tine):Unit
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet

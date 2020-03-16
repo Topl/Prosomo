@@ -563,17 +563,20 @@ trait SerializationMethods extends SimpleTypes {
   }
 
   private def sChain(chain:Tine):Array[Byte] = {
-    Ints.toByteArray(chain.length) ++ Bytes.concat(chain.getData.map(getBytes):_*)
+    def toBytes(in:(Slot,(BlockId,Rho))):Array[Byte] = getBytes(in._1) ++ getBytes(in._2._1) ++ getBytes(in._2._2)
+    Ints.toByteArray(chain.length) ++ Bytes.concat(chain.getData.map(toBytes):_*)
   }
 
   private def dChain(stream: ByteStream):Tine = {
     val numEntries = stream.getInt
-    var out:Map[Slot,BlockId] = Map()
+    var out:Map[Slot,(BlockId,Rho)] = Map()
     var i = 0
     while (i < numEntries) {
       val slot = stream.getInt
-      val id = ByteArrayWrapper(stream.get(hash_length))
-      out += (slot->id)
+      val id:Hash = ByteArrayWrapper(stream.get(hash_length))
+      val nonce:Rho = stream.get(rho_length)
+      val newOut = (id,nonce)
+      out += (slot->newOut)
       i += 1
     }
     assert(out.keySet.size == numEntries)

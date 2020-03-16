@@ -7,16 +7,25 @@ import prosomo.primitives.Types._
 
 import scala.collection.immutable.ListMap
 
-case class Tine(var data:Map[Slot,BlockId] = Map()) {
+case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
 
-  def update(slotId:SlotId):Unit = if (!data.keySet.contains(slotId._1) && slotId._1 > -1) data += (slotId._1 -> slotId._2)
+  def update(slotId:SlotId,nonce:Rho):Unit = if (!data.keySet.contains(slotId._1) && slotId._1 > -1) {
+    val newEntry:(BlockId,Rho) = (slotId._2,nonce)
+    data += (slotId._1 -> newEntry)
+  }
 
   def remove(slot:Slot):Unit = if (data.keySet.contains(slot)) data -= slot
 
   def get(slot:Slot):SlotId = if (data.keySet.contains(slot)) {
-    (slot,data(slot))
+    (slot,data(slot)._1)
   } else {
     (-1,ByteArrayWrapper(Array()))
+  }
+
+  def getNonce(slot:Slot):Rho = if (data.keySet.contains(slot)) {
+    data(slot)._2
+  } else {
+    Array()
   }
 
   def getData = data.toSeq
@@ -33,35 +42,37 @@ case class Tine(var data:Map[Slot,BlockId] = Map()) {
 
   def last:SlotId = {
     val maxSlot = data.keySet.max
-    (maxSlot,data(maxSlot))
+    (maxSlot,data(maxSlot)._1)
   }
 
-  def head:SlotId = {
+  def least:SlotId = {
     val minSlot = data.keySet.min
-    (minSlot,data(minSlot))
+    (minSlot,data(minSlot)._1)
   }
 
   def slice(minSlot:Slot,maxSlot:Slot):Tine = {
     val out:Tine = new Tine
     for (slot <- data.keySet) {
-      if(slot >= minSlot && slot < maxSlot) out.update((slot,data(slot)))
+      if(slot >= minSlot && slot < maxSlot) out.update((slot,data(slot)._1),data(slot)._2)
     }
     out
   }
 
   def slots:Set[Slot] = if (data.isEmpty) {Set(-1)} else {data.keySet}
 
+  def toSlotId(data:(Slot,(BlockId,Rho))):SlotId = (data._1,data._2._1)
+
   def ordered:Array[SlotId] = {
-    ListMap(data.toSeq.sortBy(_._1):_*).toArray
+    ListMap(data.toSeq.sortBy(_._1):_*).toArray.map(toSlotId)
   }
 
   def copy(c:Tine):Unit = {
     for (slot <- c.slots) {
-      update(c.get(slot))
+      update(c.get(slot),c.getNonce(slot))
     }
   }
 
-  private def setData(ids:Map[Slot,BlockId]):Unit = {
+  private def setData(ids:Map[Slot,(BlockId,Rho)]):Unit = {
     data = ids
   }
 
@@ -96,19 +107,13 @@ object Tine extends SimpleTypes {
 
   def apply():Tine = new Tine
 
-  def apply(id:SlotId):Tine = {
+  def apply(id:SlotId,nonce:Rho):Tine = {
     val out = new Tine
-    out.update(id)
+    out.update(id,nonce)
     out
   }
 
-  def apply(ids:Array[SlotId]):Tine = {
-    val out = new Tine
-    for (id<-ids) out.update(id)
-    out
-  }
-
-  def apply(ids:Map[Slot,BlockId]):Tine = {
+  def apply(ids:Map[Slot,(BlockId,Rho)]):Tine = {
     val out = new Tine
     out.setData(ids)
     out

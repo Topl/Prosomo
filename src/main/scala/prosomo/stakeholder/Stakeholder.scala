@@ -98,7 +98,7 @@ class Stakeholder(
   //current slot that is being processed by stakeholder
   var localSlot = 0
   //current epoch that is being processed by stakeholder
-  var currentEpoch = -1
+  var currentEpoch = 0
   //lock for update message
   var updating = false
   //lock for stalling stakeholder

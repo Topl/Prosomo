@@ -12,46 +12,39 @@ trait Update extends Members {
   import Parameters.{printFlag,epochLength,useGossipProtocol,numGossipers,dataOutInterval,dataOutFlag,useFencing}
 
   /**epoch routine, called every time currentEpoch increments*/
-  def updateEpoch(slot:Slot,epochIn:Int):Int = {
-    var ep = epochIn
-    if (slot / epochLength > ep) {
-      ep = slot / epochLength
-      updateStakingState(ep)
-      if (ep > 0) {
-        eta = eta(localChain, ep, eta)
-        //println(s"Holder $holderIndex set eta to "+Base58.encode(eta))
-      }
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta) = {
+    val ep = slot / epochLength
+    if (ep > epochIn) {
+      //println(s"Holder $holderIndex old eta "+Base58.encode(eta))
+      val newEta = eta_from_tine(chain, ep, lastEta)
+      //println(s"Holder $holderIndex eta now "+Base58.encode(newEta))
+      (epochIn+1,newEta)
+    } else {
+      (epochIn,lastEta)
     }
-    ep
   }
 
-  def updateStakingState(ep:Int):Unit = {
-    stakingState = {
-      if (ep > 1) {
-        val eps:Slot = (ep-1)*epochLength
-        history.get(localChain.getLastActiveSlot(eps)) match {
-          case value:(State,Eta) =>
-            value._1
-          case _ =>
-            val thisSlot = lastActiveSlot(localChain,eps)
-            println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(eps)._2.data))
-            localChain.print
-            SharedData.throwError(holderIndex)
-            Map()
-        }
-      } else {
-        history.get(localChain.get(0)) match {
-          case value:(State,Eta) =>
-            value._1
-          case _ =>
-            println("Could not recover staking state ep 0")
-            SharedData.throwError(holderIndex)
-            Map()
-        }
-      }
+  def getStakingState(ep:Int, chain:Tine):State = if (ep > 1) {
+    val eps:Slot = (ep-1)*epochLength
+    history.get(chain.getLastActiveSlot(eps)) match {
+      case value:(State,Eta) =>
+        value._1
+      case _ =>
+        val thisSlot = lastActiveSlot(chain,eps)
+        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(eps)._2.data))
+        chain.print
+        SharedData.throwError(holderIndex)
+        Map()
     }
-    keys.alpha = relativeStake(keys.pkw, stakingState)
-    keys.threshold = phi(keys.alpha)
+  } else {
+    history.get(chain.get(0)) match {
+      case value:(State,Eta) =>
+        value._1
+      case _ =>
+        println("Could not recover staking state ep 0")
+        SharedData.throwError(holderIndex)
+        Map()
+    }
   }
 
   def update:Unit = timeFlag{
@@ -62,7 +55,10 @@ trait Update extends Members {
 
       updating = true
       
-      if (globalSlot > tMax || SharedData.killFlag) {timers.cancelAll;updating = false}
+      if (globalSlot > tMax || SharedData.killFlag) {
+        timers.cancelAll
+        updating = false
+      }
 
       while (globalSlot > localSlot) {
         localSlot += 1
@@ -71,9 +67,13 @@ trait Update extends Members {
         }
         if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
           + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.WHITE)
-        updateEpoch(localSlot,currentEpoch) match {
-          case ep:Int if ep > currentEpoch => {
-            currentEpoch = ep
+        updateEpoch(localSlot,currentEpoch,eta,localChain) match {
+          case result:(Int,Eta) if result._1 > currentEpoch => {
+            currentEpoch = result._1
+            eta = result._2
+            stakingState = getStakingState(currentEpoch,localChain)
+            keys.alpha = relativeStake(keys.pkw,stakingState)
+            keys.threshold = phi(keys.alpha)
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
@@ -104,7 +104,7 @@ trait Update extends Members {
         }
       }
 
-      if (!useFencing) while (candidateTines.nonEmpty) {
+      if (!useFencing) while (candidateTines.nonEmpty && updating) {
         maxValidBG
       }
 

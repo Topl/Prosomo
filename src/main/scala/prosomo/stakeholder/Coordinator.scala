@@ -99,7 +99,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   val coordId:String = s"${self.path.toStringWithoutAddress}"
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
-  val eta0:Eta = FastCryptographicHash(inputSeed+"eta0")
+  val eta0:Eta = FastCryptographicHash(Base58.encode(inputSeed)+"eta0")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
   val sk_kes:MalkinKey = MalkinKey(kes,seed,0)
@@ -170,7 +170,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def startHolder(i:Int) =
-    ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+    ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
 
   def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
@@ -489,7 +489,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         case "new_holder" => {
           println("Bootstrapping new holder...")
           val i = holders.length
-          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(inputSeed+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
           holders = holders++List(newHolder)
           sendAssertDone(routerRef,holders)
           sendAssertDone(newHolder,holders)
@@ -822,7 +822,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             "dataOutFlag" -> dataOutFlag.asJson,
             "dataFileDir" -> dataFileDir.asJson,
             "useFencing" -> useFencing.asJson,
-            "inputSeed" -> inputSeed.asJson
+            "inputSeed" -> Base58.encode(inputSeed).asJson
           ).asJson,
           "position" -> Map(
             "delay" -> positionData._2.map{

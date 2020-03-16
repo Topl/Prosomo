@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import bifrost.crypto.hash.FastCryptographicHash
 import prosomo.components.Tine
-import prosomo.primitives.Ratio
+import prosomo.primitives.{Ratio, SharedData}
 
 import scala.math.BigInt
 
@@ -91,23 +91,24 @@ trait Staking extends Members {
     * @param ep epoch derived from time step
     * @return hash nonce
     */
-  def eta(c:Tine, ep:Int): Eta = {
+  def eta_from_genesis(c:Tine, ep:Int): Eta = {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
-        case _ => Array()
+        case _ => {
+          println("error: ep 0 eta not recovered")
+          SharedData.throwError(holderIndex)
+          Array()
+        }
       }
     } else {
       var v: Array[Byte] = Array()
-      val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
-      val cnext = subChain(c,0,ep*epochLength-epochLength)
-      for(id <- epcv.ordered) {
-        getBlockHeader(id) match {
-          case b:BlockHeader => v = v++b._5
-          case _ =>
-        }
+      val prev_two_thirds_epoch = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
+      for(id <- prev_two_thirds_epoch.ordered) {
+        v = v++prev_two_thirds_epoch.getNonce(id._1)
       }
-      FastCryptographicHash(eta(cnext,ep-1)++serializer.getBytes(ep)++v)
+      val next = subChain(c,0,ep*epochLength-epochLength)
+      FastCryptographicHash(eta_from_genesis(next,ep-1)++serializer.getBytes(ep)++v)
     }
   }
 
@@ -115,26 +116,27 @@ trait Staking extends Members {
     * calculates epoch nonce from previous nonce
     * @param c local chain to be verified
     * @param ep epoch derived from time step
-    * @param etaP previous eta
+    * @param eta_prev previous eta
     * @return hash nonce
     */
-  def eta(c:Tine, ep:Int, etaP:Eta): Eta = {
+  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta): Eta = {
     //println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
-        case _ => Array()
+        case _ => {
+          println("error: ep 0 eta not recovered")
+          SharedData.throwError(holderIndex)
+          Array()
+        }
       }
     } else {
       var v: Array[Byte] = Array()
-      val epcv = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
-      for(id <- epcv.ordered) {
-        getBlockHeader(id) match {
-          case b:BlockHeader => v = v++b._5
-          case _ =>
-        }
+      val prev_two_thirds_epoch = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
+      for(id <- prev_two_thirds_epoch.ordered) {
+        v = v++prev_two_thirds_epoch.getNonce(id._1)
       }
-      val eta_ep = FastCryptographicHash(etaP++serializer.getBytes(ep)++v)
+      val eta_ep = FastCryptographicHash(eta_prev++serializer.getBytes(ep)++v)
       //println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
