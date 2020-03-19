@@ -10,13 +10,13 @@ object SpecTypes {
   1,22,65,55,33,2
    */
 
-  type DiffuseDataType = Option[(String,PublicKeys,Mac)]
-  type HelloDataType = Option[(String,Mac)]
-  type RequestBlockType = Option[(SlotId,Mac,Int)]
-  type RequestBlocksType = Option[(SlotId,Int,Mac,Int)]
-  type ReturnBlocksType = Option[(List[Block],Mac,Int)]
-  type SendBlockType = Option[(Block,Mac)]
-  type SendTxType = Option[Transaction]
+  type DiffuseDataType = (String,String,PublicKeys,Mac)
+  type HelloDataType = (String,String,Mac)
+  type RequestBlockType = (String,String,SlotId,Mac,Int)
+  type RequestBlocksType = (String,String,SlotId,Int,Mac,Int)
+  type ReturnBlocksType = (String,String,List[Block],Mac,Int)
+  type SendBlockType = (String,String,Block,Mac)
+  type SendTxType = (String,String,Transaction)
 
   val diffuseCode:Byte = 100:Byte
   val helloCode:Byte = 101:Byte
@@ -25,5 +25,6 @@ object SpecTypes {
   val returnBlocksCode:Byte = 104:Byte
   val sendBlockCode:Byte = 105:Byte
   val sendTxCode:Byte = 106:Byte
+  val holdersFromRemote:Byte = 107:Byte
 
 }

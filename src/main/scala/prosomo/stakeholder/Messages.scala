@@ -217,7 +217,7 @@ trait Messages extends Members {
       val future = holder ? command
       Await.result(future, timeout.duration) match {
         case str:String => {
-          if (verifyStamp(str)) list = list++Map(s"${holder.path}" -> str)
+          if (verifyStamp(str)) list = list++Map(s"${holder.path.toString}" -> str)
         }
         case _ => println("error")
       }

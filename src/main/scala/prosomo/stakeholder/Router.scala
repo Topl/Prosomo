@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor, ActorPath, Props, Timers}
+import akka.actor.{Actor,ActorRef, ActorPath, Props, Timers}
 import akka.util.Timeout
 import bifrost.LocalInterface.{LocallyGeneratedModifier, LocallyGeneratedTransaction}
 import bifrost.blocks.BifrostBlock
@@ -39,7 +39,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   import Parameters._
   val serializer:Serializer = new Serializer
   var holders:List[ActorRefWrapper] = List()
-  var remoteHolders:List[ActorPath] = List()
   val rng = new Random(BigInt(seed).toLong)
   var holdersPosition:Map[ActorRefWrapper,(Double,Double)] = Map()
   var distanceMap:Map[(ActorRefWrapper,ActorRefWrapper),Long] = Map()
@@ -60,6 +59,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var transactionCounter:Int = 0
   var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
   var pathToPeer:Map[ActorPath,ConnectedPeer] = Map()
+  var connectedPeer:Set[ConnectedPeer] = Set()
+  implicit val routerRef = ActorRefWrapper.routerRef(self)
 
   private case object TimerKey
 
@@ -265,25 +266,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       }
     }
 
-    /** accepts list of other holders from coordinator */
-    case list:List[ActorRefWrapper] => {
-      holders = list
-      for (holder<-holders.filterNot(_.remote)) {
-        if (!holdersPosition.keySet.contains(holder)) {
-          holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
-        }
-      }
-      if (useFencing) {
-        for (holder<-holders.filterNot(_.remote)) {
-          if (!holderReady.keySet.contains(holder)) {
-            holderReady += (holder->false)
-          }
-        }
-      }
-      assert(holdersPosition.nonEmpty)
-      sender() ! "done"
-    }
-
     case NextSlot => {
       if (roundDone) globalSlot += 1
       roundDone = false
@@ -408,11 +390,158 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case GetSyncInfo =>
   }
 
-  private def messageFromPeer: Receive = {
-    case DataFromPeer(spec, data, remote) => {
-
+  def getRefs(sender:String,recipient:String):Option[(ActorRefWrapper,ActorRefWrapper)] = {
+    Try{ActorPath.fromString(sender)} match {
+      case Success(snd:ActorPath) =>
+        Try{ActorPath.fromString(recipient)} match {
+          case Success(rec:ActorPath) =>
+            holders.find(_.actorPath == snd) match {
+              case Some(out1:ActorRefWrapper) =>
+                holders.find(_.actorPath == rec) match {
+                  case Some(out2: ActorRefWrapper) => Some((out1,out2))
+                  case None => None
+                }
+              case None => None
+            }
+          case _ => None
+        }
+      case _ => None
     }
 
+  }
+
+  private def messageFromPeer: Receive = {
+    case DataFromPeer(spec, data, remote) => {
+      spec.messageCode match {
+        case DiffuseDataSpec.messageCode =>{
+          data match {
+            case msg:DiffuseDataType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    DiffuseData(s,msg._3,msg._4)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case HelloSpec.messageCode => {
+          data match {
+            case msg:HelloDataType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    Hello(s,msg._3)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case RequestBlockSpec.messageCode => {
+          data match {
+            case msg:RequestBlockType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    RequestBlock(msg._3,msg._4,msg._5)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case RequestBlocksSpec.messageCode => {
+          data match {
+            case msg:RequestBlocksType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    RequestBlocks(msg._3,msg._4,msg._5,msg._6)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case ReturnBlocksSpec.messageCode => {
+          data match {
+            case msg:ReturnBlocksType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    ReturnBlocks(msg._3,msg._4,msg._5)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case SendBlockSpec.messageCode => {
+          data match {
+            case msg:SendBlockType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    SendBlock(msg._3,msg._4)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case SendTxSpec.messageCode => {
+          data match {
+            case msg:SendTxType =>
+              getRefs(msg._1,msg._2) match {
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                    SendTx(msg._3)
+                  )(context.system.dispatcher,self)
+                case None =>
+              }
+            case _ =>
+          }
+        }case HoldersFromRemoteSpec.messageCode => {
+          data match {
+            case msg:List[String] =>
+              for (string<-msg) {
+                Try{ActorPath.fromString(string)} match {
+                  case Success(newPath:ActorPath) =>
+                    holders.find(_.path == newPath) match {
+                      case None => holders ::= ActorRefWrapper(newPath)
+                      case _ =>
+                    }
+                  case _ =>
+                }
+              }
+            case _ =>
+          }
+        }
+
+      }
+    }
+  }
+
+  private def holdersFromLocal: Receive = {
+    /** accepts list of other holders from coordinator */
+    case list:List[ActorRefWrapper] => {
+      for (holder<-list) {
+        if (!holders.contains(holder)) holder::holders
+      }
+      val localHolders = holders.filterNot(_.remote)
+      for (holder<-localHolders) {
+        if (!holdersPosition.keySet.contains(holder)) {
+          holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
+        }
+      }
+      if (useFencing) {
+        for (holder<-localHolders) {
+          if (!holderReady.keySet.contains(holder)) {
+            holderReady += (holder->false)
+          }
+        }
+      }
+      for (peer<-connectedPeer) {
+        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,localHolders.map(_.path.toString),peer)
+      }
+      sender() ! "done"
+    }
   }
 
 
@@ -424,34 +553,35 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
 
     case newMessage:(ActorPath,Any) => {
+      val s = sender().path
       val (r,c) = newMessage
       c match {
         case c:DiffuseData => {
-          val content:DiffuseDataType = Some((c.ref.path.toString,c.pks,c.mac))
+          val content:DiffuseDataType = (s.toString,r.toString,c.pks,c.mac)
           toNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
         }
         case c:Hello => {
-          val content:HelloDataType = Some((c.id.path.toString,c.mac))
+          val content:HelloDataType = (s.toString,c.id.path.toString,c.mac)
           toNetwork[HelloDataType,HelloSpec.type](HelloSpec,content,r)
         }
         case c:RequestBlock => {
-          val content:RequestBlockType = Some((c.id,c.mac,c.job))
+          val content:RequestBlockType = (s.toString,r.toString,c.id,c.mac,c.job)
           toNetwork[RequestBlockType,RequestBlockSpec.type](RequestBlockSpec,content,r)
         }
         case c:RequestBlocks => {
-          val content:RequestBlocksType = Some((c.id,c.depth,c.mac,c.job))
+          val content:RequestBlocksType = (s.toString,r.toString,c.id,c.depth,c.mac,c.job)
           toNetwork[RequestBlocksType,RequestBlocksSpec.type](RequestBlocksSpec,content,r)
         }
         case c:ReturnBlocks => {
-          val content:ReturnBlocksType = Some((c.blocks,c.mac,c.job))
+          val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.mac,c.job)
           toNetwork[ReturnBlocksType,ReturnBlocksSpec.type](ReturnBlocksSpec,content,r)
         }
         case c:SendBlock => {
-          val content:SendBlockType = Some((c.block,c.mac))
+          val content:SendBlockType = (s.toString,r.toString,c.block,c.mac)
           toNetwork[SendBlockType,SendBlockSpec.type](SendBlockSpec,content,r)
         }
         case c:SendTx => {
-          val content:SendTxType = Some(c.transaction)
+          val content:SendTxType = (s.toString,r.toString,c.transaction)
           toNetwork[SendTxType,SendTxSpec.type](SendTxSpec,content,r)
         }
       }
@@ -466,6 +596,14 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
   }
 
+  private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ConnectedPeer):Unit = {
+    Try{spec.toBytes(c)} match {
+      case Success(bytes:Array[Byte]) =>
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeer(r))
+      case _ =>
+    }
+  }
+
   val messageSpecs = Seq(
     DiffuseDataSpec,
     HelloSpec,
@@ -473,7 +611,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     RequestBlocksSpec,
     ReturnBlocksSpec,
     SendBlockSpec,
-    SendTxSpec
+    SendTxSpec,
+    HoldersFromRemoteSpec
   )
 
   private def registerNC: Receive = {
@@ -484,10 +623,11 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   def receive: Receive =
-    routerReceive orElse
-      registerNC orElse
+    registerNC orElse
+      holdersFromLocal orElse
       messageFromLocal orElse
       messageFromPeer orElse
+      routerReceive orElse
       handleSubscribe orElse
       compareViews orElse
       readLocalObjects orElse

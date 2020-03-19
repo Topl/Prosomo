@@ -24,5 +24,7 @@ object Serializer {
   case object DeserializeRequestBlocks
   case object DeserializeReturnBlocks
   case object DeserializeSendBlock
+  case object DeserializeSendTx
+  case object DeserializeHoldersFromRemote
   case object Deserialize
 }

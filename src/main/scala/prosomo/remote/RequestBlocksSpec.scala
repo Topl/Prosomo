@@ -4,10 +4,10 @@ import bifrost.network.message.Message.MessageCode
 import bifrost.network.message.MessageSpec
 import prosomo.components.SerializationMethods
 import prosomo.components.Serializer.DeserializeRequestBlocks
-import prosomo.primitives.{ByteStream, Mac}
+import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object RequestBlocksSpec extends MessageSpec[RequestBlocksType] with SerializationMethods {
   override val messageCode: MessageCode = requestBlocksCode
@@ -15,18 +15,13 @@ object RequestBlocksSpec extends MessageSpec[RequestBlocksType] with Serializati
 
   override def parseBytes(bytes: Array[Byte]): Try[RequestBlocksType] = Try{
     val msgBytes = new ByteStream(bytes,DeserializeRequestBlocks)
-    Try(fromBytes(msgBytes)) match {
-      case Success(msg:(SlotId,Int,Mac,Int)) => Some(msg)
-      case Failure(exception:Throwable) => {
-        exception.printStackTrace()
-        None
-      }
-      case _ => None
+    fromBytes(msgBytes) match {
+      case msg:RequestBlocksType => msg
     }
   }
 
-  override def toBytes(obj: RequestBlocksType): Array[Byte] = {
-    getRequestBlocksBytes(obj.get)
+  override def toBytes(msg: RequestBlocksType): Array[Byte] = {
+    getRequestBlocksBytes(msg)
   }
 
 }

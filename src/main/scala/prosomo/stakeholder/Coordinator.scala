@@ -182,36 +182,47 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       println(s"S = $slotWindow")
       println(s"f = $f_s")
       println("Populating")
-      if (remoteInstance && holderIndexMin > -1 && holderIndexMax > -1) {
-        holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
-      } else if (holderIndexMin > -1 && holderIndexMax > -1) {
+      if (holderIndexMin > -1 && holderIndexMax > -1) {
         holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
       } else {
         holders = List.range(0,numHolders).map(startHolder)
       }
-      if (!remoteInstance) setupLocal
+    }
+  }
+
+  def receiveRemoteHolders: Receive = {
+    case remoteHolders:List[ActorRefWrapper] => {
+      for (remote<-remoteHolders) {
+        if (!holders.contains(remote)) remote::holders
+      }
+    }
+  }
+
+  def findRemoteHolders: Receive = {
+    case Register => {
+      if (holderIndexMin > -1 && holderIndexMax > -1) {
+        if (holders.size < numHolders) {
+          sendAssertDone(List(routerRef),holders)
+          self ! Register
+        } else {
+          setupLocal
+        }
+      } else {
+        sendAssertDone(List(routerRef),holders)
+        setupLocal
+      }
     }
   }
 
   def setupRemote:Unit = {
     println("Sending holders list")
-    sendAssertDone(List(routerRef),holders)
-    sendAssertDone(holders,holders)
+    sendAssertDone(holders.filterNot(_.remote),holders)
     println("Sending holders coordinator ref")
-    sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
+    sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
     val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
     blocks.restore(genBlockKey) match {
       case Some(b:Block) => {
         genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-        def refMapKey(ref:ActorRefWrapper) = {
-          val pkw = ByteArrayWrapper(
-            hex2bytes(genKeys(s"${ref.path}").split(";")(0))
-              ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
-              ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
-          )
-          holderKeys += (ref-> pkw)
-        }
-        holders.map(refMapKey(_))
         verifyBlock(genBlock)
         println("Recovered Genesis Block")
       }
@@ -221,10 +232,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def setupLocal:Unit = {
     println("Sending holders list")
-    sendAssertDone(List(routerRef),holders)
-    sendAssertDone(holders,holders)
+    sendAssertDone(holders.filterNot(_.remote),holders)
     println("Sending holders coordinator ref")
-    sendAssertDone(holders,CoordRef(ActorRefWrapper(self)))
+    sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
     println("Getting holder keys")
     genKeys = collectKeys(holders,RequestKeys,genKeys)
     assert(!containsDuplicates(genKeys))
@@ -905,6 +915,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   override def receive:Receive = giveTime orElse
     run orElse
     populate orElse
+    receiveRemoteHolders orElse
+    findRemoteHolders orElse
     nextSlot orElse
     dataFile orElse {
     /**tells actors to print their inbox */

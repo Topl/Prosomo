@@ -4,10 +4,10 @@ import bifrost.network.message.Message.MessageCode
 import bifrost.network.message.MessageSpec
 import prosomo.components.SerializationMethods
 import prosomo.components.Serializer.DeserializeDiffuse
-import prosomo.primitives.{ByteStream, Mac}
+import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object DiffuseDataSpec extends MessageSpec[DiffuseDataType] with SerializationMethods {
   override val messageCode: MessageCode = diffuseCode
@@ -15,18 +15,13 @@ object DiffuseDataSpec extends MessageSpec[DiffuseDataType] with SerializationMe
 
   override def parseBytes(bytes: Array[Byte]): Try[DiffuseDataType] = Try{
     val msgBytes = new ByteStream(bytes,DeserializeDiffuse)
-    Try(fromBytes(msgBytes)) match {
-      case Success(msg:(String,PublicKeys,Mac)) => Some(msg)
-      case Failure(exception:Throwable) => {
-        exception.printStackTrace()
-        None
-      }
-      case _ => None
+    fromBytes(msgBytes) match {
+      case msg:DiffuseDataType => msg
     }
   }
 
-  override def toBytes(obj:DiffuseDataType): Array[Byte] = {
-    getDiffuseBytes(obj.get)
+  override def toBytes(msg:DiffuseDataType): Array[Byte] = {
+    getDiffuseBytes(msg)
   }
 
 }
