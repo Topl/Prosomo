@@ -58,7 +58,7 @@ trait Forging extends Members {
   }
 
   def forgeGenBlock(eta0:Eta,
-                    genKeys:Map[String,String],
+                    holderKeys:Map[ActorRefWrapper,PublicKeyW],
                     coordId:String,
                     pk_sig:PublicKey,
                     pk_vrf:PublicKey,
@@ -66,7 +66,7 @@ trait Forging extends Members {
                     sk_sig:PublicKey,
                     sk_vrf:PublicKey,
                     sk_kes:MalkinKey
-                   ): (Block,Map[ActorRefWrapper,PublicKeyW]) = {
+                   ): Block = {
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0
@@ -75,7 +75,6 @@ trait Forging extends Members {
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
     val genesisEntries: GenesisSet = holders.map{
       case ref:ActorRefWrapper => {
         val initStake = {
@@ -94,8 +93,7 @@ trait Forging extends Members {
             }
           }
         }
-        val pkw = ByteArrayWrapper(hex2bytes(genKeys(s"${ref.path}").split(";")(0))++hex2bytes(genKeys(s"${ref.path}").split(";")(1))++hex2bytes(genKeys(s"${ref.path}").split(";")(2)))
-        holderKeys += (ref-> pkw)
+        val pkw = holderKeys(ref)
         (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
       }
     }
@@ -104,7 +102,7 @@ trait Forging extends Members {
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
-    (Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries),holderKeys)
+    Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries)
   }
 
 }

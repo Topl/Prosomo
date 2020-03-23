@@ -69,6 +69,7 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
   val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
+  coordinator ! Register
   coordinator ! Run
 
   val apiRoutes:Seq[ApiRoute] = Seq(

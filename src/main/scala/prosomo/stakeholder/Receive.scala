@@ -3,13 +3,15 @@ package prosomo.stakeholder
 import java.io.BufferedWriter
 
 import bifrost.crypto.hash.FastCryptographicHash
+
 import scala.concurrent.duration._
 import prosomo.cases._
-import prosomo.components.{Block, Tine, Serializer, Transaction}
+import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
 import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
+import scala.util.Random
 
 trait Receive extends Members {
   import Parameters._
@@ -228,9 +230,40 @@ trait Receive extends Members {
     }
 
     /**allocation and vars of simulation*/
-    case value:Initialize => {
+    case Initialize => {
       println("Holder "+holderIndex.toString+" starting...")
-      tMax = value.tMax
+      password = s"password_holder_$holderIndex"
+      salt = FastCryptographicHash(uuid)
+      derivedKey = KeyFile.getDerivedKey(password,salt)
+      KeyFile.restore(storageDir) match {
+        case Some(restoredFile:KeyFile) => {
+          println("Reading keyfile ...")
+          keyFile = restoredFile
+        }
+        case None => {
+          println("Generating new keyfile...")
+          val rngSeed:Random = new Random
+          rngSeed.setSeed(BigInt(seed).toLong)
+          val seed1 = FastCryptographicHash(rngSeed.nextString(32))
+          val seed2 = FastCryptographicHash(rngSeed.nextString(32))
+          val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+          keyFile = KeyFile.fromSeed(
+            password,
+            storageDir,
+            serializer: Serializer,
+            sig:Sig,
+            vrf:Vrf,
+            kes:Kes,
+            globalSlot:Slot,
+            seed1,
+            seed2,
+            seed3
+          )
+        }
+      }
+      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
+      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
+      tMax = L_s
       globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       val genesisBlock = blocks.get((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
@@ -351,35 +384,6 @@ trait Receive extends Members {
     }
 
     case RequestKeys => {
-      password = s"password_holder_$holderIndex"
-      salt = FastCryptographicHash(uuid)
-      derivedKey = KeyFile.getDerivedKey(password,salt)
-      KeyFile.restore(storageDir) match {
-        case Some(restoredFile:KeyFile) => {
-          println("Reading keyfile ...")
-          keyFile = restoredFile
-        }
-        case None => {
-          println("Generating new keyfile...")
-          val seed1 = FastCryptographicHash(rng.nextString(32))
-          val seed2 = FastCryptographicHash(rng.nextString(32))
-          val seed3 = FastCryptographicHash(rng.nextString(32))
-          keyFile = KeyFile.fromSeed(
-            password,
-            storageDir,
-            serializer: Serializer,
-            sig:Sig,
-            vrf:Vrf,
-            kes:Kes,
-            globalSlot:Slot,
-            seed1,
-            seed2,
-            seed3
-          )
-        }
-      }
-      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
-      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
       sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
     }
 

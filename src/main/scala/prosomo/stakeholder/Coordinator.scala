@@ -116,7 +116,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var tp:Long = 0
   var actorPaused = false
   var cmdQueue:Map[Slot,List[String]] = inputCommands
-  var genKeys:Map[String,String] = Map()
+
   var fileWriter:Any = 0
   var graphWriter:Any = 0
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
@@ -185,7 +185,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       if (holderIndexMin > -1 && holderIndexMax > -1) {
         holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
       } else {
-        holders = List.range(0,numHolders).map(startHolder)
+        holders = List.range(0,numGenesisHolders).map(startHolder)
       }
     }
   }
@@ -201,7 +201,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def findRemoteHolders: Receive = {
     case Register => {
       if (holderIndexMin > -1 && holderIndexMax > -1) {
-        if (holders.size < numHolders) {
+        if (holders.size < numGenesisHolders) {
           sendAssertDone(List(routerRef),holders)
           self ! Register
         } else {
@@ -214,56 +214,39 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }
   }
 
-  def setupRemote:Unit = {
-    println("Sending holders list")
-    sendAssertDone(holders.filterNot(_.remote),holders)
-    println("Sending holders coordinator ref")
-    sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
-    val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
-    blocks.restore(genBlockKey) match {
-      case Some(b:Block) => {
-        genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-        verifyBlock(genBlock)
-        println("Recovered Genesis Block")
-      }
-      case None =>
-    }
-  }
-
   def setupLocal:Unit = {
     println("Sending holders list")
     sendAssertDone(holders.filterNot(_.remote),holders)
     println("Sending holders coordinator ref")
     sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
-    println("Getting holder keys")
-    genKeys = collectKeys(holders,RequestKeys,genKeys)
-    assert(!containsDuplicates(genKeys))
+    for (holder<-holders) {
+      val holderIndex:String = holder.actorPath.name.drop("Holder_".length)
+      val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
+      val rngSeed:Random = new Random
+      rngSeed.setSeed(BigInt(holderSeed).toLong)
+      val seed1 = FastCryptographicHash(rngSeed.nextString(32))
+      val seed2 = FastCryptographicHash(rngSeed.nextString(32))
+      val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+      val holderPK = Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
+      holderKeys += (holder->holderPK)
+    }
     val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
     blocks.restore(genBlockKey) match {
       case Some(b:Block) => {
         genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-        def refMapKey(ref:ActorRefWrapper) = {
-          val pkw = ByteArrayWrapper(
-            hex2bytes(genKeys(s"${ref.path}").split(";")(0))
-              ++hex2bytes(genKeys(s"${ref.path}").split(";")(1))
-              ++hex2bytes(genKeys(s"${ref.path}").split(";")(2))
-          )
-          holderKeys += (ref-> pkw)
-        }
-        holders.map(refMapKey(_))
         verifyBlock(genBlock)
         println("Recovered Genesis Block")
       }
       case None => {
         println("Forge Genesis Block")
-        forgeGenBlock(eta0,genKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-          case out:(Block,Map[ActorRefWrapper,PublicKeyW]) => {genBlock = out._1;holderKeys = out._2}
+        forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+          case out:Block => genBlock = out
         }
         blocks.store(genBlockKey,genBlock)
       }
     }
     println("Send GenBlock")
-    sendAssertDone(holders,GenBlock(genBlock))
+    sendAssertDone(holders.filterNot(_.remote),GenBlock(genBlock))
     println("Send Router Keys")
     sendAssertDone(routerRef,holderKeys)
   }
@@ -271,17 +254,17 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def run:Receive = {
     /**sends start command to each stakeholder*/
     case Run => {
-      println("Diffuse Holder Info")
-      sendAssertDone(holders,Diffuse)
       println("Starting")
-      sendAssertDone(holders,Initialize(L_s))
+      sendAssertDone(holders.filterNot(_.remote),Initialize)
+      println("Diffuse Holder Info")
+      sendAssertDone(holders.filterNot(_.remote),Diffuse)
       if (useFencing) sendAssertDone(routerRef,CoordRef(ActorRefWrapper(self)))
       println("Run")
       restoreTimeInfo
-      sendAssertDone(holders,SetClock(t0))
+      sendAssertDone(holders.filterNot(_.remote),SetClock(t0))
       if (useFencing) sendAssertDone(routerRef,SetClock(t0))
       if (useFencing) routerRef ! Run
-      for (holder<-rng.shuffle(holders)) {
+      for (holder<-rng.shuffle(holders.filterNot(_.remote))) {
         holder ! Run
       }
       if (!useFencing) timers.startPeriodicTimer(TimerKey, ReadCommand, commandUpdateTime)
@@ -512,9 +495,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               ++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(2))
           )
           holderKeys += (newHolder-> newHolderKeyW)
+          sendAssertDone(newHolder,Initialize)
           sendAssertDone(holders,Party(holders,true))
           sendAssertDone(holders,Diffuse)
-          sendAssertDone(newHolder,Initialize(L_s))
           sendAssertDone(newHolder,SetClock(t0))
           println("Starting new holder")
           newHolder ! Run
@@ -797,7 +780,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val json:Json = Map(
           "info" -> Map(
             "config"-> configString.asJson,
-            "numHolders"-> numHolders.asJson,
+            "numHolders"-> numGenesisHolders.asJson,
             "slotT" -> slotT.asJson,
             "delay_ms_km" -> delay_ms_km.asJson,
             "useRouting" -> useRouting.asJson,

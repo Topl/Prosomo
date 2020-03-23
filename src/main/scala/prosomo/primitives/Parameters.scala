@@ -71,10 +71,8 @@ object Parameters {
   val timeScale:Double = config.getDouble("params.timeScale")
   //use network delay parameterization if true
   val useDelayParam:Boolean = config.getBoolean("params.useDelayParam")
-  //set to true if this is a remote instance, false to forge genesis block locally
-  val remoteInstance:Boolean = config.getBoolean("params.remoteInstance")
   //number of stakeholders
-  val numHolders:Int = config.getInt("params.numHolders")
+  val numGenesisHolders:Int = config.getInt("params.numHolders")
   //minumum index of local holders, set to -1 for all local
   val holderIndexMin:Int = config.getInt("params.holderIndexMin")
   //maximum index of local holders, set to -1 for all local

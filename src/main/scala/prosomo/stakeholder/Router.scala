@@ -522,23 +522,23 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     /** accepts list of other holders from coordinator */
     case list:List[ActorRefWrapper] => {
       for (holder<-list) {
-        if (!holders.contains(holder)) holder::holders
+        if (!holders.contains(holder)) holders ::= holder
       }
-      val localHolders = holders.filterNot(_.remote)
-      for (holder<-localHolders) {
+
+      for (holder<-holders.filterNot(_.remote)) {
         if (!holdersPosition.keySet.contains(holder)) {
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
         }
       }
       if (useFencing) {
-        for (holder<-localHolders) {
+        for (holder<-holders.filterNot(_.remote)) {
           if (!holderReady.keySet.contains(holder)) {
             holderReady += (holder->false)
           }
         }
       }
       for (peer<-connectedPeer) {
-        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,localHolders.map(_.path.toString),peer)
+        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString),peer)
       }
       sender() ! "done"
     }

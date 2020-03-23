@@ -29,6 +29,7 @@ case object RequestPositionData
 case object GetBalance
 case object Refresh
 case object Register
+case object Initialize
 
 //signed messages between holders, messages from remote
 case class DiffuseData(ref:ActorRefWrapper, pks:PublicKeys, mac:Mac)
@@ -43,7 +44,6 @@ case class SendTx(transaction:Transaction)
 case class GetSlot(s:Int)
 case class CoordRef(ref: ActorRefWrapper)
 case class GetTime(t1:Long)
-case class Initialize(tMax:Int)
 case class SetClock(t0:Long)
 case class GenBlock(b: Block)
 case class IssueTx(s:Any)
