@@ -504,7 +504,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                 Try{ActorPath.fromString(string)} match {
                   case Success(newPath:ActorPath) =>
                     holders.find(_.path == newPath) match {
-                      case None => holders ::= ActorRefWrapper(newPath)
+                      case None => {
+                        holders ::= ActorRefWrapper(newPath)
+                        pathToPeer += (newPath -> remote)
+                      }
                       case _ =>
                     }
                   case _ =>
@@ -537,9 +540,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         }
       }
-      for (peer<-connectedPeer) {
-        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString),peer)
-      }
+      toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
       sender() ! "done"
     }
   }
@@ -553,7 +554,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
 
     case newMessage:(ActorPath,Any) => {
-      val s = sender().path
+      val s:ActorPath = sender().path
       val (r,c) = newMessage
       c match {
         case c:DiffuseData => {
@@ -596,10 +597,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
   }
 
-  private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ConnectedPeer):Unit = {
+  private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content):Unit = {
     Try{spec.toBytes(c)} match {
       case Success(bytes:Array[Byte]) =>
-        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeer(r))
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),Broadcast)
       case _ =>
     }
   }
