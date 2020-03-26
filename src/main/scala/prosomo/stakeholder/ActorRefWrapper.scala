@@ -38,6 +38,8 @@ case class ActorRefWrapper(
 
   def path:akka.actor.ActorPath = actorPath
 
+  override def toString():String = path.toString
+
   def ! (that:Any)(implicit sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Unit = if (this.remote) {
     routerRef ! (actorPath,that)
   } else {

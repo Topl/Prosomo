@@ -20,6 +20,7 @@ import scorex.crypto.encode.Base58
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
+import scala.concurrent.duration._
 import scala.util.{Random, Try}
 
 /**
@@ -175,6 +176,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
+      sendAssertDone(routerRef,CoordRef(ActorRefWrapper(self)))
       sendAssertDone(routerRef,Register)
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
@@ -187,14 +189,14 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       } else {
         holders = List.range(0,numGenesisHolders).map(startHolder)
       }
+      sendAssertDone(routerRef,holders)
+      self ! Register
     }
   }
 
   def receiveRemoteHolders: Receive = {
     case remoteHolders:List[ActorRefWrapper] => {
-      for (remote<-remoteHolders) {
-        if (!holders.contains(remote)) remote::holders
-      }
+      holders = remoteHolders
     }
   }
 
@@ -202,13 +204,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     case Register => {
       if (holderIndexMin > -1 && holderIndexMax > -1) {
         if (holders.size < numGenesisHolders) {
-          sendAssertDone(List(routerRef),holders)
-          self ! Register
+          sendAssertDone(routerRef,holders)
+          context.system.scheduler.scheduleOnce(1000 millis,self,Register)(context.system.dispatcher,self)
         } else {
+          SharedData.printingHolder = holderIndexMin
           setupLocal
         }
       } else {
-        sendAssertDone(List(routerRef),holders)
         setupLocal
       }
     }
@@ -249,6 +251,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     sendAssertDone(holders.filterNot(_.remote),GenBlock(genBlock))
     println("Send Router Keys")
     sendAssertDone(routerRef,holderKeys)
+    self ! Run
   }
 
   def run:Receive = {
@@ -256,9 +259,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     case Run => {
       println("Starting")
       sendAssertDone(holders.filterNot(_.remote),Initialize)
-      println("Diffuse Holder Info")
-      sendAssertDone(holders.filterNot(_.remote),Diffuse)
-      if (useFencing) sendAssertDone(routerRef,CoordRef(ActorRefWrapper(self)))
       println("Run")
       restoreTimeInfo
       sendAssertDone(holders.filterNot(_.remote),SetClock(t0))

@@ -17,7 +17,7 @@ import bifrost.utils.ScorexLogging
 import com.sun.management.HotSpotDiagnosticMXBean
 import io.circe
 import prosomo.cases._
-import prosomo.primitives.Parameters.inputSeed
+import prosomo.primitives.Parameters.{inputSeed,messageSpecs}
 import prosomo.stakeholder.{Coordinator, Router}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,7 +41,7 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
   val basicSpecs = Seq(GetPeersSpec,PeersSpec,InvSpec,RequestModifierSpec,ModifiersSpec)
 
-  val messagesHandler: MessageHandler = MessageHandler(basicSpecs ++ additionalMessageSpecs)
+  val messagesHandler: MessageHandler = MessageHandler(basicSpecs ++ additionalMessageSpecs ++ messageSpecs)
 
   println("Using seed: "+inputSeed)
 
@@ -65,12 +65,10 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
   val networkController:ActorRef = actorSystem.actorOf(Props(classOf[NetworkController], settings, messagesHandler, upnp, peerManagerRef), "networkController")
 
-  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkController)), "Router")
+  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkController,peerManagerRef)), "Router")
   val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
   coordinator ! NewDataFile
   coordinator ! Populate
-  coordinator ! Register
-  coordinator ! Run
 
   val apiRoutes:Seq[ApiRoute] = Seq(
     DebugApiRoute(settings, routerRef),

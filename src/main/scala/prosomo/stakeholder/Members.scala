@@ -122,7 +122,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getBlockTree(holder:ActorRefWrapper):Unit
   def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])
   def collectKeys(holders:List[ActorRefWrapper], command: Any, input: Map[String,String]): Map[String,String]
-  def sendDiffuse(holderId:ActorPath, holders:List[ActorRefWrapper], command: Any):Unit
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
   def verifyChain(c:Tine, gh:Hash):Boolean

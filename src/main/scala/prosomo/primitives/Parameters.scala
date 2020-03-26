@@ -10,6 +10,7 @@ import prosomo.Prosomo
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import prosomo.components.Block
+import prosomo.remote.{DiffuseDataSpec, HelloSpec, HoldersFromRemoteSpec, RequestBlockSpec, RequestBlocksSpec, ReturnBlocksSpec, SendBlockSpec, SendTxSpec}
 
 import scala.math.BigInt
 
@@ -202,5 +203,16 @@ object Parameters {
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val settingsFilename:String = config.getString("params.settingsFilename")
+
+  val messageSpecs = Seq(
+    DiffuseDataSpec,
+    HelloSpec,
+    RequestBlockSpec,
+    RequestBlocksSpec,
+    ReturnBlocksSpec,
+    SendBlockSpec,
+    SendTxSpec,
+    HoldersFromRemoteSpec
+  )
 
 }

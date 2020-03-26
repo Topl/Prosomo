@@ -1,0 +1,33 @@
+{
+  "p2p": {
+    "name": "prosomo_a",
+    "bindAddress": "127.0.0.1",
+    "upnp": false,
+    "upnpGatewayTimeout": 7000,
+    "upnpDiscoverTimeout": 3000,
+    "port": 9084,
+    "knownPeers": ["127.0.0.2:9086"
+    ],
+    "addedMaxDelay": 2000,
+    "maxConnections": 10
+  },
+  "agent": "prosomo",
+  "walletSeed": "genesisoo",
+  "keyFileDir": "keyfiles/private-testnet",
+  "walletDir": "/tmp/bifrost/private-testnet/wallet",
+  "dataDir": "/tmp/bifrost/private-testnet/blockchain",
+  "pbrDir": "/tmp/bifrost/private-testnet/pbr",
+  "tbrDir": "/tmp/bifrost/private-testnet/tbr",
+  "logDir": "/tmp/bifrost/private-testnet/log",
+  "rpcPort": 9085,
+  "rpcAllowed": [],
+  "maxRollback": 100,
+  "targetBlockTime": 6000,
+  "offlineGeneration": true,
+  "testnet": true,
+  "blockGenerationDelay": 2000,
+  "cors": true,
+  "verboseAPI": true,
+  "version": [3,0,0],
+  "forkHeight": 0
+}

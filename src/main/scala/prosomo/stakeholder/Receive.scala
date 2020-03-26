@@ -197,11 +197,11 @@ trait Receive extends Members {
     case value:Hello => {
       if (!actorStalled) {
         if (gossipers.length < numGossipers + gOff) {
-          if (verifyMac(hash(value.id,serializer),value.mac)) {
-            if (!gossipers.contains(value.id) && inbox.keySet.contains(value.mac.sid)) {
+          if (verifyMac(hash(value.ref,serializer),value.mac)) {
+            if (!gossipers.contains(value.ref) && inbox.keySet.contains(value.mac.sid)) {
               //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Adding Gossiper")}
-              if (inbox(value.mac.sid)._1 == value.id) gossipers = gossipers ++ List(value.id)
-              send(ActorRefWrapper(self),value.id,Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+              if (inbox(value.mac.sid)._1 == value.ref) gossipers = gossipers ++ List(value.ref)
+              send(ActorRefWrapper(self),value.ref,Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
           }
         }
@@ -217,16 +217,17 @@ trait Receive extends Members {
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
-      sendDiffuse(holderId, holders, DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
-      sender() ! "done"
+      holders.filterNot(_ == ActorRefWrapper(self)).foreach(
+        _ ! DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
+      )
     }
 
     /**validates diffused string from other holders and stores in inbox */
     case value:DiffuseData => {
       if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
         inbox += (value.mac.sid->(value.ref,value.pks))
+        self ! Diffuse
       }
-      sender() ! "done"
     }
 
     /**allocation and vars of simulation*/
@@ -309,6 +310,8 @@ trait Receive extends Members {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
         context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
+        println("Diffuse Holder Info")
+        self ! Diffuse
       }
     }
 

@@ -68,7 +68,11 @@ trait Messages extends Members {
     */
   def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
-      routerRef ! (sender,holder,command)
+      if (holder.remote) {
+        routerRef ! (holder.path, command)
+      } else {
+        routerRef ! (sender, holder, command)
+      }
     } else if (useFencing) {
       routerRef ! (BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
     } else {
@@ -84,7 +88,11 @@ trait Messages extends Members {
   def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any) = {
     for (holder <- holders){
       if (useRouting && !useFencing) {
-        routerRef ! (sender, holder, command)
+        if (holder.remote) {
+          routerRef ! (holder.path, command)
+        } else {
+          routerRef ! (sender, holder, command)
+        }
       } else if (useFencing) {
         routerRef ! (BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
       } else {
@@ -224,25 +232,6 @@ trait Messages extends Members {
     }
     list
   }
-
-  /**
-    * send diffuse message between holders, used for populating inbox
-    * @param holderId
-    * @param holders
-    * @param command
-    */
-  def sendDiffuse(holderId:ActorPath, holders:List[ActorRefWrapper], command: Any) = {
-    for (holder <- holders){
-      implicit val timeout:Timeout = Timeout(waitTime)
-      if (holder.path != holderId) {
-        val future = holder ? command
-        val result = Await.result(future, timeout.duration)
-        assert(result == "done")
-      }
-    }
-    diffuseSent = true
-  }
-
 
   /**
     * Verify diffused strings with public key included in the string

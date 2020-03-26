@@ -251,11 +251,15 @@ trait SerializationMethods extends SimpleTypes {
   }
 
   private def sReturnBlocks(msg: ReturnBlocksType):Array[Byte] = {
+    def mapFunc(b:Block):Array[Byte] = {
+      val blockBytes = sBlock(b)
+      getBytes(blockBytes.length)++blockBytes
+    }
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
       getBytes(msg._3.length),
-      Bytes.concat(msg._3.map(sBlock(_)):_*),
+      Bytes.concat(msg._3.map(mapFunc):_*),
       sMac(msg._4),
       getBytes(msg._5)
     )
@@ -286,10 +290,12 @@ trait SerializationMethods extends SimpleTypes {
   }
 
   private def sSendBlock(msg:SendBlockType):Array[Byte] = {
+    val blockBytes = sBlock(msg._3)
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
-      sBlock(msg._3),
+      getBytes(blockBytes.length),
+      blockBytes,
       sMac(msg._4)
     )
   }

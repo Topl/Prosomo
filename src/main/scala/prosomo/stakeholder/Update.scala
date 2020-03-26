@@ -51,7 +51,7 @@ trait Update extends Members {
 
     if (SharedData.error) actorStalled = true
 
-    if (!actorStalled && !updating && diffuseSent) {
+    if (!actorStalled && !updating) {
 
       updating = true
       
