@@ -58,7 +58,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
-  val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
+  val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(seed))
   val phase:Double = rng.nextDouble
 
   var keyFile = KeyFile.empty
@@ -98,15 +98,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var covert:Boolean = false
   var forgeAll:Boolean = false
 
-  val coordId:String = s"${self.path.toStringWithoutAddress}"
+  val coordId:String = Base58.encode(inputSeed)
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
-  val eta0:Eta = FastCryptographicHash(Base58.encode(inputSeed)+"eta0")
+  val eta0:Eta = FastCryptographicHash(Base58.encode(inputSeed)+"ETA")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
   val sk_kes:MalkinKey = MalkinKey(kes,seed,0)
   val pk_kes:PublicKey = sk_kes.getPublic(kes)
-  val coordData:String = bytes2hex(pk_sig)+":"+bytes2hex(pk_vrf)+":"+bytes2hex(pk_kes)
-  val coordKeys:PublicKeys = (pk_sig,pk_vrf,pk_kes)
 
   var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
   var genBlock:Block = _
@@ -140,22 +138,24 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
     }
     val files = getListOfFiles(s"$storageDir/time/")
-    files.length match {
-      case x:Int if x > 0 => {
+    val inputFiles = getListOfFiles("time/")
+    (files.length,inputFiles.length) match {
+      case (x:Int,y:Int) if x > 0 && y == 0 => {
         println("Coordinator loading time information...")
         val lines = readFile(files.head.getPath)
         val t0in:Long = lines(0).toLong
         val tw:Long = lines(1).toLong
         val tpin:Long = lines(2).toLong
-        //println(lines(0),lines(1),lines(2))
         val offset =  System.currentTimeMillis()-tw
-        //println(System.currentTimeMillis(),t0in,tw,tp)
         t0 = t0in + offset
         tp = tpin
-        val t1:Long = System.currentTimeMillis()-tp
-        val slot = ((t1 - t0) / slotT).toInt
-        //println("slot",slot)
-        //assert(slot>0)
+      }
+      case (x:Int,y:Int) if y > 0 => {
+        println("Coordinator loading input time information...")
+        val lines = readFile(inputFiles.head.getPath)
+        val t0in:Long = lines(0).toLong
+        t0 = t0in
+        tp = 0
       }
       case _ => t0 = System.currentTimeMillis()
     }

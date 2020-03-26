@@ -53,18 +53,26 @@ trait Validation extends Members {
         case txs:TransactionSet => {
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
-              hash(txs,serializer) == header._2.dataHash && txs.map(verifyTransaction).reduceLeft(_ && _)
+              val (out1,out2) = (hash(txs,serializer) == header._2.dataHash , txs.map(verifyTransaction).reduceLeft(_ && _))
+              if (!out1) println("error: txs hash failed")
+              if (!out2) println("error: txs verify failed")
+              out1 && out2
             } else {
-              hash(txs,serializer) == header._2.dataHash
+              val out = hash(txs,serializer) == header._2.dataHash
+              if (!out) println("error: empty txs failed hash")
+              out
             }
           } else {
+            println("error: txs length greater than tx/block")
             false
           }
         }
         case _ => {println("error: tx set match in block verify");false}
       }
     }
-    headerVer && b.id == hash(header,serializer) && ledgerVer
+    val out = headerVer && b.id == hash(header,serializer) && ledgerVer
+    if (!out) println(headerVer, b.id == hash(header,serializer) , ledgerVer)
+    out
   }
 
   /**
@@ -254,6 +262,8 @@ trait Validation extends Members {
                       }
                       case _ => {
                         println("error: could not recover parent header")
+                        println("block id:"+Base58.encode(id._2.data))
+                        println("parentId:"+Base58.encode(block._1.data))
                         isValid &&= false
                         break()
                       }

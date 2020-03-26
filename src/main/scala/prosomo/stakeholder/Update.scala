@@ -66,7 +66,7 @@ trait Update extends Members {
           coordinatorRef ! WriteFile
         }
         if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
-          + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.WHITE)
+          + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.RESET)
         updateEpoch(localSlot,currentEpoch,eta,localChain) match {
           case result:(Int,Eta) if result._1 > currentEpoch => {
             currentEpoch = result._1

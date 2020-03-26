@@ -32,7 +32,7 @@ object SharedData extends Types {
   }
 
   def throwDiskWarning = if (!diskAccess) {
-    println(Console.YELLOW + "Warning: Disk access" + Console.WHITE)
+    println(Console.YELLOW + "Warning: Disk access" + Console.RESET)
     diskAccess = true
   }
 

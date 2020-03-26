@@ -75,7 +75,7 @@ trait Forging extends Members {
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    val genesisEntries: GenesisSet = holders.map{
+    val genesisEntries: GenesisSet = holders.sortBy(_.actorPath.toStringWithoutAddress).map{
       case ref:ActorRefWrapper => {
         val initStake = {
           val out = stakeDistribution match {
@@ -97,7 +97,7 @@ trait Forging extends Members {
         (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
       }
     }
-    val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig)
+    val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash("coordId")),sk_sig,pk_sig)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)

@@ -3,7 +3,7 @@ package prosomo.remote
 import bifrost.network.message.Message.MessageCode
 import bifrost.network.message.MessageSpec
 import prosomo.components.SerializationMethods
-import prosomo.components.Serializer.DeserializeTransaction
+import prosomo.components.Serializer.DeserializeSendTx
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes._
 
@@ -14,7 +14,7 @@ object SendTxSpec extends MessageSpec[SendTxType] with SerializationMethods {
   override val messageName: String = "Send Tx"
 
   override def parseBytes(bytes: Array[Byte]): Try[SendTxType] = Try{
-    val msgBytes = new ByteStream(bytes,DeserializeTransaction)
+    val msgBytes = new ByteStream(bytes,DeserializeSendTx)
     fromBytes(msgBytes) match {
       case msg:SendTxType => msg
     }

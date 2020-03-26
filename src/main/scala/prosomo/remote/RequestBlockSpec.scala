@@ -16,7 +16,7 @@ object RequestBlockSpec extends MessageSpec[RequestBlockType] with Serialization
   override def parseBytes(bytes: Array[Byte]): Try[RequestBlockType] = Try{
     val msgBytes = new ByteStream(bytes,DeserializeRequestBlock)
     fromBytes(msgBytes) match {
-      case Success(msg:RequestBlockType) => msg
+      case msg:RequestBlockType => msg
     }
   }
 

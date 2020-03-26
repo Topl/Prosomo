@@ -277,7 +277,7 @@ trait SerializationMethods extends SimpleTypes {
     var i = 0
     while (i < numBlocks) {
       val outLen = stream.getInt
-      val outBytes = new ByteStream(stream.get(outLen),stream.caseObject)
+      val outBytes = new ByteStream(stream.get(outLen),DeserializeBlock)
       out = out ++ List(dBlock(outBytes))
       i += 1
     }
@@ -308,10 +308,11 @@ trait SerializationMethods extends SimpleTypes {
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
     val outLen = stream.getInt
-    val outBytes = new ByteStream(stream.get(outLen),stream.caseObject)
+    val outBytes = new ByteStream(stream.get(outLen),DeserializeBlock)
     val out = dBlock(outBytes)
     val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
     val mac = dMac(macBytes)
+    assert(stream.empty)
     (str,str2,out,mac)
   }
 

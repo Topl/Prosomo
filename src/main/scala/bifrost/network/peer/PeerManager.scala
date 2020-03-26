@@ -89,7 +89,7 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
         }
 
         if (toUpdate.isEmpty) {
-          log.error("No peer to update")
+          //log.error("No peer to update")
         } else {
           val newCp = toUpdate
             .find(t => handshake.declaredAddress.contains(t._1.socketAddress))

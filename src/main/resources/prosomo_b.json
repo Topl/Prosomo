@@ -6,7 +6,7 @@
     "upnpGatewayTimeout": 7000,
     "upnpDiscoverTimeout": 3000,
     "port": 9086,
-    "knownPeers": ["127.0.0.1:9084"
+    "knownPeers": [
     ],
     "addedMaxDelay": 2000,
     "maxConnections": 10
