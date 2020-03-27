@@ -175,7 +175,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
-        context.system.scheduler.scheduleOnce(0 nano,holder1.actorRef,IssueTx((holderKeys(holder2),delta)))(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(0 nano,holder1.actorRef,IssueTx(holder2,delta))(context.system.dispatcher,self)
       }
     }
   }
