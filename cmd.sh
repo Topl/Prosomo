@@ -2,7 +2,7 @@
 history -r cmd.history
 set -o vi
 CMD=""
-pth="/tmp/scorex/test-data/crypto"
+pth="command"
 nam="/cmd"
 while [ "$CMD" != "q" ]
 do

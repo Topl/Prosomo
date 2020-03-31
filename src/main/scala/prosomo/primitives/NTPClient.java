@@ -45,16 +45,16 @@ import org.apache.commons.net.ntp.TimeStamp;
  * Example: NTPClient clock.psu.edu
  *
  ***/
-public final class NTPClient
+public class NTPClient
 {
 
-    private static final NumberFormat numberFormat = new java.text.DecimalFormat("0.00");
+    public NumberFormat numberFormat = new java.text.DecimalFormat("0.00");
 
     /**
      * Process <code>TimeInfo</code> object and print its details.
      * @param info <code>TimeInfo</code> object.
      */
-    public static void processResponse(TimeInfo info)
+    public long processResponse(TimeInfo info)
     {
         NtpV3Packet message = info.getMessage();
         int stratum = message.getStratum();
@@ -145,10 +145,12 @@ public final class NTPClient
 
         System.out.println(" Roundtrip delay(ms)=" + delay
                 + ", clock offset(ms)=" + offset); // offset in ms
+        return offsetValue;
     }
 
-    public static void main(String[] args)
+    public long getOffset(String[] args)
     {
+        long offsetValue = 0;
         if (args.length == 0) {
             System.err.println("Usage: NTPClient <hostname-or-address-list>");
             System.exit(1);
@@ -166,7 +168,7 @@ public final class NTPClient
                     InetAddress hostAddr = InetAddress.getByName(arg);
                     System.out.println("> " + hostAddr.getHostName() + "/" + hostAddr.getHostAddress());
                     TimeInfo info = client.getTime(hostAddr);
-                    processResponse(info);
+                    offsetValue = processResponse(info);
                 } catch (IOException ioe) {
                     ioe.printStackTrace();
                 }
@@ -174,8 +176,8 @@ public final class NTPClient
         } catch (SocketException e) {
             e.printStackTrace();
         }
-
         client.close();
+        return offsetValue;
     }
 
 }
