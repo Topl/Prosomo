@@ -184,7 +184,7 @@ trait Receive extends Members {
               case _ =>
             }
           }
-          case None => println("error: could not find public key of actor "+value.ref.toString)
+          case None =>
         }
       }
       if (useFencing) {
@@ -225,7 +225,7 @@ trait Receive extends Members {
     case value:DiffuseData => {
       if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
         inbox += (value.mac.sid->(value.ref,value.pks))
-        self ! Diffuse
+        value.ref ! DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       }
     }
 
@@ -309,8 +309,7 @@ trait Receive extends Members {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
         context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
-        println("Diffuse Holder Info")
-        self ! Diffuse
+        context.system.scheduler.scheduleOnce(5*slotT millis,self,Diffuse)(context.system.dispatcher,self)
       }
     }
 

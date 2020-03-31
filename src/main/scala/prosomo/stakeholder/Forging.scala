@@ -4,7 +4,7 @@ import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
-import prosomo.primitives.Parameters.{genesisBytes, initStakeMax, initStakeMin, printFlag, stakeDistribution, stakeScale}
+import prosomo.primitives.Parameters._
 import prosomo.primitives.{Mac, Keys, MalkinKey, Ratio, SharedData}
 import scorex.crypto.encode.Base58
 
@@ -58,7 +58,7 @@ trait Forging extends Members {
   }
 
   def forgeGenBlock(eta0:Eta,
-                    holderKeys:Map[ActorRefWrapper,PublicKeyW],
+                    holderKeys:Map[Int,PublicKeyW],
                     coordId:String,
                     pk_sig:PublicKey,
                     pk_vrf:PublicKey,
@@ -67,6 +67,26 @@ trait Forging extends Members {
                     sk_vrf:PublicKey,
                     sk_kes:MalkinKey
                    ): Block = {
+    def genEntry(index:Int) = {
+      val initStake = {
+        val out = stakeDistribution match {
+          case "random" => {initStakeMax*rng.nextDouble}
+          case "exp" => {initStakeMax*math.exp(-stakeScale*index.toDouble)}
+          case "flat" => {initStakeMax}
+        }
+        if (initStakeMax > initStakeMin && out > initStakeMin) {
+          out
+        } else {
+          if (initStakeMin > 1.0) {
+            initStakeMin
+          } else {
+            1.0
+          }
+        }
+      }
+      val pkw = holderKeys(index)
+      (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
+    }
     val bn:Int = 0
     val ps:Slot = -1
     val slot:Slot = 0
@@ -75,28 +95,7 @@ trait Forging extends Members {
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    val genesisEntries: GenesisSet = holders.sortBy(_.actorPath.toStringWithoutAddress).map{
-      case ref:ActorRefWrapper => {
-        val initStake = {
-          val out = stakeDistribution match {
-            case "random" => {initStakeMax*rng.nextDouble}
-            case "exp" => {initStakeMax*math.exp(-stakeScale*holders.indexOf(ref).toDouble)}
-            case "flat" => {initStakeMax}
-          }
-          if (initStakeMax > initStakeMin && out > initStakeMin) {
-            out
-          } else {
-            if (initStakeMin > 1.0) {
-              initStakeMin
-            } else {
-              1.0
-            }
-          }
-        }
-        val pkw = holderKeys(ref)
-        (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
-      }
-    }
+    val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
     val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash("coordId")),sk_sig,pk_sig)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))

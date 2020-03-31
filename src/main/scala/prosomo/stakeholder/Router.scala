@@ -58,7 +58,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var txRoundCounter = 0
   var maxDelay:Double = 0
   var transactionCounter:Int = 0
-  var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
   var pathToPeer:Map[ActorPath,ConnectedPeer] = Map()
   var connectedPeer:Set[ConnectedPeer] = Set()
   implicit val routerRef = ActorRefWrapper.routerRef(self)
@@ -247,11 +246,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   def routerReceive: Receive = {
-
-    case value:Map[ActorRefWrapper,PublicKeyW] => {
-      holderKeys = value
-      sender() ! "done"
-    }
 
     case flag:(ActorRefWrapper,String) => {
       val (ref,value) = flag
@@ -517,6 +511,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         pathToPeer += (newPath -> remote)
                         println("new holder "+newPath.toString)
                         coordinatorRef ! holders
+                        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case _ =>
                     }

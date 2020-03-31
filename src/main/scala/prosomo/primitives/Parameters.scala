@@ -9,14 +9,13 @@ import prosomo.Prosomo
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import prosomo.components.Block
-import prosomo.remote.{DiffuseDataSpec, HelloSpec, HoldersFromRemoteSpec, RequestBlockSpec, RequestBlocksSpec, ReturnBlocksSpec, SendBlockSpec, SendTxSpec}
+import prosomo.remote._
 
 import scala.math.BigInt
 
 object Parameters {
 
-  //tags for identifying ledger entries
+  //tag for identifying ledger entries
   val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
 
   def getConfig:Config = {

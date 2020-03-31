@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{ActorPath, Props}
+import akka.actor.{ActorPath, PoisonPill, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
@@ -22,6 +22,12 @@ import scala.reflect.io.Path
 import scala.sys.process._
 import scala.concurrent.duration._
 import scala.util.{Random, Try}
+import java.io.IOException
+import java.net.InetAddress
+import java.text.SimpleDateFormat
+
+import org.apache.commons.net.ntp.NTPUDPClient
+import org.apache.commons.net.ntp.TimeInfo
 
 /**
   * Coordinator actor that initializes the genesis block and instantiates the staking party,
@@ -110,7 +116,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var genBlock:Block = _
   var roundDone = true
   var parties: List[List[ActorRefWrapper]] = List()
-  var holderKeys:Map[ActorRefWrapper,PublicKeyW] = Map()
   var t:Slot = 0
   var tp:Long = 0
   var actorPaused = false
@@ -120,12 +125,17 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var graphWriter:Any = 0
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
+  var localClockOffset:Long = 0
 
   def readFile(filename: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(filename)
     val lines = (for (line <- bufferedSource.getLines()) yield line).toList
     bufferedSource.close
     lines
+  }
+
+  def globalTime:Long = {
+    System.currentTimeMillis()+localClockOffset
   }
 
   def restoreTimeInfo = {
@@ -155,6 +165,27 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val lines = readFile(inputFiles.head.getPath)
         val t0in:Long = lines(0).toLong
         t0 = t0in
+        try {
+          val time_SERVER = "time-a.nist.gov"
+          val timeClient = new NTPUDPClient
+          val inetAddress = InetAddress.getByName(time_SERVER)
+          if (timeClient != null) if (inetAddress != null) {
+            val timeInfo = timeClient.getTime(inetAddress)
+            if (timeInfo != null) {
+              val returnTime:Long = timeInfo.getReturnTime
+              localClockOffset = System.currentTimeMillis() - returnTime
+              val ntpDatetime:String = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS").format(new java.util.Date(returnTime))
+              val systemDatetime:String = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS").format(new java.util.Date())
+              println("NTPDateTime  = " + ntpDatetime)
+              println("SystemDatetime = " + systemDatetime)
+              println("LocalClockOffset = " + localClockOffset.toString)
+            }
+          }
+        } catch {
+          case e: IOException =>
+            e.printStackTrace()
+            SharedData.throwError(-1)
+        }
         tp = 0
       }
       case _ => t0 = System.currentTimeMillis()
@@ -196,24 +227,80 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def receiveRemoteHolders: Receive = {
     case remoteHolders:List[ActorRefWrapper] => {
+//      for (newPath<-remoteHolders.map(_.path)) {
+//        holders.find(_.path == newPath) match {
+//          case None => {
+//            holders ::= ActorRefWrapper(newPath)
+//          }
+//          case _ =>
+//        }
+//      }
       holders = remoteHolders
+      holders.filterNot(_.remote).foreach(sendAssertDone(_,holders))
     }
   }
 
+  val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
+
   def findRemoteHolders: Receive = {
     case Register => {
-      if (holderIndexMin > -1 && holderIndexMax > -1) {
-        if (holders.size < numGenesisHolders) {
-          sendAssertDone(routerRef,holders)
-          context.system.scheduler.scheduleOnce(1000 millis,self,Register)(context.system.dispatcher,self)
-        } else {
-          SharedData.printingHolder = holderIndexMin
+      blocks.restore(genBlockKey) match {
+        case Some(b:Block) => {
+          genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
+          verifyBlock(genBlock)
+          println("Recovered Genesis Block")
+          sendAssertDone(routerRef,holders.filterNot(_.remote))
           setupLocal
         }
-      } else {
-        setupLocal
+        case None => {
+          if (holderIndexMin > -1 && holderIndexMax > -1) {
+            if (holders.size < numGenesisHolders && holderIndexMin < numGenesisHolders) {
+              sendAssertDone(routerRef,holders.filterNot(_.remote))
+              context.system.scheduler.scheduleOnce(1000 millis,self,Register)(context.system.dispatcher,self)
+            } else {
+              SharedData.printingHolder = holderIndexMin
+              forge
+              setupLocal
+              sendAssertDone(routerRef,holders.filterNot(_.remote))
+            }
+          } else {
+            forge
+            setupLocal
+          }
+        }
       }
     }
+  }
+
+  def pkFromIndex(index:Int):PublicKeyW = {
+    val holderIndex:String = index.toString
+    val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
+    val rngSeed:Random = new Random
+    rngSeed.setSeed(BigInt(holderSeed).toLong)
+    val seed1 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed2 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+    Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
+  }
+
+  def pkFromIndex(holder:ActorRefWrapper):PublicKeyW = {
+    val holderIndex:String = holder.actorPath.name.drop("Holder_".length)
+    val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
+    val rngSeed:Random = new Random
+    rngSeed.setSeed(BigInt(holderSeed).toLong)
+    val seed1 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed2 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+    Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
+  }
+
+  def forge:Unit = {
+    println("Forge Genesis Block")
+    val holderKeys = List.range(0,numGenesisHolders).map(i =>i-> pkFromIndex(i)).toMap
+    forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+      case out:Block => genBlock = out
+    }
+    blocks.store(genBlockKey,genBlock)
   }
 
   def setupLocal:Unit = {
@@ -221,36 +308,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     sendAssertDone(holders.filterNot(_.remote),holders)
     println("Sending holders coordinator ref")
     sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
-    for (holder<-holders) {
-      val holderIndex:String = holder.actorPath.name.drop("Holder_".length)
-      val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
-      val rngSeed:Random = new Random
-      rngSeed.setSeed(BigInt(holderSeed).toLong)
-      val seed1 = FastCryptographicHash(rngSeed.nextString(32))
-      val seed2 = FastCryptographicHash(rngSeed.nextString(32))
-      val seed3 = FastCryptographicHash(rngSeed.nextString(32))
-      val holderPK = Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
-      holderKeys += (holder->holderPK)
-    }
-    val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
-    blocks.restore(genBlockKey) match {
-      case Some(b:Block) => {
-        genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
-        verifyBlock(genBlock)
-        println("Recovered Genesis Block")
-      }
-      case None => {
-        println("Forge Genesis Block")
-        forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-          case out:Block => genBlock = out
-        }
-        blocks.store(genBlockKey,genBlock)
-      }
-    }
     println("Send GenBlock")
     sendAssertDone(holders.filterNot(_.remote),GenBlock(genBlock))
-    println("Send Router Keys")
-    sendAssertDone(routerRef,holderKeys)
     self ! Run
   }
 
@@ -275,7 +334,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**returns offset time to stakeholder that issues GetTime to coordinator*/
     case GetTime => {
       if (!actorStalled) {
-        val t1 = System.currentTimeMillis()-tp
+        val t1 = globalTime-tp
         sender() ! GetTime(t1)
       } else {
         sender() ! GetTime(tp)
@@ -322,7 +381,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   /**randomly picks two holders and creates a transaction between the two*/
   def issueRandTx:Unit = {
-    for (i <- 0 to txProbability.floor.toInt) {
+    for (i <- 0 to txProbability.floor.toInt) if (holders.length > 1) {
       val holder1 = rng.shuffle(holders.filterNot(_.remote)).head
       val r = rng.nextDouble
       if (r<txProbability%1.0) {
@@ -347,7 +406,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
         case "status_all" => {
           SharedData.txCounter = 0
-          sendAssertDone(holders,Status)
+          sendAssertDone(holders.filterNot(_.remote),Status)
           println("Total Transactions: "+SharedData.txCounter)
           println("Total Attempts to Issue Txs:"+transactionCounter.toString)
           SharedData.txCounter = 0
@@ -355,27 +414,27 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
         case "fence_step" => sendAssertDone(routerRef,"fence_step")
 
-        case "verify_all" => sendAssertDone(holders,Verify)
+        case "verify_all" => sendAssertDone(holders.filterNot(_.remote),Verify)
 
-        case "stall" => sendAssertDone(holders,StallActor)
+        case "stall" => sendAssertDone(holders.filterNot(_.remote),StallActor)
 
         case "pause" => {
           if (!actorPaused) {
             actorPaused = true
             if (!actorStalled) {
               actorStalled = true
-              tp = System.currentTimeMillis()-tp
+              tp = globalTime-tp
             }
           } else {
             actorPaused = false
             if (actorStalled) {
               actorStalled = false
-              tp = System.currentTimeMillis()-tp
+              tp = globalTime-tp
             }
           }
         }
 
-        case "inbox" => sendAssertDone(holders,Inbox)
+        case "inbox" => sendAssertDone(holders.filterNot(_.remote),Inbox)
 
         case "randtx" => if (!transactionFlag) {transactionFlag = true} else {transactionFlag = false}
 
@@ -386,22 +445,22 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
         case "graph" => {
           println("Writing network graph matrix...")
-          gossipersMap = getGossipers(holders)
+          gossipersMap = getGossipers(holders.filterNot(_.remote))
           val dateString = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString.replace(":", "-")
           val uid = uuid
           graphWriter = new BufferedWriter(new FileWriter(s"$dataFileDir/ouroboros-graph-$uid-$dateString.graph"))
           graphWriter match {
             case fw:BufferedWriter => {
               var line:String = ""
-              for (holder<-holders) {
+              for (holder<-holders.filterNot(_.remote)) {
                 line = ""
-                for (ref<-holders) {
+                for (ref<-holders.filterNot(_.remote)) {
                   if (gossipersMap(holder).contains(ref)) {
                     line = line + "1"
                   } else {
                     line = line + "0"
                   }
-                  if (holders.indexOf(ref)!=holders.length-1) {
+                  if (holders.filterNot(_.remote).indexOf(ref)!=holders.filterNot(_.remote).length-1) {
                     line = line + " "
                   }
                 }
@@ -420,13 +479,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         }
 
         case "tree_all" => {
-          for (holder<-holders) {
+          for (holder<-holders.filterNot(_.remote)) {
             printTree(holder)
           }
         }
 
         case "tree" => {
-         printTree(holders(SharedData.printingHolder))
+         printTree(holders.filterNot(_.remote)(SharedData.printingHolder))
         }
 
         case "kill" => {
@@ -483,24 +542,20 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           println("Bootstrapping new holder...")
           val i = holders.length
           val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
-          holders = holders++List(newHolder)
-          sendAssertDone(routerRef,holders)
-          sendAssertDone(newHolder,holders)
-          sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
-          sendAssertDone(newHolder,GenBlock(genBlock))
-          val newHolderKeys = collectKeys(List(newHolder),RequestKeys,Map())
-          val newHolderKeyW = ByteArrayWrapper(
-            hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(0))
-              ++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(1))
-              ++hex2bytes(newHolderKeys(s"${newHolder.path}").split(";")(2))
-          )
-          holderKeys += (newHolder-> newHolderKeyW)
-          sendAssertDone(newHolder,Initialize)
-          sendAssertDone(holders,Party(holders,true))
-          sendAssertDone(holders,Diffuse)
-          sendAssertDone(newHolder,SetClock(t0))
-          println("Starting new holder")
-          newHolder ! Run
+          holders.find(newHolder.path == _.path) match {
+            case None => {
+              holders ::= newHolder
+              sendAssertDone(newHolder,holders)
+              sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
+              sendAssertDone(newHolder,GenBlock(genBlock))
+              sendAssertDone(newHolder,Initialize)
+              sendAssertDone(newHolder,SetClock(t0))
+              println("Starting new holder")
+              sendAssertDone(routerRef,holders.filterNot(_.remote))
+              newHolder ! Run
+            }
+            case _ => newHolder ! PoisonPill
+          }
         }
 
         case value:String => {
@@ -527,7 +582,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             val netStake:BigInt = {
               var out:BigInt = 0
               for (holder<-holders){
-                out += stakingState(holderKeys(holder))._1
+                out += stakingState(pkFromIndex(holder))._1
               }
               out
             }
@@ -537,7 +592,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             var holders2:List[ActorRefWrapper] = List()
             var net2:BigInt = 0
             for (holder <- rng.shuffle(holders)) {
-              val holderStake = stakingState(holderKeys(holder))._1
+              val holderStake = stakingState(pkFromIndex(holder))._1
               if (net1< BigDecimal(ratio*(net1.toDouble+net2.toDouble)).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt) {
                 net1 += holderStake
                 holders1 ::= holder
@@ -571,7 +626,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             val netStake:BigInt = {
               var out:BigInt = 0
               for (holder<-holders){
-                out += stakingState(holderKeys(holder))._1
+                out += stakingState(pkFromIndex(holder))._1
               }
               out
             }
@@ -580,7 +635,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             var holders2:List[ActorRefWrapper] = List()
             var net2:BigInt = 0
             for (holder <- rng.shuffle(holders)) {
-              val holderStake = stakingState(holderKeys(holder))._1
+              val holderStake = stakingState(pkFromIndex(holder))._1
               if (net1<BigDecimal(ratio*(net1.toDouble+net2.toDouble)).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt) {
                 net1 += holderStake
                 holders1 ::= holder
@@ -659,6 +714,28 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             sendAssertDone(holders(data.toInt),Adversary("nas"))
           }
 
+          val arg11 = "new_holder_"
+          if (value.slice(0,arg11.length) == arg11) {
+            val data = value.drop(arg11.length)
+            println("Bootstrapping new holder...")
+            val i = data.toInt
+            val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+            holders.find(newHolder.path == _.path) match {
+              case None => {
+                holders ::= newHolder
+                sendAssertDone(newHolder,holders)
+                sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
+                sendAssertDone(newHolder,GenBlock(genBlock))
+                sendAssertDone(newHolder,Initialize)
+                sendAssertDone(newHolder,SetClock(t0))
+                println("Starting new holder")
+                sendAssertDone(routerRef,holders.filterNot(_.remote))
+                newHolder ! Run
+              }
+              case _ => newHolder ! PoisonPill
+            }
+
+          }
         }
         case _ =>
       }
@@ -668,7 +745,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def readCommand:Unit = {
     if (!useFencing) {
       if (!actorStalled) {
-        val t1 = System.currentTimeMillis()-tp
+        val t1 = globalTime-tp
         t = ((t1 - t0) / slotT).toInt
       } else {
         t = ((tp - t0) / slotT).toInt
@@ -679,9 +756,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       globalSlot = t
       SharedData.diskAccess = false
     }
-    if (new File("/tmp/scorex/test-data/crypto/cmd").exists) {
+    if (new File("command/cmd").exists) {
       println("-----------------------------------------------------------")
-      val f = new File("/tmp/scorex/test-data/crypto/cmd")
+      val f = new File("command/cmd")
       val cmd: String = ("cat" #< f).!!
       f.delete
       val cmdList = cmd.split("\n")
@@ -729,10 +806,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       if (!actorPaused) {
         val cpuLoad = (0.0 /: loadAverage){_ + _}/loadAverage.length
         if (cpuLoad >= systemLoadThreshold && !actorStalled) {
-          tp = System.currentTimeMillis()-tp
+          tp = globalTime-tp
           actorStalled = true
         } else if (cpuLoad < systemLoadThreshold && actorStalled) {
-          tp = System.currentTimeMillis()-tp
+          tp = globalTime-tp
           actorStalled = false
         }
       }
@@ -758,7 +835,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       tn = t
     } else {
       if (!actorStalled) {
-        val t1 = System.currentTimeMillis()-tp
+        val t1 = globalTime-tp
         tn = ((t1 - t0) / slotT).toInt
       } else {
         val t1 = tp

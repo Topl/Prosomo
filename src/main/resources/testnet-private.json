@@ -1,12 +1,12 @@
 {
   "p2p": {
     "name": "local-testnet",
-    "bindAddress": "0.0.0.0",
+    "bindAddress": "127.0.0.3",
     "upnp": false,
     "upnpGatewayTimeout": 7000,
     "upnpDiscoverTimeout": 3000,
-    "port": 9084,
-    "knownPeers": [
+    "port": 9088,
+    "knownPeers": ["127.0.0.1:9084","127.0.0.2:9086"
     ],
     "addedMaxDelay": 2000,
     "maxConnections": 10
@@ -18,7 +18,7 @@
   "pbrDir": "/tmp/bifrost/private-testnet/pbr",
   "tbrDir": "/tmp/bifrost/private-testnet/tbr",
   "logDir": "/tmp/bifrost/private-testnet/log",
-  "rpcPort": 9085,
+  "rpcPort": 9089,
   "rpcAllowed": [],
   "maxRollback": 100,
   "targetBlockTime": 6000,
