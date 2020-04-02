@@ -1,9 +1,9 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor, ActorPath, Timers}
+import akka.actor.{Actor, ActorPath, Cancellable, Timers}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Tine, Serializer, Transaction}
+import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.wallet._
 
@@ -67,6 +67,10 @@ trait Members extends SimpleTypes with Actor with Timers {
   var adversary:Boolean
   var covert:Boolean
   var forgeAll:Boolean
+
+  var bootStrapLock:Boolean
+  var bootStrapJob:Int
+  var bootStrapMessage:Cancellable
 
   case object TimerKey
 

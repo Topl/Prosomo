@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{ActorPath, PoisonPill, Props}
+import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
@@ -103,6 +103,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var adversary:Boolean = false
   var covert:Boolean = false
   var forgeAll:Boolean = false
+  var bootStrapLock:Boolean = false
+  var bootStrapJob:Int = 0
+  var bootStrapMessage:Cancellable = _
+
 
   val coordId:String = Base58.encode(inputSeed)
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
@@ -246,7 +250,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def findRemoteHolders: Receive = {
     case Register => {
-      blocks.restore(genBlockKey) match {
+      blocks.restore((0,genBlockKey)) match {
         case Some(b:Block) => {
           genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
           verifyBlock(genBlock)

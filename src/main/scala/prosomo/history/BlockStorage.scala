@@ -22,7 +22,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   private val blockLoader:CacheLoader[SlotId,Block] = new CacheLoader[SlotId,Block] {
     def load(id:SlotId):Block = {
-      restore(id._2) match {
+      restore(id) match {
         case Some(b:Block) => b
         case None => Block(id._2,None,None)
       }
@@ -79,7 +79,8 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     }
   }
 
-  def restore(key:ByteArrayWrapper):Option[Block] = {
+  def restore(id:SlotId):Option[Block] = {
+    val key = id._2
     SharedData.throwDiskWarning
     blockHeaderStore.get(key) match {
       case Some(bytes: ByteArrayWrapper) => {

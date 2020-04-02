@@ -31,6 +31,7 @@ case object GetBalance
 case object Refresh
 case object Register
 case object Initialize
+case object BootstrapJob
 
 //signed messages between holders, messages from remote
 case class DiffuseData(ref:ActorRefWrapper, pks:PublicKeys, mac:Mac)

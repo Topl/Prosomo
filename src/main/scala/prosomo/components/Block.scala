@@ -7,6 +7,11 @@ case class Block(identifier:ByteArrayWrapper, blockHeader:Any, blockBody:Any) ex
   def id:BlockId = identifier
   def body:Any = blockBody
   def header:Any = blockHeader
+  def slotId:SlotId = (slot,identifier)
+  def parentSlotId:SlotId = {
+    val header = prosomoHeader
+    (header._10,header._1)
+  }
   def prosomoHeader:BlockHeader = blockHeader match {
     case h:BlockHeader => h
   }

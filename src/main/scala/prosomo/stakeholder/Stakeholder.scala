@@ -1,9 +1,9 @@
 package prosomo.stakeholder
 
-import akka.actor.{ActorPath, Props}
+import akka.actor.{ActorPath, Cancellable, Props}
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Tine, Serializer}
+import prosomo.components.{Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
@@ -113,6 +113,11 @@ class Stakeholder(
   var covert:Boolean = false
   //toggle for nothing-at-stake forging
   var forgeAll:Boolean = false
+
+  var bootStrapLock:Boolean = false
+  var bootStrapJob:Int = -1
+  var bootStrapMessage: Cancellable = _
+
 }
 
 object Stakeholder {

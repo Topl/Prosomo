@@ -2,6 +2,7 @@ package prosomo.stakeholder
 
 import java.io.BufferedWriter
 
+import akka.actor.Cancellable
 import bifrost.crypto.hash.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 
@@ -13,6 +14,7 @@ import scorex.crypto.encode.Base58
 
 import scala.math.BigInt
 import scala.util.Random
+import scala.util.control.Breaks.{break, breakable}
 
 trait Receive extends Members {
   import Parameters._
@@ -60,7 +62,7 @@ trait Receive extends Members {
                   //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
                   send(ActorRefWrapper(self),gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
-                  if (tines.keySet.size < tineMaxTries) {
+                  if (tines.keySet.size < tineMaxTries && !bootStrapLock) {
                     val jobNumber = tineCounter
                     tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
                     buildTine((jobNumber,tines(jobNumber)))
@@ -81,6 +83,11 @@ trait Receive extends Members {
       }
     }
 
+    case BootstrapJob => {
+      println(s"Holder $holderIndex Bootstrapping...")
+      buildTine((bootStrapJob,tines(bootStrapJob)))
+    }
+
     /**block passing, returned blocks are added to block database*/
     case value:ReturnBlocks => {
       if (!actorStalled) {
@@ -95,7 +102,19 @@ trait Receive extends Members {
                   }
                   blocks.add(block)
                 } else {println("error: invalid returned block")}
-                if (tines.keySet.contains(value.job)) buildTine((value.job,tines(value.job)))
+                if (tines.keySet.contains(value.job)) {
+                  if (bootStrapLock) {
+                    if (value.job == bootStrapJob) {
+                      bootStrapMessage match {
+                        case scheduledMessage:Cancellable => scheduledMessage.cancel
+                        case null =>
+                      }
+                      bootStrapMessage = context.system.scheduler.scheduleOnce(5*slotT millis,self,BootstrapJob)(context.system.dispatcher,self)
+                    }
+                  } else {
+                    buildTine((value.job,tines(value.job)))
+                  }
+                }
               }
             }
           } else {println("error: invalid block list")}
@@ -136,7 +155,7 @@ trait Receive extends Members {
       }
     }
 
-    /**block passing, parent ids are requested with increasing depth of chain upto a finite number of attempts*/
+    /**block passing, parent ids are requested with increasing depth of chain up to a finite number of attempts*/
     case value:RequestBlocks => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
@@ -152,12 +171,20 @@ trait Receive extends Members {
             var returnedBlockList:List[Block] = List()
             var returnedIdList:List[SlotId] = List()
             var id:SlotId = startId
-            while (returnedBlockList.length <= depth && blocks.known_then_load(id)) {
-              returnedBlockList ::= blocks.get(id)
-              returnedIdList ::= id
-              send(ActorRefWrapper(self),ref,ReturnBlocks(List(blocks.get(id)),signMac(hash((List(id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
-              id = (returnedBlockList.head.parentSlot,returnedBlockList.head.pid)
+            breakable{
+              while (returnedBlockList.length <= depth) {
+                blocks.restore(id) match {
+                  case Some(block:Block) =>{
+                    returnedIdList ::= id
+                    send(ActorRefWrapper(self),ref,ReturnBlocks(List(block),signMac(hash((List(id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+                    id = block.parentSlotId
+                  }
+                  case None => break
+                }
+
+              }
             }
+
             //if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Returned Tine")
             //}

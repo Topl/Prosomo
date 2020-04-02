@@ -129,6 +129,8 @@ trait ChainSelection extends Members {
         val tineLength = getActiveSlots(tine)
         tines += (job._1 -> (tine,counter,tineLength,totalTries+1,ref))
         if (totalTries > tineMaxTries || tineLength>tineMaxDepth) {
+          bootStrapLock = true
+          bootStrapJob = job._1
           if (holderIndex == SharedData.printingHolder && printFlag) println(
             "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tines.keySet.size
           )
@@ -154,9 +156,15 @@ trait ChainSelection extends Members {
   def maxValidBG = {
     val prefix:Slot = candidateTines.last._2
     val tine:Tine = Tine(candidateTines.last._1)
+    val job:Int = candidateTines.last._3
     val tineMaxSlot = tine.last._1
     val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
     val bnl = {getBlockHeader(localChain.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
+
+    if (job == bootStrapJob) {
+      bootStrapJob = -1
+      bootStrapLock = false
+    }
 
     val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
       true
