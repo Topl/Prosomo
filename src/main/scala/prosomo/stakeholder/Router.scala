@@ -316,6 +316,11 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
     case Update => update
 
+    case TimerKey => {
+      toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+      holders.filterNot(_.remote).foreach(_ ! NewGossipers)
+    }
+
     case value:SetClock => {
       t0 = value.t0
       sender() ! "done"
@@ -546,6 +551,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         }
       }
+      timers.startPeriodicTimer(TimerKey, TimerKey, 10.seconds)
       toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
       sender() ! "done"
     }

@@ -60,10 +60,12 @@ trait Receive extends Members {
                   //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
                   send(ActorRefWrapper(self),gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
-                  val jobNumber = tineCounter
-                  tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
-                  buildTine((jobNumber,tines(jobNumber)))
-                  tineCounter += 1
+                  if (tines.keySet.size < tineMaxTries) {
+                    val jobNumber = tineCounter
+                    tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
+                    buildTine((jobNumber,tines(jobNumber)))
+                    tineCounter += 1
+                  }
                 }
               } else {println("error: invalid block")}
             } else {println("error: invalid block info")}
@@ -140,9 +142,9 @@ trait Receive extends Members {
         if (inbox.keySet.contains(value.mac.sid)) {
           val request:Request = (List(value.id),value.depth,value.job)
           if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
-            if (holderIndex == SharedData.printingHolder && printFlag) {
-              println("Holder " + holderIndex.toString + " Was Requested Blocks")
-            }
+            //if (holderIndex == SharedData.printingHolder && printFlag) {
+              println("Holder " + holderIndex.toString + " Was Requested Tine")
+            //}
             val ref = inbox(value.mac.sid)._1
             val startId:SlotId = value.id
             val depth:Int = value.depth
@@ -150,15 +152,17 @@ trait Receive extends Members {
             var returnedBlockList:List[Block] = List()
             var returnedIdList:List[SlotId] = List()
             var id:SlotId = startId
-            while (returnedBlockList.length < k_s*depth && blocks.known_then_load(id)) {
+            while (returnedBlockList.length <= depth && blocks.known_then_load(id)) {
               returnedBlockList ::= blocks.get(id)
               returnedIdList ::= id
+              send(ActorRefWrapper(self),ref,ReturnBlocks(List(blocks.get(id)),signMac(hash((List(id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
               id = (returnedBlockList.head.parentSlot,returnedBlockList.head.pid)
             }
-            if (holderIndex == SharedData.printingHolder && printFlag) {
-              println("Holder " + holderIndex.toString + " Returned Blocks")
-            }
-            send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+            //if (holderIndex == SharedData.printingHolder && printFlag) {
+              println("Holder " + holderIndex.toString + " Returned Tine")
+            //}
+
+            //send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
           } else {println("error:chain request mac invalid")}
         }
       }
@@ -346,6 +350,8 @@ trait Receive extends Members {
       }
       sender() ! "done"
     }
+
+    case NewGossipers => gossipers = gossipSet(holderId,holders)
 
     /**accepts genesis block from coordinator */
     case gb:GenBlock => {

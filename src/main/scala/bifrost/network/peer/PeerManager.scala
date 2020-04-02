@@ -2,8 +2,10 @@ package bifrost.network.peer
 
 import java.net.InetSocketAddress
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
+import bifrost.network.NetworkController.SendToNetwork
 import bifrost.network._
+import bifrost.network.message.{Message, PeersSpec}
 import bifrost.settings.Settings
 import bifrost.utils.ScorexLogging
 
@@ -29,6 +31,9 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
       val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
       peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
     }
+    val localAddress:InetSocketAddress = new InetSocketAddress(settings.bindAddress,settings.port)
+    val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), Some(settings.nodeNonce), None)
+    peerDatabase.addOrUpdateKnownPeer(localAddress, defaultPeerInfo)
   }
 
   private def randomPeer(): Option[InetSocketAddress] = {
@@ -59,8 +64,11 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
     case GetConnectedPeers =>
       sender() ! (connectedPeers.values.flatten.toSeq: Seq[Handshake])
 
-    case GetAllPeers =>
-      sender() ! peerDatabase.knownPeers(true)
+    case value:GetAllPeers =>{
+      val allPeers:Seq[InetSocketAddress] = peerDatabase.knownPeers(false).keySet.toSeq
+      val msg = Message(PeersSpec, Right(allPeers), None)
+      value.networkControllerRef ! SendToNetwork(msg, SendToPeers(Seq(value.remote)))
+    }
 
     case GetBlacklistedPeers =>
       sender() ! peerDatabase.blacklistedPeers()
@@ -87,7 +95,9 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
         val toUpdate = connectedPeers.filter { case (cp, h) =>
           cp.socketAddress == address || h.map(_.nodeNonce == handshake.nodeNonce).getOrElse(true)
         }
-
+//        val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
+//        println("Adding Peer to Database")
+//        peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
         if (toUpdate.isEmpty) {
           //log.error("No peer to update")
         } else {
@@ -154,7 +164,7 @@ object PeerManager {
 
   case class FilterPeers(sendingStrategy: SendingStrategy)
 
-  case object GetAllPeers
+  case class GetAllPeers(remote: ConnectedPeer,networkControllerRef:ActorRef)
 
   case object GetBlacklistedPeers
 

@@ -167,8 +167,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         t0 = t0in
         try {
           val time_SERVER = "time-a.nist.gov"
-          val ntpClient = new NTPClient
-          println(ntpClient.getOffset(Array(time_SERVER)))
+          //val ntpClient = new NTPClient
+          //println(ntpClient.getOffset(Array(time_SERVER)))
           val timeClient = new NTPUDPClient
           val inetAddress = InetAddress.getByName(time_SERVER)
           if (timeClient != null) if (inetAddress != null) {

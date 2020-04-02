@@ -126,20 +126,23 @@ trait ChainSelection extends Members {
         tines -= job._1
       } else {
         tines -= job._1
-        tines += (job._1 -> (tine,counter,getActiveSlots(tine),totalTries+1,ref))
-        if (totalTries > tineMaxTries) {
+        val tineLength = getActiveSlots(tine)
+        tines += (job._1 -> (tine,counter,tineLength,totalTries+1,ref))
+        if (totalTries > tineMaxTries || tineLength>tineMaxDepth) {
           if (holderIndex == SharedData.printingHolder && printFlag) println(
-            "Holder " + holderIndex.toString + " Looking for Parent Blocks C:"+counter.toString+"L:"+getActiveSlots(tine)
+            "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tines.keySet.size
           )
-          val depth:Int = if (totalTries - tineMaxTries < tineMaxDepth) {
-            totalTries - tineMaxTries
+          val depth:Int = if (tineLength < tineMaxDepth) {
+            tineLength
           } else {
             tineMaxDepth
           }
           val request:Request = (List(tine.least),depth,job._1)
           send(ActorRefWrapper(self),ref, RequestBlocks(tine.least,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
-          if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Looking for Parent Block C:"+counter.toString+"L:"+getActiveSlots(tine))
+          if (holderIndex == SharedData.printingHolder && printFlag) println(
+            "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tines.keySet.size
+          )
           val request:Request = (List(tine.least),0,job._1)
           send(ActorRefWrapper(self),ref, RequestBlock(tine.least,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         }

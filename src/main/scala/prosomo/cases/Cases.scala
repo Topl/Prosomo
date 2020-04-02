@@ -19,6 +19,7 @@ case object StallActor
 case object ReadCommand
 case object Verify
 case object RequestGossipers
+case object NewGossipers
 case object RequestState
 case object RequestBlockTree
 case object Populate
