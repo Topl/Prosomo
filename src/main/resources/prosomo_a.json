@@ -1,7 +1,7 @@
 {
   "p2p": {
     "name": "alice",
-    "bindAddress": "127.0.0.1",
+    "bindAddress": "127.0.0.2",
     "upnp": false,
     "upnpGatewayTimeout": 7000,
     "upnpDiscoverTimeout": 3000,

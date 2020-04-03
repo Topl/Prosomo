@@ -202,7 +202,7 @@ object Parameters {
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val settingsFilename:String = config.getString("params.settingsFilename")
-
+  val knownPeer:String = config.getString("params.knownPeer")
   val messageSpecs = Seq(
     DiffuseDataSpec,
     HelloSpec,

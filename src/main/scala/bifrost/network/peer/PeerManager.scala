@@ -12,6 +12,7 @@ import bifrost.utils.ScorexLogging
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Random
+import scala.util.{Try,Success,Failure}
 
 /**
   * Peer manager takes care of peers connected and in process, and also choose a random peer to connect
@@ -30,6 +31,18 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
     settings.knownPeers.foreach { address =>
       val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
       peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
+    }
+    import prosomo.primitives.Parameters.knownPeer
+    knownPeer match {
+      case str:String if str != "" => Try{
+        val addrParts = str.split(":")
+        val DefaultPort = 9084
+        val port = if (addrParts.size == 2) addrParts(1).toInt else DefaultPort
+        val address = new InetSocketAddress(addrParts(0), port)
+        val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
+        peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
+      }
+      case _ =>
     }
     val localAddress:InetSocketAddress = new InetSocketAddress(settings.bindAddress,settings.port)
     val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), Some(settings.nodeNonce), None)
