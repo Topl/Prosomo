@@ -15,6 +15,7 @@ import scorex.crypto.encode.Base58
 import scala.math.BigInt
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
+import scala.util.{Try,Success,Failure}
 
 trait Receive extends Members {
   import Parameters._
@@ -266,30 +267,37 @@ trait Receive extends Members {
       password = s"password_holder_$holderIndex"
       salt = FastCryptographicHash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
-      KeyFile.restore(storageDir) match {
-        case Some(restoredFile:KeyFile) => {
+      def generateNewKeys:Unit = {
+        println("Generating new keyfile...")
+        val rngSeed:Random = new Random
+        rngSeed.setSeed(BigInt(seed).toLong)
+        val seed1 = FastCryptographicHash(rngSeed.nextString(32))
+        val seed2 = FastCryptographicHash(rngSeed.nextString(32))
+        val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+        keyFile = KeyFile.fromSeed(
+          password,
+          storageDir,
+          serializer: Serializer,
+          sig:Sig,
+          vrf:Vrf,
+          kes:Kes,
+          globalSlot:Slot,
+          seed1,
+          seed2,
+          seed3
+        )
+      }
+      Try{KeyFile.restore(storageDir)} match {
+        case Success(Some(restoredFile:KeyFile)) => {
           println("Reading keyfile ...")
           keyFile = restoredFile
         }
-        case None => {
-          println("Generating new keyfile...")
-          val rngSeed:Random = new Random
-          rngSeed.setSeed(BigInt(seed).toLong)
-          val seed1 = FastCryptographicHash(rngSeed.nextString(32))
-          val seed2 = FastCryptographicHash(rngSeed.nextString(32))
-          val seed3 = FastCryptographicHash(rngSeed.nextString(32))
-          keyFile = KeyFile.fromSeed(
-            password,
-            storageDir,
-            serializer: Serializer,
-            sig:Sig,
-            vrf:Vrf,
-            kes:Kes,
-            globalSlot:Slot,
-            seed1,
-            seed2,
-            seed3
-          )
+        case Success(None) => {
+          generateNewKeys
+        }
+        case Failure(exception) => {
+          exception.printStackTrace
+          generateNewKeys
         }
       }
       keys = keyFile.getKeys(password,serializer,sig,vrf,kes)

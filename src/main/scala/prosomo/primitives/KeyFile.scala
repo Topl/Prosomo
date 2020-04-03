@@ -365,11 +365,25 @@ object KeyFile {
         List[File]()
       }
     }
-    val files = getListOfFiles(s"$storageDir/keys/")
-    files.length match {
-      case x:Int if x > 0 => Some(readFile(files.head.getPath))
-      case _ => None
+    var recoveredKey:Option[KeyFile] = None
+    var files = getListOfFiles(s"$storageDir/keys/")
+
+    while (files.length>0) {
+      Try{readFile(files.head.getPath)} match {
+        case Success(keyFile:KeyFile) => {
+          recoveredKey match {
+            case None => recoveredKey = Some(keyFile)
+            case _ => deleteFile(files.head.getPath)
+          }
+          files = files.tail
+        }
+        case Failure(exception) => {
+          deleteFile(files.head.getPath)
+          files = files.tail
+        }
+      }
     }
+    recoveredKey
   }
 
   def deleteFile(filename:String):Unit = {

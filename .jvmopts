@@ -1,7 +1,7 @@
 -Xms512M
--Xmx8192M
+-Xmx2048M
 -Xss2M
--XX:MaxMetaspaceSize=2048M
+-XX:MaxMetaspaceSize=1024M
 -XX:PermSize=512m
 -XX:+UseG1GC
 -XX:MaxGCPauseMillis=200

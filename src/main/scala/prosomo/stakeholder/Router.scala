@@ -509,17 +509,26 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:List[String] =>
               for (string<-msg) {
                 Try{ActorPath.fromString(string)} match {
-                  case Success(newPath:ActorPath) =>
+                  case Success(newPath:ActorPath) => {
                     holders.find(_.path == newPath) match {
                       case None => {
                         holders ::= ActorRefWrapper(newPath)
                         pathToPeer += (newPath -> remote)
-                        println("new holder "+newPath.toString)
+                        println("New holder "+newPath.toString)
                         coordinatorRef ! holders
                         toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
-                      case _ =>
+                      case Some(actorRef:ActorRefWrapper) => {
+                        if (pathToPeer(actorRef.path).socketAddress.toString != remote.socketAddress.toString) {
+                          val key = actorRef.path
+                          pathToPeer -= key
+                          pathToPeer += (key -> remote)
+                          println("Updated Peer "+newPath.toString)
+                          holders.filterNot(_.remote).foreach(_ ! Diffuse)
+                        }
+                      }
                     }
+                  }
                   case _ => println("error: could not parse actor path")
                 }
               }

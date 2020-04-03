@@ -248,33 +248,19 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
 
-  def findRemoteHolders: Receive = {
+  def restorOrGenerateGenBlock: Receive = {
     case Register => {
       blocks.restore((0,genBlockKey)) match {
         case Some(b:Block) => {
           genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
           verifyBlock(genBlock)
           println("Recovered Genesis Block")
-          sendAssertDone(routerRef,holders.filterNot(_.remote))
-          setupLocal
         }
         case None => {
-          if (holderIndexMin > -1 && holderIndexMax > -1) {
-            if (holders.size < numGenesisHolders && holderIndexMin < numGenesisHolders) {
-              sendAssertDone(routerRef,holders.filterNot(_.remote))
-              context.system.scheduler.scheduleOnce(1000 millis,self,Register)(context.system.dispatcher,self)
-            } else {
-              SharedData.printingHolder = holderIndexMin
-              forge
-              setupLocal
-              sendAssertDone(routerRef,holders.filterNot(_.remote))
-            }
-          } else {
-            forge
-            setupLocal
-          }
+          forge
         }
       }
+      setupLocal
     }
   }
 
@@ -310,6 +296,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def setupLocal:Unit = {
+    if (holderIndexMin > -1 && holderIndexMax > -1) {
+      SharedData.printingHolder = holderIndexMin
+      sendAssertDone(routerRef, holders.filterNot(_.remote))
+    }
     println("Sending holders list")
     sendAssertDone(holders.filterNot(_.remote),holders)
     println("Sending holders coordinator ref")
@@ -982,7 +972,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     run orElse
     populate orElse
     receiveRemoteHolders orElse
-    findRemoteHolders orElse
+    restorOrGenerateGenBlock orElse
     nextSlot orElse
     dataFile orElse {
     /**tells actors to print their inbox */
