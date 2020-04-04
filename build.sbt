@@ -6,12 +6,12 @@ name := "prosomo"
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.8",
   organization := "co.topl",
-  version := "0.6"
+  version := "0.7"
 )
 
 scalaVersion := "2.12.8"
 organization := "co.topl"
-version := "0.6"
+version := "0.7"
 
 mainClass in assembly := Some("prosomo.Prosomo")
 
@@ -19,7 +19,9 @@ test in assembly := {}
 
 val circeVersion = "0.7+"
 
+enablePlugins(UniversalPlugin)
 enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)
 
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.19",
