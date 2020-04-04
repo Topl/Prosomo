@@ -89,8 +89,12 @@ trait Settings extends ScorexLogging {
       new InetSocketAddress(addrParts(0), port)
     })
   }.toOption.flatten.getOrElse(Seq[InetSocketAddress]())
-
-  lazy val bindAddress = p2pSettings.get("bindAddress").flatMap(_.asString).getOrElse(DefaultBindAddress)
+  lazy val bindAddress = {
+    prosomo.primitives.Parameters.bindAddress match {
+      case str:String if str != "" => str
+      case _ => p2pSettings.get("bindAddress").flatMap(_.asString).getOrElse(DefaultBindAddress)
+    }
+  }
   lazy val maxConnections = p2pSettings.get("maxConnections")
     .flatMap(_.asNumber).flatMap(_.toInt).getOrElse(DefaultMaxConnections)
   lazy val connectionTimeout = p2pSettings.get("connectionTimeout")
@@ -99,14 +103,24 @@ trait Settings extends ScorexLogging {
   lazy val upnpGatewayTimeout = p2pSettings.get("upnpGatewayTimeout").flatMap(_.asNumber).flatMap(_.toInt)
   lazy val upnpDiscoverTimeout = p2pSettings.get("upnpDiscoverTimeout").flatMap(_.asNumber).flatMap(_.toInt)
   lazy val port = p2pSettings.get("port").flatMap(_.asNumber).flatMap(_.toInt).getOrElse(DefaultPort)
-  lazy val declaredAddress = p2pSettings.get("myAddress").flatMap(_.asString)
+  lazy val declaredAddress = {
+    prosomo.primitives.Parameters.myAddress match {
+      case str:String if str != "" => Some(str)
+      case _ => p2pSettings.get("myAddress").flatMap(_.asString)
+    }
+  }
 
   lazy val handshakeTimeout: Int = p2pSettings.get("handshakeTimeout")
     .flatMap(_.asNumber)
     .flatMap(_.toInt)
     .getOrElse(DefaultHandshakeTimeout)
 
-  lazy val rpcPort = settingsJSON.get("rpcPort").flatMap(_.asNumber).flatMap(_.toInt).getOrElse(DefaultRpcPort)
+  lazy val rpcPort = {
+    prosomo.primitives.Parameters.rpcPort match {
+      case str:String if str != "" => str.toInt
+      case _ => settingsJSON.get("rpcPort").flatMap(_.asNumber).flatMap(_.toInt).getOrElse(DefaultRpcPort)
+    }
+  }
 
   lazy val blockGenerationDelay: FiniteDuration = settingsJSON.get("blockGenerationDelay").flatMap(_.asNumber).flatMap(_.toLong)
     .map(x => FiniteDuration(x, MILLISECONDS)).getOrElse(DefaultBlockGenerationDelay)

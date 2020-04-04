@@ -6,11 +6,27 @@ if read -t 10 response; then
 else
     stakeHolderIndex=$(((RANDOM<<15)|RANDOM))
 fi
-echo -n "Enter known peer IpAddress > "
+echo -n "Enter known peer IP address > "
 if read -t 10 response; then
     knownPeer=$response
 else
-    knownPeer="127.0.0.2"
+    knownPeer="127.0.0.1"
 fi
 echo "Holder Index = $stakeHolderIndex"
-sbt "run-main prosomo.Prosomo bootstrap.conf input{params{numHolders=$numHolders,holderIndexMin=$stakeHolderIndex,holderIndexMax=$stakeHolderIndex,knownPeer=$knownPeer}}"
+PORT=$(( ((RANDOM<<15)|RANDOM) % 63001 + 2000 ))
+echo $PORT
+BIND="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 256))"
+echo $BIND
+sbt "run-main prosomo.Prosomo bootstrap.conf \\
+input{params{\\
+inputSeed=\"prosomo_testnet\"\\
+settingsFilename=\"bootstrap.json\"\\
+numHolders=$numHolders,\\
+holderIndexMin=$stakeHolderIndex,\\
+holderIndexMax=$stakeHolderIndex,\\
+knownPeer=$knownPeer,\\
+dataFileDir=data_$stakeHolderIndex,\\
+rpcPort=$PORT,\\
+bindAddress=$BIND\\
+}}"
+

@@ -203,6 +203,9 @@ object Parameters {
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val settingsFilename:String = config.getString("params.settingsFilename")
   val knownPeer:String = config.getString("params.knownPeer")
+  val rpcPort:String = config.getString("params.rpcPort")
+  val myAddress:String = config.getString("params.myAddress")
+  val bindAddress:String = config.getString("params.bindAddress")
   val messageSpecs = Seq(
     DiffuseDataSpec,
     HelloSpec,

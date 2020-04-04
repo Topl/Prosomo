@@ -220,11 +220,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       println(s"K = $k_s")
       println(s"S = $slotWindow")
       println(s"f = $f_s")
-      println("Populating")
       if (holderIndexMin > -1 && holderIndexMax > -1) {
+        println("Populating...")
         holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
       } else {
-        holders = List.range(0,numGenesisHolders).map(startHolder)
+        println("No Holders to start...")
       }
       sendAssertDone(routerRef,holders)
       self ! Register

@@ -32,12 +32,11 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
       val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
       peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
     }
-    import prosomo.primitives.Parameters.knownPeer
-    knownPeer match {
+    prosomo.primitives.Parameters.knownPeer match {
       case str:String if str != "" => Try{
         val addrParts = str.split(":")
-        val DefaultPort = 9084
-        val port = if (addrParts.size == 2) addrParts(1).toInt else DefaultPort
+        val defaultPort = 9084
+        val port = if (addrParts.size == 2) addrParts(1).toInt else defaultPort
         val address = new InetSocketAddress(addrParts(0), port)
         val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
         peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
