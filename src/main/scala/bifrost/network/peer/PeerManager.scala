@@ -34,10 +34,10 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
     }
     prosomo.primitives.Parameters.knownPeer match {
       case str:String if str != "" => Try{
-        val addrParts = str.split(":")
+        //val addrParts = str.split(":")
         val defaultPort = 9084
-        val port = if (addrParts.size == 2) addrParts(1).toInt else defaultPort
-        val address = new InetSocketAddress(addrParts(0), port)
+        //val port = if (addrParts.size == 2) addrParts(1).toInt else defaultPort
+        val address = new InetSocketAddress(str, defaultPort)
         val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
         peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
       }
@@ -111,7 +111,7 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
 //        println("Adding Peer to Database")
 //        peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
         if (toUpdate.isEmpty) {
-          //log.error("No peer to update")
+          log.info("No peer to update")
         } else {
           val newCp = toUpdate
             .find(t => handshake.declaredAddress.contains(t._1.socketAddress))

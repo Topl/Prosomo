@@ -17,16 +17,16 @@ PORT=$(( ((RANDOM<<15)|RANDOM) % 63001 + 2000 ))
 echo $PORT
 BIND="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 256))"
 echo $BIND
-sbt "run-main prosomo.Prosomo bootstrap.conf \\
-input{params{\\
-inputSeed=\"prosomo_testnet\"\\
-settingsFilename=\"bootstrap.json\"\\
-numHolders=$numHolders,\\
-holderIndexMin=$stakeHolderIndex,\\
-holderIndexMax=$stakeHolderIndex,\\
-knownPeer=$knownPeer,\\
-dataFileDir=data_$stakeHolderIndex,\\
-rpcPort=$PORT,\\
-bindAddress=$BIND\\
+sbt "run-main prosomo.Prosomo bootstrap.conf \
+input{params{\
+inputSeed=\"prosomo_testnet\",\
+settingsFilename=\"bootstrap.json\",\
+numHolders=$numHolders,\
+holderIndexMin=$stakeHolderIndex,\
+holderIndexMax=$stakeHolderIndex,\
+knownPeer=\"$knownPeer\",\
+dataFileDir=data_$stakeHolderIndex,\
+rpcPort=$PORT,\
+bindAddress=$BIND\
 }}"
 
