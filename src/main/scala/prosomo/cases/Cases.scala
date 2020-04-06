@@ -37,7 +37,7 @@ case object BootstrapJob
 case class DiffuseData(ref:ActorRefWrapper, pks:PublicKeys, mac:Mac)
 case class Hello(ref:ActorRefWrapper, mac:Mac)
 case class RequestBlock(id:SlotId,mac:Mac,job:Int)
-case class RequestBlocks(id:SlotId,depth:Int,mac:Mac,job:Int)
+case class RequestTine(id:SlotId, depth:Int, mac:Mac, job:Int)
 case class ReturnBlocks(blocks:List[Block],mac:Mac,job:Int)
 case class SendBlock(block:Block,mac:Mac)
 case class SendTx(transaction:Transaction)

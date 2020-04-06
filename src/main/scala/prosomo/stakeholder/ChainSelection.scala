@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.cases.{RequestBlock, RequestBlocks, SendTx}
+import prosomo.cases.{RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
 
@@ -140,7 +140,7 @@ trait ChainSelection extends Members {
             tineMaxDepth
           }
           val request:Request = (List(tine.least),depth,job._1)
-          send(ActorRefWrapper(self),ref, RequestBlocks(tine.least,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+          send(ActorRefWrapper(self),ref, RequestTine(tine.least,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
         } else {
           if (holderIndex == SharedData.printingHolder && printFlag) println(
             "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tines.keySet.size

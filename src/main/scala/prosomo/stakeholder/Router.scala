@@ -22,7 +22,7 @@ import bifrost.wallet.BWallet
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Parameters, SharedData, Types}
-import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestBlocksType, ReturnBlocksType, SendBlockType, SendTxType}
+import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.crypto.encode.Base58
 
@@ -452,13 +452,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case _ =>
           }
         }
-        case RequestBlocksSpec.messageCode => {
+        case RequestTineSpec.messageCode => {
           data match {
-            case msg:RequestBlocksType =>
+            case msg:RequestTineType =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
-                    RequestBlocks(msg._3,msg._4,msg._5,msg._6)
+                    RequestTine(msg._3,msg._4,msg._5,msg._6)
                   )(context.system.dispatcher,self)
                 case None =>
               }
@@ -591,9 +591,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           val content:RequestBlockType = (s.toString,r.toString,c.id,c.mac,c.job)
           toNetwork[RequestBlockType,RequestBlockSpec.type](RequestBlockSpec,content,r)
         }
-        case c:RequestBlocks => {
-          val content:RequestBlocksType = (s.toString,r.toString,c.id,c.depth,c.mac,c.job)
-          toNetwork[RequestBlocksType,RequestBlocksSpec.type](RequestBlocksSpec,content,r)
+        case c:RequestTine => {
+          val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.mac,c.job)
+          toNetwork[RequestTineType,RequestTineSpec.type](RequestTineSpec,content,r)
         }
         case c:ReturnBlocks => {
           val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.mac,c.job)

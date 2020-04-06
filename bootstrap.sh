@@ -10,12 +10,13 @@ echo -n "Enter known peer IP address > "
 if read -t 10 response; then
     knownPeer=$response
 else
-    knownPeer="127.0.0.1"
+    knownPeer=""
 fi
 echo "Holder Index = $stakeHolderIndex"
 PORT=$(( ((RANDOM<<15)|RANDOM) % 63001 + 2000 ))
 echo $PORT
-BIND="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 256))"
+#BIND="127.$((RANDOM % 256)).$((RANDOM % 256)).$((RANDOM % 256))"
+BIND="0.0.0.0"
 echo $BIND
 sbt "run-main prosomo.Prosomo bootstrap.conf \
 input{params{\

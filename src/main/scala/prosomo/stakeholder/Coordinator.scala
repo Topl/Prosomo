@@ -170,7 +170,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val t0in:Long = lines(0).toLong
         t0 = t0in
         try {
-          val time_SERVER = "time-a.nist.gov"
+          val time_SERVER = timeServer
           //val ntpClient = new NTPClient
           //println(ntpClient.getOffset(Array(time_SERVER)))
           val timeClient = new NTPUDPClient

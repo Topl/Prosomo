@@ -43,9 +43,9 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
       }
       case _ =>
     }
-    val localAddress:InetSocketAddress = new InetSocketAddress(settings.bindAddress,settings.port)
-    val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), Some(settings.nodeNonce), None)
-    peerDatabase.addOrUpdateKnownPeer(localAddress, defaultPeerInfo)
+    //val localAddress:InetSocketAddress = new InetSocketAddress(settings.bindAddress,settings.port)
+    //val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), Some(settings.nodeNonce), None)
+    //peerDatabase.addOrUpdateKnownPeer(localAddress, defaultPeerInfo)
   }
 
   private def randomPeer(): Option[InetSocketAddress] = {

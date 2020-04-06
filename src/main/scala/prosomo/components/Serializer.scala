@@ -21,7 +21,7 @@ object Serializer {
   case object DeserializeDiffuse
   case object DeserializeHello
   case object DeserializeRequestBlock
-  case object DeserializeRequestBlocks
+  case object DeserializeRequestTine
   case object DeserializeReturnBlocks
   case object DeserializeSendBlock
   case object DeserializeSendTx

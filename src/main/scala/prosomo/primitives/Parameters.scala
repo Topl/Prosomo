@@ -206,11 +206,12 @@ object Parameters {
   val rpcPort:String = config.getString("params.rpcPort")
   val myAddress:String = config.getString("params.myAddress")
   val bindAddress:String = config.getString("params.bindAddress")
+  val timeServer:String = config.getString("params.timeServer")
   val messageSpecs = Seq(
     DiffuseDataSpec,
     HelloSpec,
     RequestBlockSpec,
-    RequestBlocksSpec,
+    RequestTineSpec,
     ReturnBlocksSpec,
     SendBlockSpec,
     SendTxSpec,

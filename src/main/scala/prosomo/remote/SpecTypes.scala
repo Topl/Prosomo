@@ -13,7 +13,7 @@ object SpecTypes {
   type DiffuseDataType = (String,String,PublicKeys,Mac)
   type HelloDataType = (String,String,Mac)
   type RequestBlockType = (String,String,SlotId,Mac,Int)
-  type RequestBlocksType = (String,String,SlotId,Int,Mac,Int)
+  type RequestTineType = (String,String,SlotId,Int,Mac,Int)
   type ReturnBlocksType = (String,String,List[Block],Mac,Int)
   type SendBlockType = (String,String,Block,Mac)
   type SendTxType = (String,String,Transaction)
@@ -21,7 +21,7 @@ object SpecTypes {
   val diffuseCode:Byte = 100:Byte
   val helloCode:Byte = 101:Byte
   val requestBlockCode:Byte = 102:Byte
-  val requestBlocksCode:Byte = 103:Byte
+  val requestTineCode:Byte = 103:Byte
   val returnBlocksCode:Byte = 104:Byte
   val sendBlockCode:Byte = 105:Byte
   val sendTxCode:Byte = 106:Byte

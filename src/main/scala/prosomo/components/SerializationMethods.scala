@@ -16,7 +16,7 @@ trait SerializationMethods extends SimpleTypes {
     DiffuseDataType,
     HelloDataType,
     RequestBlockType,
-    RequestBlocksType,
+    RequestTineType,
     ReturnBlocksType,
     SendBlockType,
     SendTxType
@@ -75,7 +75,7 @@ trait SerializationMethods extends SimpleTypes {
   def getDiffuseBytes(msg:DiffuseDataType):Array[Byte] = sDiffuse(msg)
   def getHelloBytes(msg:HelloDataType):Array[Byte] = sHello(msg)
   def getRequestBlockBytes(msg:RequestBlockType):Array[Byte] = sRequestBlock(msg)
-  def getRequestBlocksBytes(msg:RequestBlocksType):Array[Byte] = sRequestBlocks(msg)
+  def getRequestTineBytes(msg:RequestTineType):Array[Byte] = sRequestTine(msg)
   def getReturnBlocksBytes(msg:ReturnBlocksType):Array[Byte] = sReturnBlocks(msg)
   def getSendBlockBytes(msg:SendBlockType):Array[Byte] = sSendBlock(msg)
   def getSendTxBytes(msg:SendTxType):Array[Byte] = sSendTx(msg)
@@ -99,7 +99,7 @@ trait SerializationMethods extends SimpleTypes {
       case DeserializeDiffuse => dDiffuse(input)
       case DeserializeHello => dHello(input)
       case DeserializeRequestBlock => dRequestBlock(input)
-      case DeserializeRequestBlocks => dRequestBlocks(input)
+      case DeserializeRequestTine => dRequestTine(input)
       case DeserializeReturnBlocks => dReturnBlocks(input)
       case DeserializeSendBlock => dSendBlock(input)
       case DeserializeSendTx => dSendTx(input)
@@ -196,7 +196,7 @@ trait SerializationMethods extends SimpleTypes {
     (str,str2,mac)
   }
 
-  private def sRequestBlocks(msg: RequestBlocksType):Array[Byte] = {
+  private def sRequestTine(msg: RequestTineType):Array[Byte] = {
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
@@ -207,7 +207,7 @@ trait SerializationMethods extends SimpleTypes {
     )
   }
 
-  private def dRequestBlocks(stream: ByteStream):RequestBlocksType = {
+  private def dRequestTine(stream: ByteStream):RequestTineType = {
     val strLen = stream.getInt
     val strBytes = new ByteStream(stream.get(strLen),stream.caseObject)
     val str = dString(strBytes)
