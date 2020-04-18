@@ -3,10 +3,8 @@ package prosomo.primitives
 import bifrost.crypto.hash.FastCryptographicHash
 import org.bouncycastle.math.ec.rfc8032.Ed25519
 import scorex.crypto.encode.Base58
-import prosomo.primitives.MalkinKey
 
 import scala.math.BigInt
-
 
 /**
   * Implementation of the MMM construction:
@@ -27,7 +25,7 @@ class Kes {
   val skBytes = Ed25519.SECRET_KEY_SIZE
   val sigBytes = Ed25519.SIGNATURE_SIZE
   val hashBytes = 32
-  val KeyLength = hashBytes
+  val keyLength = hashBytes
   val logl = 7
 
   type MalkinKeyBytes = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
@@ -38,7 +36,7 @@ class Kes {
     * @param n integer
     * @return 2 to the n
     */
-  def exp(n: Int): Int = {
+  private def exp(n: Int): Int = {
     scala.math.pow(2,n).toInt
   }
 
@@ -50,7 +48,7 @@ class Kes {
     * @return
     */
 
-  def PRNG(k: Array[Byte]): (Array[Byte],Array[Byte]) = {
+  private def PRNG(k: Array[Byte]): (Array[Byte],Array[Byte]) = {
     val r1 = FastCryptographicHash(k)
     val r2 = FastCryptographicHash(r1++k)
     (r1,r2)
@@ -61,7 +59,7 @@ class Kes {
     * @param seed input entropy for keypair generation
     * @return byte array sk||pk
     */
-  def sKeypairFast(seed: Array[Byte]): Array[Byte] = {
+  private def sKeypairFast(seed: Array[Byte]): Array[Byte] = {
     val sk = FastCryptographicHash(seed)
     var pk = Array.fill(32){0x00.toByte}
     Ed25519.generatePublicKey(sk,0,pk,0)
@@ -73,7 +71,7 @@ class Kes {
     * @param seed input entropy for keypair generation
     * @return byte array pk
     */
-  def sPublic(seed: Array[Byte]): Array[Byte] = {
+  private def sPublic(seed: Array[Byte]): Array[Byte] = {
     val sk = FastCryptographicHash(seed)
     var pk = Array.fill(32){0x00.toByte}
     Ed25519.generatePublicKey(sk,0,pk,0)
@@ -85,7 +83,7 @@ class Kes {
     * @param seed input entropy for keypair generation
     * @return byte array sk
     */
-  def sPrivate(seed: Array[Byte]): Array[Byte] = {
+  private def sPrivate(seed: Array[Byte]): Array[Byte] = {
     FastCryptographicHash(seed)
   }
 
@@ -95,7 +93,7 @@ class Kes {
     * @param sk Ed25519 secret key to be signed
     * @return Ed25519 signature
     */
-  def sSign(m: Array[Byte], sk: Array[Byte]): Array[Byte] = {
+  private def sSign(m: Array[Byte], sk: Array[Byte]): Array[Byte] = {
     var sig: Array[Byte] = Array.fill(sigBytes){0x00.toByte}
     Ed25519.sign(sk,0,m,0,m.length,sig,0)
     sig
@@ -108,7 +106,7 @@ class Kes {
     * @param pk public key corresponding to signature
     * @return true if valid signature, false if otherwise
     */
-  def sVerify(m: Array[Byte], sig: Array[Byte], pk: Array[Byte]): Boolean = {
+  private def sVerify(m: Array[Byte], sig: Array[Byte], pk: Array[Byte]): Boolean = {
     Ed25519.verify(sig,0,pk,0,m,0,m.length)
   }
 
@@ -117,7 +115,7 @@ class Kes {
     * @param t binary tree for which the key is to be calculated
     * @return binary array public key
     */
-  def sumGetPublicKey(t: Tree[Array[Byte]]): Array[Byte] = {
+  private def sumGetPublicKey(t: Tree[Array[Byte]]): Array[Byte] = {
     t match {
       case n: Node[Array[Byte]] => {
         val pk0 = n.v.slice(seedBytes, seedBytes + pkBytes)
@@ -138,7 +136,7 @@ class Kes {
     * @param i height of tree
     * @return binary tree at time step 0
     */
-  def sumGenerateKey(seed: Array[Byte],i:Int):Tree[Array[Byte]] = {
+  private def sumGenerateKey(seed: Array[Byte],i:Int):Tree[Array[Byte]] = {
 
     // generate the binary tree with the pseudorandom number generator
     def sumKeyGenMerkle(seed: Array[Byte],i:Int): Tree[Array[Byte]] = {
@@ -271,7 +269,7 @@ class Kes {
     * @param pk root of the Merkle tree
     * @return true if pk is the root of the Merkle tree, false if otherwise
     */
-  def sumVerifyKeyPair(t: Tree[Array[Byte]], pk:Array[Byte]): Boolean = {
+  private def sumVerifyKeyPair(t: Tree[Array[Byte]], pk:Array[Byte]): Boolean = {
     //loops through the tree to verify Merkle witness path
     def loop(t: Tree[Array[Byte]]): Boolean = {
       t match {
@@ -321,7 +319,7 @@ class Kes {
     * @param t time step key is to be updated to
     * @return updated key to be written to key
     */
-  def sumUpdate(key: Tree[Array[Byte]],t:Int): Tree[Array[Byte]] = {
+  private def sumUpdate(key: Tree[Array[Byte]],t:Int): Tree[Array[Byte]] = {
     //checks if the sub tree is right most
     def isRightBranch(t: Tree[Array[Byte]]): Boolean = {
       t match {
@@ -355,40 +353,28 @@ class Kes {
           var rightIsLeaf = false
           var rightIsNode = false
           var rightVal: Array[Byte] = Array()
-
           val left = n.l match {
-            case n: Node[Array[Byte]] => leftIsNode = true;leftVal=n.v;n
-            case l: Leaf[Array[Byte]] => leftIsLeaf = true;leftVal=l.v;l
-            case _ => leftIsEmpty = true; n.l
+            case n: Node[Array[Byte]] => {leftIsNode = true;leftVal=n.v;n}
+            case l: Leaf[Array[Byte]] => {leftIsLeaf = true;leftVal=l.v;l}
+            case _ => {leftIsEmpty = true; n.l}
           }
           val right = n.r match {
-            case n: Node[Array[Byte]] => rightIsNode=true;rightVal=n.v;n
-            case l: Leaf[Array[Byte]] => rightIsLeaf=true;rightVal=l.v;l
-            case _ => rightIsEmpty = true; n.r
+            case n: Node[Array[Byte]] => {rightIsNode=true;rightVal=n.v;n}
+            case l: Leaf[Array[Byte]] => {rightIsLeaf=true;rightVal=l.v;l}
+            case _ => {rightIsEmpty = true; n.r}
           }
           val cutBranch = isRightBranch(left)
           if (rightIsEmpty && leftIsLeaf) {
-            //println("right is empty and left is leaf")
             val keyPair = sKeypairFast(n.v.slice(0,seedBytes))
             assert(FastCryptographicHash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
             Node(n.v,Empty,Leaf(keyPair))
           } else if (cutBranch) {
-            //println("cut branch")
             Node(n.v,Empty,sumGenerateKey(n.v.slice(0,seedBytes),n.height-1))
           } else if (leftIsNode && rightIsEmpty) {
-            //println("left is node and right is empty")
             Node(n.v,loop(left),Empty)
           } else if (leftIsEmpty && rightIsNode) {
-            //println("left is empty and right is node")
             Node(n.v, Empty, loop(right))
-          } else if (leftIsEmpty && rightIsLeaf) {
-            //println("Error: cut branch failed, left is empty and right is leaf")
-            n
-          } else if (leftIsEmpty && rightIsEmpty) {
-            //println("Error: left and right is empty")
-            n
           } else {
-            //println("Error: did nothing")
             n
           }
         }
@@ -396,7 +382,6 @@ class Kes {
         case _ => t
       }
     }
-    val keyH = key.height
     val T = exp(key.height)
     val keyTime = sumGetKeyTimeStep(key)
     //steps key through time steps one at a time until key step == t
@@ -414,13 +399,84 @@ class Kes {
   }
 
   /**
+    * Updates the key in the sum composition
+    * @param key binary tree to be updated
+    * @param t time step key is to be updated to
+    * @return updated key to be written to key
+    */
+  private def sumUpdateFast(key: Tree[Array[Byte]],t:Int): Tree[Array[Byte]] = {
+    val T = exp(key.height)
+    val keyTime = sumGetKeyTimeStep(key)
+    if (t<T && keyTime < t){
+      def constructKey(step:Int,input:Tree[Array[Byte]]):Tree[Array[Byte]] = {
+        input match {
+          case n: Node[Array[Byte]] => {
+            var leftIsEmpty = false
+            var leftIsLeaf = false
+            var leftIsNode = false
+            var leftVal: Array[Byte] = Array()
+            var rightIsEmpty = false
+            var rightIsLeaf = false
+            var rightIsNode = false
+            var rightVal: Array[Byte] = Array()
+            val left = n.l match {
+              case n: Node[Array[Byte]] => {leftIsNode = true;leftVal=n.v;n}
+              case l: Leaf[Array[Byte]] => {leftIsLeaf = true;leftVal=l.v;l}
+              case _ => {leftIsEmpty = true; n.l}
+            }
+            val right = n.r match {
+              case n: Node[Array[Byte]] => {rightIsNode=true;rightVal=n.v;n}
+              case l: Leaf[Array[Byte]] => {rightIsLeaf=true;rightVal=l.v;l}
+              case _ => {rightIsEmpty = true; n.r}
+            }
+            val e = exp(n.height-1)
+            val nextStep = step%e
+            if (step>=e) {
+              if (rightIsEmpty && leftIsLeaf) {
+                val keyPair = sKeypairFast(n.v.slice(0,seedBytes))
+                assert(FastCryptographicHash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
+                Node(n.v,Empty,Leaf(keyPair))
+              } else if (leftIsEmpty && rightIsNode) {
+                Node(n.v, Empty, constructKey(nextStep,right))
+              } else if (rightIsEmpty && leftIsNode) {
+                val subKey = sumGenerateKey(n.v.slice(0,seedBytes),n.height-1)
+                Node(n.v,Empty,constructKey(nextStep,subKey))
+              } else {
+                n
+              }
+            } else {
+              if (rightIsEmpty) {
+                Node(n.v,constructKey(nextStep,left),Empty)
+              } else if (leftIsEmpty) {
+                Node(n.v, Empty, constructKey(nextStep,right))
+              } else {
+                n
+              }
+            }
+          }
+          case l: Leaf[Array[Byte]] => l
+          case _ => input
+        }
+      }
+      val newKey:Tree[Array[Byte]] = constructKey(t,key)
+      if (sumGetKeyTimeStep(newKey)!=t) printTree(newKey)
+      assert(sumGetKeyTimeStep(newKey)==t)
+      newKey
+    } else {
+      println("Time step error, key not updated")
+      println("T: "+T.toString+", key t:"+keyTime.toString+", t:"+t.toString)
+      key
+    }
+  }
+
+  /**
     * Signature in the sum composition
     * @param sk secret key tree of the sum composition
     * @param m message to be signed
     * @param step  current time step of signing key sk
     * @return byte array signature
     */
-  def sumSign(sk: Tree[Array[Byte]],m: Array[Byte],step:Int): Array[Byte] = {
+  private def sumSign(sk: Tree[Array[Byte]],m: Array[Byte],step:Int): Array[Byte] = {
     assert(step == sumGetKeyTimeStep(sk))
     assert(sumVerifyKeyPair(sk,sumGetPublicKey(sk)))
     val stepBytesBigInt = BigInt(step).toByteArray
@@ -467,7 +523,7 @@ class Kes {
     * @param sig signature to be verified
     * @return true if the signature is valid false if otherwise
     */
-  def sumVerify(pk: Array[Byte],m: Array[Byte],sig: Array[Byte]): Boolean = {
+  private def sumVerify(pk: Array[Byte],m: Array[Byte],sig: Array[Byte]): Boolean = {
     val pkSeq = sig.drop(sigBytes+pkBytes+seedBytes)
     val stepBytes = sig.slice(sigBytes+pkBytes,sigBytes+pkBytes+seedBytes)
     val step = BigInt(stepBytes)
@@ -499,7 +555,7 @@ class Kes {
     * @param key binary tree key
     * @return time step
     */
-  def sumGetKeyTimeStep(key: Tree[Array[Byte]]): Int = {
+  private def sumGetKeyTimeStep(key: Tree[Array[Byte]]): Int = {
     key match {
       case n: Node[Array[Byte]] => {
         val left = n.l match {
@@ -581,48 +637,61 @@ class Kes {
   /**
     * Fast version on updateKey, should be equivalent input and output
     * @param key
-    * @param t
+    * @param t_in
     * @return  updated key
     */
-  def updateKeyFast(key: MalkinKeyBytes, t:Int): MalkinKeyBytes = {
+  def updateKeyFast(key: MalkinKeyBytes, t_in:Int): MalkinKeyBytes = {
     val keyTime = getKeyTimeStep(key)
     var L = key._1
     var Si = key._2
     var sig = key._3
     var pki = key._4
     var seed = key._5
-    val Tl = exp(L.height)
-    var Ti = exp(Si.height)
-    var tl = sumGetKeyTimeStep(L)
-    var ti = sumGetKeyTimeStep(Si)
-    if (keyTime < t) {
-      var i = keyTime+1
-      while(i < t) {
-        tl = sumGetKeyTimeStep(L)
-        ti = sumGetKeyTimeStep(Si)
-        if (t-i > exp(tl)-ti) {
-          val r = PRNG(seed)
-          seed = r._2
-          L = sumUpdate(L, tl + 1)
-          tl = sumGetKeyTimeStep(L)
-          sig = sumSign(L,pki,tl)
-        } else {
-          if (ti+1 < Ti) {
-            Si = sumUpdate(Si, ti + 1)
-          } else if (tl < Tl) {
-            val r = PRNG(seed)
-            Si = sumGenerateKey(r._1, tl + 1)
-            pki = sumGetPublicKey(Si)
-            seed = r._2
-            Ti = exp(Si.height)
-            L = sumUpdate(L, tl + 1)
-            tl = sumGetKeyTimeStep(L)
-            sig = sumSign(L,pki,tl)
+    def timeStepModLog2(t:Int):(Int,Int) = {
+      if (t == 0) {
+        (0,0)
+      } else {
+        var e = 2
+        var n = 1
+        var found = false
+        while (!found) {
+          val next_power = exp(n+1)
+          if (t+1>next_power-1) {
+            n+=1
+            e = next_power
           } else {
-            println("Error: max time steps reached")
+            found = true
           }
         }
-        i+=1
+        val tl = n
+        val ti = (t+1) % e
+        (tl,ti)
+      }
+    }
+    val (tl_in,ti_in) = timeStepModLog2(t_in)
+    if (keyTime < t_in) {
+      val Tl = exp(L.height)
+      val tl = sumGetKeyTimeStep(L)
+      var currentLeaf = tl
+      if (tl < Tl) while(tl_in>currentLeaf) {
+        val r = PRNG(seed)
+        seed = r._2
+        currentLeaf += 1
+        if (currentLeaf == tl_in) {
+          Si = sumGenerateKey(r._1, tl_in)
+          pki = sumGetPublicKey(Si)
+          L = sumUpdate(L, tl_in)
+          sig = sumSign(L,pki,tl_in)
+        } else {
+          L = sumUpdate(L, currentLeaf)
+        }
+      } else {
+        println("Error: max time steps reached")
+      }
+      val Ti = exp(Si.height)
+      val ti = sumGetKeyTimeStep(Si)
+      if (ti_in < Ti && ti_in > 0 && ti<ti_in) {
+        Si = sumUpdateFast(Si, ti_in)
       }
     } else {
       println("Error: t less than given keyTime")
@@ -696,7 +765,7 @@ class Kes {
   }
 
   //print a tree for debugging
-  def printTree(t:Tree[Array[Byte]]):Unit = {
+  private def printTree(t:Tree[Array[Byte]]):Unit = {
     t match {
       case n:Node[Array[Byte]] => {
         println("["+Base58.encode(n.v)+"]")

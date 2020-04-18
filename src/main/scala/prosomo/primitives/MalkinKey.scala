@@ -16,6 +16,15 @@ class MalkinKey {
     rp = updatedKey._5
   }
 
+  def update_fast(kes:Kes,t:Int) = {
+    val updatedKey = kes.updateKeyFast((L,Si,sig,pki,rp),t)
+    L = updatedKey._1
+    Si = updatedKey._2
+    sig = updatedKey._3
+    pki = updatedKey._4
+    rp = updatedKey._5
+  }
+
   def sign(kes:Kes,m:Array[Byte]): (Array[Byte],Array[Byte],Array[Byte]) = {
     kes.sign((L,Si,sig,pki,rp),m)
   }
@@ -48,6 +57,15 @@ object MalkinKey {
     newKey.sig = sig
     newKey.pki = pki
     newKey.rp = rp
+    newKey
+  }
+  def apply(mk:MalkinKey):MalkinKey = {
+    val newKey = new MalkinKey
+    newKey.L = mk.L
+    newKey.Si = mk.Si
+    newKey.sig = mk.sig
+    newKey.pki = mk.pki
+    newKey.rp = mk.rp
     newKey
   }
 }

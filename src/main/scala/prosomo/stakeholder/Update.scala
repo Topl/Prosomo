@@ -2,10 +2,12 @@ package prosomo.stakeholder
 
 import prosomo.cases.{Hello, WriteFile}
 import prosomo.components.Tine
-import prosomo.primitives.{KeyFile, Parameters, SharedData}
+import prosomo.primitives.{KeyFile, MalkinKey, Parameters, SharedData}
 import scorex.crypto.encode.Base58
 import akka.actor.Actor
 import akka.actor.Props
+import io.iohk.iodb.ByteArrayWrapper
+
 import scala.concurrent.duration._
 
 trait Update extends Members {
@@ -65,8 +67,6 @@ trait Update extends Members {
         if (dataOutFlag && localSlot % dataOutInterval == 0) {
           coordinatorRef ! WriteFile
         }
-        if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
-          + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.RESET)
         updateEpoch(localSlot,currentEpoch,eta,localChain) match {
           case result:(Int,Eta) if result._1 > currentEpoch => {
             currentEpoch = result._1
@@ -81,9 +81,15 @@ trait Update extends Members {
           }
           case _ =>
         }
+        if (globalSlot == localSlot && updating) {
+          val keyTime = keys.sk_kes.time(kes)
 
-        if (keys.sk_kes.time(kes) < globalSlot && globalSlot == localSlot && updating) {
-          keys.sk_kes.update(kes, globalSlot)
+          if (keyTime < globalSlot) {
+            keys.sk_kes.update_fast(kes, globalSlot)
+          }
+
+          if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
+            + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.RESET)
           if (!useFencing) {
             forgeBlock(keys)
           }

@@ -17,7 +17,8 @@ do
 	    python ./src/main/python/obGraph.py
     elif [ "$CMD" == "clean" ]
     then
-        rm -r data/*
+        rm -r -f data/*
+        rm -r -f data_*
 	elif [ "$CMD" != "q" ]
 	then
         mkdir -p "$pth"
