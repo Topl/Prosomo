@@ -42,8 +42,8 @@ class Kes {
 
   /**
     * Pseudorandom number generator used for seed doubling
-    * input must be non-recoverable from from k and outputs
-    * cannot be used to determine one from the other
+    * Input must be non-recoverable from output
+    * Each output cannot be used to determine one from the other
     * @param k
     * @return
     */
@@ -458,10 +458,7 @@ class Kes {
           case _ => input
         }
       }
-      val newKey:Tree[Array[Byte]] = constructKey(t,key)
-      if (sumGetKeyTimeStep(newKey)!=t) printTree(newKey)
-      assert(sumGetKeyTimeStep(newKey)==t)
-      newKey
+      constructKey(t,key)
     } else {
       println("Time step error, key not updated")
       println("T: "+T.toString+", key t:"+keyTime.toString+", t:"+t.toString)

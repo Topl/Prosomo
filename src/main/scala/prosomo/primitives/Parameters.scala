@@ -132,8 +132,6 @@ object Parameters {
   } else {
     config.getInt("params.slotWindow")
   }
-  //simulation runtime in slots
-  val L_s:Int = config.getInt("params.L_s")
   //status and verify check chain hash data up to this depth to gauge consensus amongst actors
   val confirmationDepth:Int = config.getInt("params.confirmationDepth")
   //max initial stake

@@ -301,7 +301,6 @@ trait Receive extends Members {
       }
       keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
-      tMax = L_s
       globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       val genesisBlock = blocks.get((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
@@ -417,7 +416,6 @@ trait Receive extends Members {
             gossipers = gossipSet(holderId,holders)
           }
           if (value.clear) inbox = Map()
-          diffuseSent = false
         }
         case _ =>
       }

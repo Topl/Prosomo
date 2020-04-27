@@ -57,7 +57,7 @@ trait Update extends Members {
 
       updating = true
       
-      if (globalSlot > tMax || SharedData.killFlag) {
+      if (SharedData.killFlag) {
         timers.cancelAll
         updating = false
       }

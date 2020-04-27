@@ -528,10 +528,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         case "join" => {
           parties = List()
           println("Joining Parties")
-          sendAssertDone(holders,Party(holders,true))
-          sendAssertDone(holders,Diffuse)
+          sendAssertDone(holders.filterNot(_.remote),Party(holders,true))
+          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders
-          gossipersMap = getGossipers(holders)
+          gossipersMap = getGossipers(holders.filterNot(_.remote))
         }
 
         case "new_holder" => {
@@ -811,11 +811,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
     }
 
-    if (!actorStalled && transactionFlag && !useFencing && t>1 && t<L_s && transactionCounter < txMax && !SharedData.errorFlag) {
+    if (!actorStalled && transactionFlag && !useFencing && t>1 && transactionCounter < txMax && !SharedData.errorFlag) {
       issueRandTx
     }
 
-    if (SharedData.killFlag || t>L_s+2*delta_s) {
+    if (SharedData.killFlag) {
       timers.cancelAll
       fileWriter match {
         case fw:BufferedWriter => fw.close()
@@ -861,7 +861,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             "useDelayParam" -> useDelayParam.asJson,
             "k_s" -> k_s.asJson,
             "f_s" -> f_s.asJson,
-            "L_s" -> L_s.asJson,
             "epochLength" -> epochLength.asJson,
             "slotWindow" -> slotWindow.asJson,
             "confirmationDepth" -> confirmationDepth.asJson,

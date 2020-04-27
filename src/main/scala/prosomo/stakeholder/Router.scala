@@ -180,7 +180,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   def update = {
-    if (globalSlot > L_s || SharedData.killFlag) {
+    if (SharedData.killFlag) {
       timers.cancelAll
       context.system.terminate
     } else {

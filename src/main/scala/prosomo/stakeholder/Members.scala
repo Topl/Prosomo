@@ -41,7 +41,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   var eta:Eta
   var stakingState:State
   var memPool:MemPool
-  var diffuseSent:Boolean
   var chainUpdateLock:Boolean
   var holders: List[ActorRefWrapper]
   var gossipers: List[ActorRefWrapper]
@@ -56,7 +55,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   var genBlockHeader:BlockHeader
   var genBlockHash:Hash
   var roundBlock:Int
-  var tMax:Int
   var t0:Long
   var localSlot:Slot
   var currentEpoch:Int
