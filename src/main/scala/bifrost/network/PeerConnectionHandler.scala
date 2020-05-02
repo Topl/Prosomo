@@ -125,7 +125,7 @@ case class PeerConnectionHandler(settings: Settings,
     case msg: message.Message[_] =>
       def sendOutMessage() {
         val bytes = msg.bytes
-        log.info("Send message " + msg.spec + " to " + remote)
+        log.debug("Send message " + msg.spec + " to " + remote)
         connection ! Write(ByteString(Ints.toByteArray(bytes.length) ++ bytes))
       }
 
@@ -154,7 +154,7 @@ case class PeerConnectionHandler(settings: Settings,
       t._1.find { packet =>
         messagesHandler.parseBytes(packet.toByteBuffer, Some(selfPeer)) match {
           case Success(message) =>
-            log.info("Received message " + message.spec + " from " + remote)
+            log.debug("Received message " + message.spec + " from " + remote)
             networkControllerRef ! message
             false
 

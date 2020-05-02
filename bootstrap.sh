@@ -10,5 +10,5 @@ sbt "run-main prosomo.Prosomo bootstrap.conf \
 input{params{\
 holderIndexMin=$stakeHolderIndex,\
 holderIndexMax=$stakeHolderIndex,\
-dataFileDir=data_$stakeHolderIndex,\
+dataFileDir=data_$stakeHolderIndex\
 }}"

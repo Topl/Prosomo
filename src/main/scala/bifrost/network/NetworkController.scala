@@ -93,7 +93,6 @@ class NetworkController(settings: Settings,
   }
 
   log.info(s"Declared address: $externalSocketAddress")
-  println(s"Declared address: $externalSocketAddress")
 
   lazy val connTimeout = Some(new FiniteDuration(settings.connectionTimeout, SECONDS))
 

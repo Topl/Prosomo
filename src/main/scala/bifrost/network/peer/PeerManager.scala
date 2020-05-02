@@ -37,7 +37,7 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
         val addrParts = str.split(":")
         val defaultPort = 9084
         val port = if (addrParts.size == 2) addrParts(1).toInt else defaultPort
-        val address = new InetSocketAddress(str, port)
+        val address = new InetSocketAddress(addrParts(0), port)
         val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
         peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
       }
