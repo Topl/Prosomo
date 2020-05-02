@@ -23,11 +23,7 @@ import scala.sys.process._
 import scala.concurrent.duration._
 import scala.util.{Random, Try}
 import java.io.IOException
-import java.net.InetAddress
-import java.text.SimpleDateFormat
 
-import org.apache.commons.net.ntp.NTPUDPClient
-import org.apache.commons.net.ntp.TimeInfo
 
 /**
   * Coordinator actor that initializes the genesis block and instantiates the staking party,
@@ -130,6 +126,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
+  val ntpClient = new NTPClient
 
   def readFile(filename: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(filename)
@@ -170,27 +167,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val t0in:Long = lines(0).toLong
         t0 = t0in
         try {
-          val time_SERVER = timeServer
-          //val ntpClient = new NTPClient
-          //println(ntpClient.getOffset(Array(time_SERVER)))
-          val timeClient = new NTPUDPClient
-          val inetAddress = InetAddress.getByName(time_SERVER)
-          if (timeClient != null) if (inetAddress != null) {
-            val timeInfo = timeClient.getTime(inetAddress)
-            if (timeInfo != null) {
-              val returnTime:Long = timeInfo.getReturnTime
-              localClockOffset = System.currentTimeMillis() - returnTime
-              val ntpDatetime:String = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS").format(new java.util.Date(returnTime))
-              val systemDatetime:String = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS").format(new java.util.Date())
-              println("NTPDateTime  = " + ntpDatetime)
-              println("SystemDatetime = " + systemDatetime)
-              println("LocalClockOffset = " + localClockOffset.toString)
-            }
-          }
+          localClockOffset = ntpClient.getOffset(Array(timeServer))
         } catch {
           case e: IOException =>
             e.printStackTrace()
-            SharedData.throwError(-1)
+            SharedData.throwError
         }
         tp = 0
       }

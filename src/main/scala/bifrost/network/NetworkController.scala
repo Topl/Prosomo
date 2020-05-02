@@ -1,6 +1,7 @@
 package bifrost.network
 
-import java.net.{InetAddress, InetSocketAddress, NetworkInterface, URI}
+import java.io.{BufferedReader, InputStreamReader}
+import java.net.{InetAddress, InetSocketAddress, NetworkInterface, URI, URL}
 
 import akka.actor._
 import akka.io.Tcp._
@@ -19,6 +20,7 @@ import scala.concurrent.duration._
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe.TypeTag
+
 
 /**
   * Control all network interaction
@@ -71,14 +73,27 @@ class NetworkController(settings: Settings,
   lazy val localAddress = new InetSocketAddress(InetAddress.getByName(settings.bindAddress), settings.port)
 
   //an address to send to peers
-  lazy val externalSocketAddress = settings.declaredAddress
-    .flatMap(s => Try(InetAddress.getByName(s)).toOption)
-    .orElse {
-      if (settings.upnpEnabled) upnp.externalAddress else None
-    }.map(ia => new InetSocketAddress(ia, settings.port))
+  lazy val externalSocketAddress = Try{
+    def ipAddress(): String = {
+      val checkip = new URL("http://checkip.amazonaws.com")
+      val in:BufferedReader = new BufferedReader(new InputStreamReader(
+        checkip.openStream()))
+      in.readLine()
+    }
+    ipAddress()
+  } match {
+    case Success(value:String) => value
+    case _ => {
+      settings.declaredAddress
+        .flatMap(s => Try(InetAddress.getByName(s)).toOption)
+        .orElse {
+          if (settings.upnpEnabled) upnp.externalAddress else None
+        }.map(ia => new InetSocketAddress(ia, settings.port))
+    }
+  }
 
   log.info(s"Declared address: $externalSocketAddress")
-
+  println(s"Declared address: $externalSocketAddress")
 
   lazy val connTimeout = Some(new FiniteDuration(settings.connectionTimeout, SECONDS))
 
