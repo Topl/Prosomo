@@ -2,7 +2,7 @@
   "p2p": {
     "name": "bootstrap",
     "bindAddress": "0.0.0.0",
-    "upnp": true,
+    "upnp": false,
     "upnpGatewayTimeout": 7000,
     "upnpDiscoverTimeout": 3000,
     "port": 9084,
