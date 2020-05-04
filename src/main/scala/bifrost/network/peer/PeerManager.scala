@@ -29,8 +29,8 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
 
   if (peerDatabase.isEmpty()) {
     settings.knownPeers.foreach { address =>
-      val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
-      peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
+      val peerInfo = PeerInfo(System.currentTimeMillis(), None, Some("bootstrap"))
+      peerDatabase.addOrUpdateKnownPeer(address, peerInfo)
     }
     prosomo.primitives.Parameters.knownPeer match {
       case str:String if str != "" => Try{
@@ -38,8 +38,8 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
         val defaultPort = 9084
         val port = if (addrParts.size == 2) addrParts(1).toInt else defaultPort
         val address = new InetSocketAddress(addrParts(0), port)
-        val defaultPeerInfo = PeerInfo(System.currentTimeMillis(), None, None)
-        peerDatabase.addOrUpdateKnownPeer(address, defaultPeerInfo)
+        val peerInfo = PeerInfo(System.currentTimeMillis(), None, Some("bootstrap"))
+        peerDatabase.addOrUpdateKnownPeer(address, peerInfo)
       }
       case _ =>
     }
@@ -74,7 +74,17 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
       sender() ! (connectedPeers.values.flatten.toSeq: Seq[Handshake])
 
     case value:GetAllPeers =>{
-      val allPeers:Seq[InetSocketAddress] = peerDatabase.knownPeers(false).keySet.toSeq
+      val allPeers:Seq[InetSocketAddress] = {
+        var declaredPeers:Seq[InetSocketAddress] = Seq()
+        val knownPeers = peerDatabase.knownPeers(false)
+        for (entry<-knownPeers.keySet) {
+          knownPeers(entry).nodeName match {
+            case Some(str:String) if str == "declared" => declaredPeers ++= Seq(entry)
+            case _ =>
+          }
+        }
+        declaredPeers
+      }
       val msg = Message(PeersSpec, Right(allPeers), None)
       value.networkControllerRef ! SendToNetwork(msg, SendToPeers(Seq(value.remote)))
     }
@@ -121,7 +131,7 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
           if (handshake.nodeNonce == settings.nodeNonce) {
             newCp.handlerRef ! PeerConnectionHandler.CloseConnection
           } else {
-            handshake.declaredAddress.foreach(address => self ! PeerManager.AddOrUpdatePeer(address, None, None))
+            handshake.declaredAddress.foreach(address => self ! PeerManager.AddOrUpdatePeer(address, None, Some("declared")))
             connectedPeers += newCp -> Some(handshake)
           }
         }
