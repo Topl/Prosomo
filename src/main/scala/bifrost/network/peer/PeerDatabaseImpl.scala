@@ -17,27 +17,29 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
   private lazy val ownNonce = settings.nodeNonce
 
   override def addOrUpdateKnownPeer(address: InetSocketAddress, peerInfo: PeerInfo): Unit = {
-    whitelistPersistence.get(address) match {
-      case Some(info:PeerInfo) => {
-        info.nonce match {
-          case Some(nonce:Long) if nonce == settings.nodeNonce =>
-          case _ => {
-            val updatedPeerInfo = whitelistPersistence.get(address).map { dbPeerInfo =>
-              val nonceOpt = peerInfo.nonce.orElse(dbPeerInfo.nonce)
-              val nodeNameOpt = peerInfo.nodeName.orElse(dbPeerInfo.nodeName)
-              PeerInfo(peerInfo.lastSeen, nonceOpt, nodeNameOpt)
-            }.getOrElse(peerInfo)
-            whitelistPersistence.put(address, updatedPeerInfo)
+    if (address.getHostName != prosomo.primitives.Parameters.myAddress) {
+      whitelistPersistence.get(address) match {
+        case Some(info:PeerInfo) => {
+          info.nonce match {
+            case Some(nonce:Long) if nonce == settings.nodeNonce =>
+            case _ => {
+              val updatedPeerInfo = whitelistPersistence.get(address).map { dbPeerInfo =>
+                val nonceOpt = peerInfo.nonce.orElse(dbPeerInfo.nonce)
+                val nodeNameOpt = peerInfo.nodeName.orElse(dbPeerInfo.nodeName)
+                PeerInfo(peerInfo.lastSeen, nonceOpt, nodeNameOpt)
+              }.getOrElse(peerInfo)
+              whitelistPersistence.put(address, updatedPeerInfo)
+            }
           }
         }
-      }
-      case _ => {
-        val updatedPeerInfo = whitelistPersistence.get(address).map { dbPeerInfo =>
-          val nonceOpt = peerInfo.nonce.orElse(dbPeerInfo.nonce)
-          val nodeNameOpt = peerInfo.nodeName.orElse(dbPeerInfo.nodeName)
-          PeerInfo(peerInfo.lastSeen, nonceOpt, nodeNameOpt)
-        }.getOrElse(peerInfo)
-        whitelistPersistence.put(address, updatedPeerInfo)
+        case _ => {
+          val updatedPeerInfo = whitelistPersistence.get(address).map { dbPeerInfo =>
+            val nonceOpt = peerInfo.nonce.orElse(dbPeerInfo.nonce)
+            val nodeNameOpt = peerInfo.nodeName.orElse(dbPeerInfo.nodeName)
+            PeerInfo(peerInfo.lastSeen, nonceOpt, nodeNameOpt)
+          }.getOrElse(peerInfo)
+          whitelistPersistence.put(address, updatedPeerInfo)
+        }
       }
     }
   }
