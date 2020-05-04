@@ -42,55 +42,42 @@ class NetworkController(settings: Settings,
 
   private val messageHandlers = mutable.Map[Seq[Message.MessageCode], ActorRef]()
 
-  //check own declared address for validity
-  if (!settings.localOnly) {
-    settings.declaredAddress.forall { myAddress =>
-      Try {
-        val uri = new URI("http://" + myAddress)
-        val myHost = uri.getHost
-        val myAddrs = InetAddress.getAllByName(myHost)
-
-        NetworkInterface.getNetworkInterfaces.exists { intf =>
-          intf.getInterfaceAddresses.exists { intfAddr =>
-            val extAddr = intfAddr.getAddress
-            myAddrs.contains(extAddr)
-          }
-        } match {
-          case true => true
-          case false =>
-            if (settings.upnpEnabled) {
-              val extAddr = upnp.externalAddress
-              myAddrs.contains(extAddr)
-            } else false
-        }
-      }.recover { case t: Throwable =>
-        log.error("Declared address validation failed: ", t)
-        false
-      }.getOrElse(false)
-    }.ensuring(b => b, "Declared address isn't valid")
-  }
+//  //check own declared address for validity
+//  if (!settings.localOnly) {
+//    settings.declaredAddress.forall { myAddress =>
+//      Try {
+//        val uri = new URI("http://" + myAddress)
+//        val myHost = uri.getHost
+//        val myAddrs = InetAddress.getAllByName(myHost)
+//
+//        NetworkInterface.getNetworkInterfaces.exists { intf =>
+//          intf.getInterfaceAddresses.exists { intfAddr =>
+//            val extAddr = intfAddr.getAddress
+//            myAddrs.contains(extAddr)
+//          }
+//        } match {
+//          case true => true
+//          case false =>
+//            if (settings.upnpEnabled) {
+//              val extAddr = upnp.externalAddress
+//              myAddrs.contains(extAddr)
+//            } else false
+//        }
+//      }.recover { case t: Throwable =>
+//        log.error("Declared address validation failed: ", t)
+//        false
+//      }.getOrElse(false)
+//    }.ensuring(b => b, "Declared address isn't valid")
+//  }
 
   lazy val localAddress = new InetSocketAddress(InetAddress.getByName(settings.bindAddress), settings.port)
 
   //an address to send to peers
-  lazy val externalSocketAddress = Try{
-    def ipAddress(): String = {
-      val checkip = new URL("http://checkip.amazonaws.com")
-      val in:BufferedReader = new BufferedReader(new InputStreamReader(
-        checkip.openStream()))
-      in.readLine()
-    }
-    ipAddress()
-  } match {
-    case Success(value:String) => value
-    case _ => {
-      settings.declaredAddress
-        .flatMap(s => Try(InetAddress.getByName(s)).toOption)
-        .orElse {
-          if (settings.upnpEnabled) upnp.externalAddress else None
-        }.map(ia => new InetSocketAddress(ia, settings.port))
-    }
-  }
+  lazy val externalSocketAddress = settings.declaredAddress
+    .flatMap(s => Try(InetAddress.getByName(s)).toOption)
+    .orElse {
+      if (settings.upnpEnabled) upnp.externalAddress else None
+    }.map(ia => new InetSocketAddress(ia, settings.port))
 
   log.info(s"Declared address: $externalSocketAddress")
 

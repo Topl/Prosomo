@@ -6,8 +6,11 @@ else
     stakeHolderIndex=$(((RANDOM<<15)|RANDOM))
 fi
 echo "Holder Index = $stakeHolderIndex"
+stakeHolderAddress=$(dig @resolver1.opendns.com ANY myip.opendns.com +short)
+echo "Declared Address = $stakeHolderAddress"
 sbt "run-main prosomo.Prosomo bootstrap.conf \
 input{params{\
+myAddress=\"$stakeHolderAddress\",\
 holderIndexMin=$stakeHolderIndex,\
 holderIndexMax=$stakeHolderIndex,\
 dataFileDir=data_$stakeHolderIndex\
