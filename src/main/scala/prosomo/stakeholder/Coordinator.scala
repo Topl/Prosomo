@@ -126,7 +126,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
-  val ntpClient = new NTPClient
 
   def readFile(filename: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(filename)
@@ -167,6 +166,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val t0in:Long = lines(0).toLong
         t0 = t0in
         try {
+          val ntpClient = new NTPClient
           localClockOffset = ntpClient.getOffset(Array(timeServer))
         } catch {
           case e: IOException =>
