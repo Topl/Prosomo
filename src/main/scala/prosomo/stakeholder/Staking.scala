@@ -21,15 +21,6 @@ trait Staking extends Members {
     for (n <- 1 to o_n) {
       out = out - ( base.pow(n) / factorial(n) )
     }
-    //    if (holderIndex == 0) {
-    //val alpha = a.toBigDecimal.toDouble
-    //      val phiDouble = 1.0 - scala.math.pow(1.0 - f_s,alpha)
-    //      println(a.toString)
-    //      println(maclaurin_coefficient.toString)
-    //      println(s"alpha double:$alpha")
-    //      println(s"phi double:$phiDouble")
-    //      println(s"phi Ratio :${out.toBigDecimal.toDouble}")
-    //    }
     out
   }
 
@@ -53,11 +44,6 @@ trait Staking extends Members {
       val d = BigInt(2).pow(8*i)
       net = net + new Ratio(n,d)
     }
-    //    if (holderIndex == 0) {
-    //      println(s"net:${net.toBigDecimal.toDouble}")
-    //      println(s"thr:${t.toBigDecimal.toDouble}")
-    //      println(net < t)
-    //    }
     net < t
   }
 
@@ -120,7 +106,6 @@ trait Staking extends Members {
     * @return hash nonce
     */
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta): Eta = {
-    //println(s"Holder $holderIndex:eta in:"+Base58.encode(etaP))
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case b:BlockHeader => b._1.data
@@ -137,7 +122,6 @@ trait Staking extends Members {
         v = v++prev_two_thirds_epoch.getNonce(id._1)
       }
       val eta_ep = FastCryptographicHash(eta_prev++serializer.getBytes(ep)++v)
-      //println(s"Holder $holderIndex:eta out:"+Base58.encode(eta_ep))
       eta_ep
     }
   }
