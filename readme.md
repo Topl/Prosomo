@@ -68,12 +68,6 @@ This serves as a crude representation of the effects of network latency, bandwid
 
 Three distinct cryptographic functionalities are used to identify a Stakeholder with a single public address.  A Signature scheme, a Verifiable Random Function, and a Key Evolving Signature scheme are simultaneously used to validate transactions, leader eligibility, and block header authenticity respectively.  The three functionalities form a triad of public private keypairs so a Stakeholder’s public address corresponds to all three public keys concatenated together.
 
-
-## Hash Function
-
-Randomness is produced with a hash function that is used in epoch nonce generation and the key evolving scheme.  This functionality corresponds to the global random oracle specified in Ouroboros Genesis and is implemented with a fast cryptographic hash function that is used to produce unique identifiers and for block hashing.  The hash function currently used is the Blake2b 256-bit java implementation of RFC7693 https://www.ietf.org/rfc/rfc7693.txt.
-
-
 ## Digital Signatures
 
 A Signature Functionality (SIG) is used to determine transaction validity and identity verification.  We have two requirements for a signature routine:
@@ -90,14 +84,14 @@ We use the BouncyCastle java implementation of the Ed25519 signature routine spe
 A Verifiable Random Function (VRF) is used to carry out the staking procedure and determine the validity of block headers.  VRF output is a pseudo-random value that is deterministic and is generated from a proof.  The proof is committed to a message with the secret key and verified with the message and a public key.  A VRF must satisfy the following properties:
 
 
-- Given input message ***a****,* compute ***b = VRF(SK,a)*** **and proof ***p = P(SK,a)*** where ***SK*** is the secret key
-- Given the public key ***PK***, compute ***v = Verify(PK, b, p)*** where ***Verify*** will return **true** if ***b*** and ***p*** were made with ***SK*** that corresponds to ***PK***, **false** if otherwise
-- Uniformly Random: ***b*** must be indistinguishable from randomness
-- Uniqueness: ***p = p’*** ****if and only if ***a = a’*** for ***p = P(SK,a)*** and ***p’ = P(SK,a’)***
-- The above constraints require a function ***ProofToOutput*** to securely map the proof to the output such that ***VRF(SK,a) == ProofToOutput(P(SK,a))***
-- We need only specify ***P(SK,a)*** and ***ProofToOutput(p)***
+- Given input message **a**, compute **b = VRF(SK,a)** and proof **p = P(SK,a)** where **SK** is the secret key
+- Given the public key **PK**, compute **v = Verify(PK, b, p)** where **Verify** will return **true** if **b** and **p** were made with **SK** that corresponds to **PK**, **false** if otherwise
+- Uniformly Random: **b** must be indistinguishable from randomness
+- Uniqueness: **p = p’** if and only if **a = a’** for **p = P(SK,a)** and **p’ = P(SK,a’)**
+- The above constraints require a function **ProofToOutput** to securely map the proof to the output such that **VRF(SK,a) == ProofToOutput(P(SK,a))**
+- We need only specify **P(SK,a)** and **ProofToOutput(p)**
 
-A VRF has been implemented in Scala that uses the Ed25519 implementation specified in the SIG functionality.  This implementation is used for slot leader election and epoch nonce generation.  It corresponds to ECVRF-ED25519-SHA512-TAI specified in https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06.  The public-private keypair for the VRF in this implementation is equivalent to a keypair for Ed25519.
+A VRF has been implemented in Scala that uses the Ed25519 implementation specified in the SIG functionality.  This implementation is used for slot leader election and epoch nonce generation.  It corresponds to ECVRF-ED25519-SHA512-TAI specified in https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06.  The public-private keypair for the VRF in this implementation is equivalent to a keypair for Ed25519.  This implementation satisfies the above requirements and specifies **P(SK,a)** and **ProofToOutput(p)**.
 
 
 ## Key Evolving Scheme
@@ -124,6 +118,16 @@ Key update consists of modifying the binary tree structure and reproducing the p
 A signature in the MMM scheme consists of the signature and public key of the sub-scheme given in the key file as well as the signature of the message signed by the sub-scheme.  The sub-scheme signature is a sum composition signature of the message concatenated with the time step bytes, along with the public keys **PK0||PK1** of each node of the private key, in order.
 
 Signature verification consists of two sum composition verifications, one for the public key of **PKL** and the signature of **PKSi**, the other for the public key **PKSi** and the signature of the message **M||step**.  The step bytes are used to verify the Merkle tree witness path **PK0||PK1||PK0'||PK1'**... that is given with each signature.  Finally the public keys are confirmed to correspond to the two schemes **L** and **Si**.
+
+## Hash Function
+
+The execution of the protocol requires a sufficient realization of a global random oracle, a trusted source of randomness that is available and verifiable globally.  A hash function with the following properties is sufficient to realize this ideal funcitonality:
+  
+- Trapdoor function: Given a hash function **H**, input message **m**, and output **b**, the input **m** must be non-recoverable from the output **b = H(m)** provided **b** alone
+- Collision resistance: It must be impossible to find input **m'** such that **H(m) = H(m')** for a given **m**
+  
+Prosomo uses a hash function to produce epoch nonces, seeds in the key evolving scheme, and block identification.  The hash function currently used is the Blake2b 256-bit java implementation of RFC7693 https://www.ietf.org/rfc/rfc7693.txt.  This specification was chosen for its speed and established security.
+
 
 
 ## Global Clock
@@ -164,23 +168,25 @@ Blocks are broadcast among stakeholders as they are forged and when a new block 
 # Chain Adoption
 
   
-Chain selection occurs in accordance with *maxvalid-bg* specified in Ouroboros Genesis as new tines are built and confirmed to have a common ancestor in the local chain.  The ancestor block for both tines represent the head of the prefix to both tines.  Any tine with a prefix above a certain depth is considered.  This depth is parameterized by *k* and any tine that has a common prefix above *k* blocks deep is selected by longest chain rule, i.e. the tine with a head containing a higher block number than the head of the local chain.  If a common prefix below *k* blocks is found an alternative selection rule is used.  This selection rule prefers the tine with a higher number of blocks in a window of slots starting at the prefix slot and ending at prefix slot + *s* where *s* is the slot window interval.  Both *k* and *s* < *k* are parameterized to satisfy chain quality properties in the honest majority setting.  If either of these conditions are satisfied then the tine is validated block by block.
+Chain selection occurs in accordance with *maxvalid-bg* specified in Ouroboros Genesis as new tines are built and confirmed to have a common ancestor in the local chain.  The ancestor block for both tines represent the head of the prefix to both tines.  Any tine with a prefix above a certain depth is considered.  This depth is parameterized by **k** and any tine that has a common prefix above **k** blocks deep is selected by longest chain rule, i.e. the tine with a head containing a higher block number than the head of the local chain.  If a common prefix below **k** blocks is found an alternative selection rule is used.  This selection rule prefers the tine with a higher number of blocks in a window of slots starting at the prefix slot and ending at prefix slot + **s** where **s** is the slot window interval.  Both **k** and **s < k** are parameterized to satisfy chain quality properties in the honest majority setting.  If either of these conditions are satisfied then the tine is validated block by block.
 
 The tines with appropriate block number are validated per the isValidChain specification in Ouroboros Genesis.  The transactions included in each ledger are verified and a new state is calculated for each block on the tine.  If an invalid state is produced then the entire tine is discarded.  If the resulting state is valid, then each block is verified according to the VRF proofs, KES signatures, and slot leader eligibility according to the forger public keys and the local staking state.  Once the tine has passed all tests it is adopted as the local chain.
 
 The implementation of chain validation in Prosomo has an additional check not specified in Ouroboros Genesis.  The threshold calculated upon forging is included in the block certificate.  The validator calculates this same threshold for the forger from its local staking state, and the locally calculated threshold must be equal to the certificate threshold for the block to be valid.  In Ouroboros Genesis, the locally calculated threshold is evaluated in an inequality against the VRF test nonce, and there is no assurance that the forger and verifier calculated the exact same threshold value.
 
 
-# Transactions, State, and History
+# Transactions and State
 
 During the execution of the simulation, transactions are randomly generated at a specified rate. 
 Transactions may also be scheduled between specific actors with commands.  Transactions that are issued and new transactions that are discovered are broadcast to the set of gossipers.  An account based model is used for tracking state transitions and each transaction has a unique ID and a nonce.  State consists of a balance along with the next expected transaction nonce.  For a transaction to be applied to state it must have a nonce equal to the expected nonce and it must not deplete the account balance to below zero.  If those conditions are satisfied, then the new state balance is calculated and the next expected nonce is incremented by one.
 
-The state of each stakeholder is represented as an integer value balance along with a transaction counter and activity flag.  Following the account based model of Etherium, the transaction counter enforces the ordering of transactions issued by stakeholders and prevents double counting state transitions when blocks are applied to state.  Block validity is predicated on the state validity check, so that all transactions on the block ledger are valid state transitions.
+The state of the blockchain in Prosomo consists a ledger balance and a transaction counter.  Following the account based transaction model, the transaction counter enforces the ordering of transactions issued by stakeholders and prevents double counting state transitions when blocks are applied to state.  Block validity is predicated on the state validity check, so that all transactions on the block ledger are valid state transitions.
 
-The activity of stake is currently always on, and inactive stake is not considered in Ouroboros.   If the stake is active, the activity flag is true and the balance contributes the the net stake of the system.  We plan to experiment with setting stake inactive to account for scenarios where a significant portion of stake goes dark.
+# History and Storage
 
 Each block that produces a valid state is stored in a history object that the actors use to store copies of state.  When the epoch is updated, the snapshot of state used for the staking distribution is collected from history by querying it based on the hash of the block associated with that state.  History is also used to revert the local state to the common prefix and apply new state transitions when checking a new tine.  The staking state is collected from history when the epoch is incremented.
+
+Prosomo uses a database to store block and state information on disk. A java implementation of LevelDB maintained at https://github.com/dain/leveldb is used to store and index blocks and state based on what epoch they correspond to.  Since there can be no empty epochs, each epoch will be represented as individual LevelDB databases.  When the database is queried with a block ID, the slot number must be included so the appropriate epoch database can be opened and checked.
 
 # Wallet
 
@@ -198,10 +204,9 @@ When a tine is adopted, all transactions on the local chain from above the commo
 
 Transactions that are broadcast on the network file into stakeholders mempools and are statefully tracked as eligible ledger entries according to local state.  When a block is forged, the ledger for that block is created from entries in the mempool.  First a buffer is created from the mempool that consists of a sorted list of transactions that are sorted by their nonces.  The lowest nonce is applied first, beyond that there is no order.  Once a maximum number of valid transactions have been parsed, the mempool returns the sorted list and the block is forged with that ledger including the forger reward for the block.  The size of the ledger and the forger reward are configuration parameters not specified in Ouroboros.
 
-
 # Executing the Simulation
 
-The simulation is designed to execute a predetermined number of slots, retaining all information in memory.  Chain data is written to disk only when the command is given, stakeholders retain all data in memory and don’t save or load blocks to disk.  The project can be run either in the scala build tool (sbt) console or staged for deployment to a server by running ‘sbt stage’ in the project directory.  This creates the executable Crypto/target/universal/stage/bin/prosomo that can be run independently of sbt.  A command line script for interacting with the simulation is provided in the project directory.  To execute the command line, run Crypto/cmd.sh in a separate terminal.  This is used to pass commands to Prosomo via a file tmp/scorex/test-data/crypto/cmd and also can be used to queue commands at a later slot.  Just enter the desired slot number next to the command.  The command line input script is mostly for debugging purposes, and is useful for manipulating repeated simulation runs in real time.
+The project can be run either in the scala build tool (sbt) console or staged for deployment to a server by running ‘sbt stage’ in the project directory.  This creates the executable Prosomo/target/universal/stage/bin/prosomo that can be run independently of sbt.  A command line script for interacting with the simulation is provided in the project directory.  To execute the command line, run Prosomo/cmd.sh in a separate terminal.  This is used to pass commands to Prosomo via a file and can be used to queue commands at a later slot.  Just enter the desired slot number next to the command.  The command line input is useful for debugging, setting up specific network conditions, and manipulating repeated simulation runs in real time.
 
 Prosomo has command line configuration capabilities.  The *.conf files are HOCON formatted configuration files that specify the simulation parameters and commands.  To run a simulation with a given input command, they can be entered into an array in the .conf file.  The default input.conf file is given below, and is included in the project directory:
 
@@ -321,9 +326,9 @@ Splits all stakeholders into two randomly selected parties with one stakeholder 
 Joins the parties back together and resets all actors gossipers.
 
 
-    new_holder
+    new_holder_0
 
-Creates a new holder that bootstraps from the genesis block.  The new holder will not have any stake initially and won’t be able to forge blocks until future epochs where it has acquired tokens through transactions.
+Creates a new holder with the specified index that bootstraps from the genesis block.  If the holder index is not on the genesis block, the new holder will not have any stake initially and won’t be able to forge blocks until future epochs.
 
 
 ## Configuration Files
