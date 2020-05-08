@@ -16,7 +16,7 @@ class SlotHistoryStorage(dir:String) extends Types {
 
   private var data:Map[Slot,List[BlockId]] = Map()
 
-  private var blockReorgStore:LDBStore = new LDBStore(s"$dir/history/reorg")
+  private var blockReorgStore:LDBStore = LDBStore(s"$dir/history/reorg")
 
   def uuid = ByteArrayWrapper(FastCryptographicHash(java.util.UUID.randomUUID.toString))
 

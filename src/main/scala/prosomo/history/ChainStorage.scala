@@ -10,7 +10,7 @@ class ChainStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
 
-  var chainStore:LDBStore = new LDBStore(s"$dir/history/chain")
+  var chainStore:LDBStore = LDBStore(s"$dir/history/chain")
 
   def refresh():Unit = {
     chainStore.refresh()

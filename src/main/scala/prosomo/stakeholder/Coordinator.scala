@@ -904,7 +904,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {blocks.getBodyData(value._1) match {case txs:Seq[Any]=>txs}}.toArray.map{
+                    "ledger" -> {blocks.getBody((bs,value._1)) match {case txs:Seq[Any]=>txs}}.toArray.map{
                       case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
                         val delta = entry._3
                         val pk_g:PublicKeyW = entry._2

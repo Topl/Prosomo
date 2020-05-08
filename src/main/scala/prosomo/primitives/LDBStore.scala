@@ -7,7 +7,7 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 
 import io.iohk.iodb.ByteArrayWrapper
 
-class LDBStore(dir:String) {
+case class LDBStore(dir:String) {
 
   private val lock:ReentrantReadWriteLock = new ReentrantReadWriteLock()
 
@@ -21,6 +21,7 @@ class LDBStore(dir:String) {
   op.blockSize(4 * 1024 * 1024)
   op.cacheSize(0)
   op.maxOpenFiles(10)
+  op.compressionType(CompressionType.SNAPPY)
   var database:DB = factory.open(iFile, op)
 
   def refresh():Unit = {
@@ -78,4 +79,3 @@ class LDBStore(dir:String) {
   }
 
 }
-

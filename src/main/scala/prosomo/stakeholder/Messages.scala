@@ -184,7 +184,7 @@ trait Messages extends Members {
     result match {
       case value:GetBlockTree => {
         value.t match {
-          case t:BlockStorage => blocks.copy(t)
+          case t:BlockStorage => blocks
           case _ => println("error")
         }
         value.h match {

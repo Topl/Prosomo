@@ -1,96 +1,85 @@
 package prosomo.history
 
-import java.io.File
-
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
-import scorex.crypto.encode.Base58
 
 import scala.concurrent.duration.MINUTES
 
 class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.{storageFlag,cacheSize}
+  import prosomo.primitives.Parameters.{cacheSize,epochLength}
+  val dbCacheSize = 4
+  type DB = LDBStore
 
-  var idMap:Map[Hash,(State,Eta)] = Map()
+  private val stateStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
+    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .build[BigInt,DB](new CacheLoader[BigInt,DB] {
+      def load(epoch:BigInt):DB = {
+        LDBStore(s"$dir/history/state/epoch_$epoch")
+      }
+    })
 
-  var stateStore:LDBStore = new LDBStore(s"$dir/history/state")
-
-  var etaStore:LDBStore = new LDBStore(s"$dir/history/eta")
+  private val etaStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
+    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .build[BigInt,DB](new CacheLoader[BigInt,DB] {
+      def load(epoch:BigInt):DB = {
+        LDBStore(s"$dir/history/eta/epoch_$epoch")
+      }
+    })
 
   def refresh():Unit = {
-    stateStore.refresh()
-    etaStore.refresh()
-  }
-
-  private val stateLoader:CacheLoader[SlotId,(State,Eta)] = new CacheLoader[SlotId,(State,Eta)] {
-    def load(id:SlotId):(State,Eta) = {
-      SharedData.throwDiskWarning
-      (
-        stateStore.get(id._2) match {
-          case Some(bytes:ByteArrayWrapper) => {
-            val byteStream = new ByteStream(bytes.data,DeserializeState)
-            serializer.fromBytes(byteStream) match {
-              case s:State => s
-              case _ => Map()
-            }
-          }
-          case None => Map()
-        },
-        etaStore.get(id._2) match {
-          case Some(bytes:ByteArrayWrapper) => bytes.data
-          case None => Array()
-        }
-      )
-    }
+    etaStoreCache.invalidateAll()
+    stateStoreCache.invalidateAll()
   }
 
   private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
     .expireAfterAccess(10,MINUTES).maximumSize(cacheSize)
-    .build[SlotId,(State,Eta)](stateLoader)
+    .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
+      def load(id:SlotId):(State,Eta) = {
+        SharedData.throwDiskWarning
+        (
+          stateStoreCache.get(id._1/epochLength).get(id._2) match {
+            case Some(bytes:ByteArrayWrapper) => {
+              val byteStream = new ByteStream(bytes.data,DeserializeState)
+              serializer.fromBytes(byteStream) match {
+                case s:State => s
+                case _ => Map()
+              }
+            }
+            case None => Map()
+          },
+          etaStoreCache.get(id._1/epochLength).get(id._2) match {
+            case Some(bytes:ByteArrayWrapper) => bytes.data
+            case None => Array()
+          }
+        )
+      }
+    })
 
-
-  def known(id:SlotId):Boolean = if (storageFlag) {
+  def known(id:SlotId):Boolean = {
     stateCache.getIfPresent(id) match {
       case s:(State,Eta) => true
-      case _ => stateStore.known(id._2)
+      case _ => stateStoreCache.get(id._1/epochLength).known(id._2)
     }
-  } else {
-    idMap.keySet.contains(id._2)
   }
 
-  def known_then_load(id:SlotId):Boolean = if (storageFlag) {
+  def known_then_load(id:SlotId):Boolean = {
     stateCache.get(id) match {
       case s:(State,Eta) => true
       case _ => false
     }
-  } else {
-    idMap.keySet.contains(id._2)
   }
 
-  def add(id:SlotId,ls:State,eta:Eta):Unit = if (storageFlag) {
+  def add(id:SlotId,ls:State,eta:Eta):Unit = {
     if (!known(id)) {
-      stateStore.update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
-      etaStore.update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
+      stateStoreCache.get(id._1/epochLength).update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
+      etaStoreCache.get(id._1/epochLength).update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
     }
     stateCache.put(id,(ls,eta))
-  } else {
-    if (!known(id)) {
-      idMap += (id._2 -> (ls, eta))
-    }
   }
 
-  def get(id:SlotId):Any = if (storageFlag) {
-    stateCache.get(id)
-  } else {
-    if (known(id)) {
-      idMap(id._2)
-    } else {
-      println("Warning: Unknown id in history "+Base58.encode(id._2.data))
-      0
-    }
-  }
+  def get(id:SlotId):Any = stateCache.get(id)
 
 }
