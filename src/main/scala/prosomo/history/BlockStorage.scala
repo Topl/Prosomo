@@ -1,6 +1,6 @@
 package prosomo.history
 
-import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalListener, RemovalNotification}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
@@ -14,7 +14,11 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   type DB = LDBStore
 
   private val headerStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .expireAfterAccess(10,MINUTES)
+    .maximumSize(dbCacheSize)
+    .removalListener((notification: RemovalNotification[BigInt, DB]) => {
+      notification.getValue.close()
+    })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
       def load(epoch:BigInt):DB = {
         LDBStore(s"$dir/blocks/header/epoch_$epoch")
@@ -22,7 +26,11 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     })
 
   private val bodyStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .expireAfterAccess(10,MINUTES)
+    .maximumSize(dbCacheSize)
+    .removalListener((notification: RemovalNotification[BigInt, DB]) => {
+      notification.getValue.close()
+    })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
       def load(epoch:BigInt):DB = {
         LDBStore(s"$dir/blocks/body/epoch_$epoch")
@@ -30,8 +38,8 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     })
 
   def refresh():Unit = {
-    bodyStoreCache.invalidateAll()
-    headerStoreCache.invalidateAll()
+    bodyStoreCache.asMap().keySet().forEach(bodyStoreCache.get(_).refresh())
+    headerStoreCache.asMap().keySet().forEach(headerStoreCache.get(_).refresh())
   }
 
   private val blockCache:LoadingCache[SlotId,Block] = CacheBuilder.newBuilder()

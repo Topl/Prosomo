@@ -1,6 +1,6 @@
 package prosomo.history
 
-import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalNotification}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
@@ -14,7 +14,11 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   type DB = LDBStore
 
   private val stateStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .expireAfterAccess(10,MINUTES)
+    .maximumSize(dbCacheSize)
+    .removalListener((notification: RemovalNotification[BigInt, DB]) => {
+      notification.getValue.close()
+    })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
       def load(epoch:BigInt):DB = {
         LDBStore(s"$dir/history/state/epoch_$epoch")
@@ -22,7 +26,11 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     })
 
   private val etaStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(dbCacheSize)
+    .expireAfterAccess(10,MINUTES)
+    .maximumSize(dbCacheSize)
+    .removalListener((notification: RemovalNotification[BigInt, DB]) => {
+      notification.getValue.close()
+    })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
       def load(epoch:BigInt):DB = {
         LDBStore(s"$dir/history/eta/epoch_$epoch")
@@ -30,8 +38,8 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     })
 
   def refresh():Unit = {
-    etaStoreCache.invalidateAll()
-    stateStoreCache.invalidateAll()
+    etaStoreCache.asMap().keySet().forEach(etaStoreCache.get(_).refresh())
+    stateStoreCache.asMap().keySet().forEach(stateStoreCache.get(_).refresh())
   }
 
   private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
