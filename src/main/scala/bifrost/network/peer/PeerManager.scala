@@ -114,8 +114,9 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
         println("address",address)
         println("handshake",handshake.declaredAddress)
         handshake.declaredAddress match {
-          case Some(address:InetSocketAddress) => {
-            self ! PeerManager.AddOrUpdatePeer(address, None, Some("declared"))
+          case Some(newAddress:InetSocketAddress) => {
+            println("adding new peer to database")
+            self ! PeerManager.AddOrUpdatePeer(newAddress, None, Some("declared"))
           }
           case _ =>
         }
