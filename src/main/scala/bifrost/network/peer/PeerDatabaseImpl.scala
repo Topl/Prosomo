@@ -17,7 +17,7 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
   private lazy val ownNonce = settings.nodeNonce
 
   override def addOrUpdateKnownPeer(address: InetSocketAddress, peerInfo: PeerInfo): Unit = {
-    if (!address.getHostName.contains(prosomo.primitives.Parameters.myAddress)) {
+    if (!address.getHostName.contains(prosomo.primitives.Parameters.myAddress) && prosomo.primitives.Parameters.myAddress != "") {
       whitelistPersistence.get(address) match {
         case Some(info:PeerInfo) => {
           info.nonce match {
