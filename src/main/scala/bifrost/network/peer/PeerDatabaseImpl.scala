@@ -57,7 +57,7 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
           case _ =>
         }
       }
-      case Some(nonce:Long) if nonce == ownNonce => {
+      case None => {
         peerInfo.nodeName match {
           case Some(str:String) if str == "bootstrap" => addPeer
           case _ =>
