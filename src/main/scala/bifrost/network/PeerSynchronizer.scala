@@ -22,7 +22,9 @@ class PeerSynchronizer(val networkControllerRef: ActorRef, peerManager: ActorRef
 
   val messageSpecs = Seq(GetPeersSpec, PeersSpec)
 
-  case object TimerKey
+  case object PeerSync
+
+  case object PeerSyncTimer
 
   val msg = Message[Unit](GetPeersSpec, Right(Unit), None)
   val stn = NetworkController.SendToNetwork(msg, Broadcast)
@@ -32,7 +34,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef, peerManager: ActorRef
 
     networkControllerRef ! NetworkController.RegisterMessagesHandler(messageSpecs, self)
     context.system.scheduler.schedule(2.seconds, 10.seconds)(networkControllerRef ! stn)
-    timers.startPeriodicTimer(TimerKey,TimerKey,10.seconds)
+    timers.startPeriodicTimer(PeerSyncTimer,PeerSync,10.seconds)
   }
 
   override def receive: Receive = {
@@ -45,7 +47,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef, peerManager: ActorRef
       peerManager ! GetAllPeers(remote,networkControllerRef)
     }
 
-    case TimerKey => {
+    case PeerSync => {
       peerManager ! "print_peers"
       networkControllerRef ! stn
     }

@@ -145,7 +145,10 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
   }
 
   override def receive: Receive = ({
-    case "print_peers" => peerDatabase.print
+    case "print_peers" => {
+      println("Peers:")
+      peerDatabase.print
+    }
 
     case CheckPeers =>
       if (connectedPeers.size < settings.maxConnections && connectingPeer.isEmpty) {
