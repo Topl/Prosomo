@@ -25,7 +25,7 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
     println(address.getPort)
     println(peerInfo.nonce)
     println(peerInfo.nodeName)
-    if (peerInfo.nonce.get != ownNonce) {
+    def addPeer:Unit = {
       whitelistPersistence.get(address) match {
         case Some(info:PeerInfo) => {
           info.nonce match {
@@ -49,6 +49,21 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
           whitelistPersistence.put(address, updatedPeerInfo)
         }
       }
+    }
+    peerInfo.nonce match {
+      case Some(nonce:Long) if nonce != ownNonce => {
+        peerInfo.nodeName match {
+          case Some(str:String) if str == "declared" => addPeer
+          case _ =>
+        }
+      }
+      case Some(nonce:Long) if nonce == ownNonce => {
+        peerInfo.nodeName match {
+          case Some(str:String) if str == "bootstrap" => addPeer
+          case _ =>
+        }
+      }
+      case _ =>
     }
   }
 
