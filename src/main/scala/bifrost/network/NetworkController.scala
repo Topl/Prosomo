@@ -76,7 +76,7 @@ class NetworkController(settings: Settings,
   lazy val externalSocketAddress:Option[InetSocketAddress] = if (settings.upnpEnabled) {
     upnp.externalAddress.map(ia => new InetSocketAddress(ia, settings.port))
   } else {
-    settings.declaredAddress.flatMap(s => Try(InetAddress.getByName(s)).toOption).map(ia => new InetSocketAddress(ia, settings.port))
+    Try(InetAddress.getByName(settings.declaredAddress.get)).toOption.map(ia => new InetSocketAddress(ia, settings.port))
   }
 
 

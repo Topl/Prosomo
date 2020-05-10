@@ -65,4 +65,10 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
   override def blacklistedPeers(): Seq[String] = blacklist.keys.toSeq
 
   override def isEmpty(): Boolean = whitelistPersistence.isEmpty
+
+  def print:Unit = {
+    for (entry<-whitelistPersistence) {
+      println(entry._1,entry._2)
+    }
+  }
 }

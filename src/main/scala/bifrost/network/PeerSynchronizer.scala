@@ -46,6 +46,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef, peerManager: ActorRef
     }
 
     case TimerKey => {
+      peerManager ! "print_peers"
       networkControllerRef ! stn
     }
 
