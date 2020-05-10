@@ -69,7 +69,6 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "iodb" % "0.3.+",
-  "org.ethereum" % "leveldbjni-all" % "1.18.3",
   "org.iq80.leveldb" % "leveldb" % "0.12",
   "com.typesafe.akka" %% "akka-testkit" % "2.4.17" % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % "10.0.7",
