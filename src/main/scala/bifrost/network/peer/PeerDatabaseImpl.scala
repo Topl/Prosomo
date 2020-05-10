@@ -3,12 +3,13 @@ package bifrost.network.peer
 import java.net.InetSocketAddress
 
 import bifrost.settings.Settings
+import bifrost.utils.ScorexLogging
 
 import scala.collection.mutable
 
 
 //todo: persistence
-class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends PeerDatabase {
+class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends PeerDatabase with ScorexLogging {
 
   private val whitelistPersistence = mutable.Map[InetSocketAddress, PeerInfo]()
 
@@ -17,14 +18,14 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
   private lazy val ownNonce = settings.nodeNonce
 
   override def addOrUpdateKnownPeer(address: InetSocketAddress, peerInfo: PeerInfo): Unit = {
-    println(prosomo.primitives.Parameters.myAddress)
-    println(address)
-    println(address.getAddress)
-    println(address.getHostName)
-    println(address.getHostString)
-    println(address.getPort)
-    println(peerInfo.nonce)
-    println(peerInfo.nodeName)
+//    println(prosomo.primitives.Parameters.myAddress)
+//    println(address)
+//    println(address.getAddress)
+//    println(address.getHostName)
+//    println(address.getHostString)
+//    println(address.getPort)
+//    println(peerInfo.nonce)
+//    println(peerInfo.nodeName)
     def addPeer:Unit = {
       whitelistPersistence.get(address) match {
         case Some(info:PeerInfo) => {
@@ -91,7 +92,7 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
 
   def print:Unit = {
     for (entry<-whitelistPersistence) {
-      println(entry._1,entry._2)
+      log.info("Known Peer: "+entry._1.toString+" "+entry._2.toString)
     }
   }
 }

@@ -154,7 +154,7 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
 
   override def receive: Receive = ({
     case "print_peers" => {
-      println("Peers:")
+
       peerDatabase.print
     }
 

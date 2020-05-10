@@ -74,11 +74,15 @@ class NetworkController(settings: Settings,
 
   //an address to send to peers
   lazy val externalSocketAddress:Option[InetSocketAddress] = if (settings.upnpEnabled) {
-    upnp.externalAddress.map(ia => new InetSocketAddress(ia, settings.port))
+    log.info("UPNP Enabled...")
+    log.info(upnp.externalAddress.toString)
+    upnp.externalAddress match {
+      case Some(ia:InetAddress) => Some(new InetSocketAddress(ia, settings.port))
+      case None => None
+    }
   } else {
     Try(InetAddress.getByName(settings.declaredAddress.get)).toOption.map(ia => new InetSocketAddress(ia, settings.port))
   }
-
 
   log.info(s"Declared address: $externalSocketAddress")
 
