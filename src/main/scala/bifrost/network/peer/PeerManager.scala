@@ -113,6 +113,12 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
       } else {
         println("address",address)
         println("handshake",handshake.declaredAddress)
+        handshake.declaredAddress match {
+          case Some(address:InetSocketAddress) => {
+            self ! PeerManager.AddOrUpdatePeer(address, None, Some("declared"))
+          }
+          case _ =>
+        }
         val toUpdate = connectedPeers.filter { case (cp, h) =>
           cp.socketAddress == address || h.map(_.nodeNonce == handshake.nodeNonce).getOrElse(true)
         }
@@ -133,7 +139,6 @@ class PeerManager(settings: Settings) extends Actor with ScorexLogging {
           if (handshake.nodeNonce == settings.nodeNonce) {
             newCp.handlerRef ! PeerConnectionHandler.CloseConnection
           } else {
-            handshake.declaredAddress.foreach(address => self ! PeerManager.AddOrUpdatePeer(address, None, Some("declared")))
             connectedPeers += newCp -> Some(handshake)
           }
         }
