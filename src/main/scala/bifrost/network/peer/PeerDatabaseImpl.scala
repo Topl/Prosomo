@@ -74,7 +74,9 @@ class PeerDatabaseImpl(settings: Settings, filename: Option[String]) extends Pee
         peerInfo.nodeName match {
           case Some(str:String) if str == "bootstrap" => addPeer
           case Some(str:String) if str == "declared" => {
-            addPeer
+            if (!address.getHostString.contains(prosomo.primitives.Parameters.myAddress)) {
+              addPeer
+            }
           }
           case _ =>
         }
