@@ -14,7 +14,6 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   type DB = LDBStore
 
   private val stateStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES)
     .maximumSize(dbCacheSize)
     .removalListener((notification: RemovalNotification[BigInt, DB]) => {
       notification.getValue.close()
@@ -26,7 +25,6 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     })
 
   private val etaStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES)
     .maximumSize(dbCacheSize)
     .removalListener((notification: RemovalNotification[BigInt, DB]) => {
       notification.getValue.close()
@@ -43,7 +41,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   }
 
   private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(cacheSize)
+    .maximumSize(cacheSize)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
       def load(id:SlotId):(State,Eta) = {
         SharedData.throwDiskWarning

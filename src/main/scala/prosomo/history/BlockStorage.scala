@@ -14,7 +14,6 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   type DB = LDBStore
 
   private val headerStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES)
     .maximumSize(dbCacheSize)
     .removalListener((notification: RemovalNotification[BigInt, DB]) => {
       notification.getValue.close()
@@ -26,7 +25,6 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     })
 
   private val bodyStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES)
     .maximumSize(dbCacheSize)
     .removalListener((notification: RemovalNotification[BigInt, DB]) => {
       notification.getValue.close()
@@ -43,7 +41,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   }
 
   private val blockCache:LoadingCache[SlotId,Block] = CacheBuilder.newBuilder()
-    .expireAfterAccess(10,MINUTES).maximumSize(cacheSize)
+    .maximumSize(cacheSize)
     .build[SlotId,Block](new CacheLoader[SlotId,Block] {
       def load(id:SlotId):Block = {
         restore(id) match {
