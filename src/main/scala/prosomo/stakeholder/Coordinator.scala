@@ -5,7 +5,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
@@ -15,12 +15,10 @@ import prosomo.components._
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
 import prosomo.wallet.Wallet
-import scorex.crypto.encode.Base58
-
+import scorex.util.encode.Base58
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
-import scala.concurrent.duration._
 import scala.util.{Random, Try}
 import java.io.IOException
 
@@ -103,6 +101,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var bootStrapJob:Int = 0
   var bootStrapMessage:Cancellable = _
 
+  val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
 
   val coordId:String = Base58.encode(inputSeed)
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
@@ -126,6 +125,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
+
+  self ! NewDataFile
+  self ! Populate
 
   def readFile(filename: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(filename)
@@ -207,33 +209,23 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       } else {
         println("No Holders to start...")
       }
-      sendAssertDone(routerRef,holders)
+      sendAssertDone(routerRef,HoldersFromLocal(holders))
       self ! Register
     }
   }
 
   def receiveRemoteHolders: Receive = {
-    case remoteHolders:List[ActorRefWrapper] => {
-//      for (newPath<-remoteHolders.map(_.path)) {
-//        holders.find(_.path == newPath) match {
-//          case None => {
-//            holders ::= ActorRefWrapper(newPath)
-//          }
-//          case _ =>
-//        }
-//      }
+    case HoldersFromRemote(remoteHolders:List[ActorRefWrapper]) => {
       holders = remoteHolders
-      holders.filterNot(_.remote).foreach(sendAssertDone(_,holders))
+      holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromRemote(holders)))
     }
   }
-
-  val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
 
   def restorOrGenerateGenBlock: Receive = {
     case Register => {
       blocks.restore((0,genBlockKey)) match {
         case Some(b:Block) => {
-          genBlock = Block(hash(b.prosomoHeader,serializer),b.header,b.body)
+          genBlock = Block(hash(b.prosomoHeader,serializer),b.blockHeader,b.blockBody,b.genesisSet)
           verifyBlock(genBlock)
           println("Recovered Genesis Block")
         }
@@ -279,10 +271,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def setupLocal:Unit = {
     if (holderIndexMin > -1 && holderIndexMax > -1) {
       SharedData.printingHolder = holderIndexMin
-      sendAssertDone(routerRef, holders.filterNot(_.remote))
+      sendAssertDone(routerRef, HoldersFromLocal(holders.filterNot(_.remote)))
     }
     println("Sending holders list")
-    sendAssertDone(holders.filterNot(_.remote),holders)
+    sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
     println("Sending holders coordinator ref")
     sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
     println("Send GenBlock")
@@ -522,13 +514,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           holders.find(newHolder.path == _.path) match {
             case None => {
               holders ::= newHolder
-              sendAssertDone(newHolder,holders)
+              sendAssertDone(newHolder,HoldersFromLocal(holders))
               sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
               sendAssertDone(newHolder,GenBlock(genBlock))
               sendAssertDone(newHolder,Initialize)
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
-              sendAssertDone(routerRef,holders.filterNot(_.remote))
+              sendAssertDone(routerRef,HoldersFromLocal(holders.filterNot(_.remote)))
               newHolder ! Run
             }
             case _ => newHolder ! PoisonPill
@@ -700,13 +692,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             holders.find(newHolder.path == _.path) match {
               case None => {
                 holders ::= newHolder
-                sendAssertDone(newHolder,holders)
+                sendAssertDone(newHolder,HoldersFromLocal(holders))
                 sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
                 sendAssertDone(newHolder,GenBlock(genBlock))
                 sendAssertDone(newHolder,Initialize)
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
-                sendAssertDone(routerRef,holders.filterNot(_.remote))
+                sendAssertDone(routerRef,HoldersFromLocal(holders.filterNot(_.remote)))
                 newHolder ! Run
               }
               case _ => newHolder ! PoisonPill

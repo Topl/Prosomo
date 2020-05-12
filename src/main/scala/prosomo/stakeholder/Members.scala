@@ -6,7 +6,6 @@ import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf
 import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.wallet._
-
 import scala.math.BigInt
 import scala.util.Random
 
@@ -92,7 +91,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def hash(input:TransactionSet,serializer: Serializer):Hash
   def hash(input:String,serializer: Serializer):Hash
   def verifyTX(transaction: Transaction,sig:Sig,serializer: Serializer):Boolean
-  def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Any
+  def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
   def getParentId(b:BlockHeader):SlotId
   def lastActiveSlot(c:Tine, s:Slot):Slot
   def getActiveSlots(c:Tine):Int
@@ -105,13 +104,12 @@ trait Members extends SimpleTypes with Actor with Timers {
   def bytes2hex(b: Array[Byte]):String
   def hex2bytes(hex: String): Array[Byte]
   def containsDuplicates(s:Map[String,String]):Boolean
-  def getBlockHeader(bid:SlotId):Any
-  def getParentBlockHeader(b:BlockHeader):Any
-  def getParentId(bid:SlotId):Any
+  def getBlockHeader(bid:SlotId):Option[BlockHeader]
+  def getParentBlockHeader(b:BlockHeader):Option[BlockHeader]
+  def getParentId(bid:SlotId):Option[SlotId]
   def getNonce(id:SlotId):Rho
   def eta_from_genesis(c:Tine, ep:Int):Eta
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta):Eta
-  def diffuse(str: String,id: String,sk_sig: PrivateKey):String
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
   def verifyMac(input:Hash, mac:Mac):Boolean
   def gossipSet(id:ActorPath,h:List[ActorRefWrapper]):List[ActorRefWrapper]
@@ -129,8 +127,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyChain(c:Tine, gh:Hash):Boolean
   def verifySubChain(tine:Tine, prefix:Slot):Boolean
   def verifyTransaction(t:Transaction):Boolean
-  def updateLocalState(ls:State, c:Tine):Any
-  def updateLocalState(ls:State, id:SlotId):Any
+  def updateLocalState(ls:State, c:Tine):Option[State]
+  def updateLocalState(ls:State, id:SlotId):Option[State]
   def trimMemPool:Unit
   def collectLedger(c:Tine):Unit
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet

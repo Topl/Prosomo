@@ -3,7 +3,6 @@ package prosomo.stakeholder
 import prosomo.cases.{RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, SharedData}
-
 import scala.util.control.Breaks.{break, breakable}
 
 trait ChainSelection extends Members {

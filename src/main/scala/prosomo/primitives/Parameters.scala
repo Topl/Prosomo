@@ -1,16 +1,12 @@
 package prosomo.primitives
 
 import java.io.File
-
-import bifrost.crypto.hash.FastCryptographicHash
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
-
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import prosomo.remote._
-
 import scala.math.BigInt
 
 object Parameters {

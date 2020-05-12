@@ -1,8 +1,6 @@
 package prosomo.history
 
-import java.io.File
-
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, Ratio, SimpleTypes}
@@ -15,7 +13,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
 
   var walletStore:LDBStore = LDBStore(s"$dir/wallet")
 
-  def refresh():Unit = {
+  def refresh:Unit = {
     walletStore.refresh()
   }
 

@@ -1,13 +1,12 @@
 package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Cancellable, Props}
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
-
 import scala.math.BigInt
 import scala.util.Random
 

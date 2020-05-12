@@ -1,11 +1,9 @@
 package prosomo.history
 
-import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalListener, RemovalNotification}
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalNotification}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
-
-import scala.concurrent.duration.MINUTES
 
 class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._
@@ -35,7 +33,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
       }
     })
 
-  def refresh():Unit = {
+  def refresh:Unit = {
     bodyStoreCache.asMap().keySet().forEach(bodyStoreCache.get(_).refresh())
     headerStoreCache.asMap().keySet().forEach(headerStoreCache.get(_).refresh())
   }
@@ -56,11 +54,11 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     headerStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
       bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getGenesisBytes(
-        block.body match {case txs:GenesisSet => {txs}}
+        block.body match {case txs:GenesisSet@unchecked => {txs}}
       ))))
     } else {
       bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(
-        block.body match {case txs:TransactionSet => txs}
+        block.body match {case txs:TransactionSet@unchecked => txs}
       ))))
     }
     blockCache.put((blockHeader._3,block.id),block)
@@ -71,11 +69,11 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     headerStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
       bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
-        block.body match {case txs:GenesisSet => {txs}}
+        block.body match {case txs:GenesisSet@unchecked => {txs}}
       ))))
     } else {
       bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
-        block.body match {case txs:TransactionSet => txs}
+        block.body match {case txs:TransactionSet@unchecked => txs}
       ))))
     }
   }
@@ -87,13 +85,13 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeBlockHeader)
         serializer.fromBytes(byteStream) match {
-          case h:BlockHeader=> {
+          case h:BlockHeader@unchecked => {
             bodyStoreCache.get(id._1/epochLength).get(key) match {
               case Some(bytes:ByteArrayWrapper) => {
                 if (h._3 == 0) {
                   val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeGenesisSet)
                   serializer.fromBytes(byteStream) match {
-                    case txs:GenesisSet => {
+                    case txs:GenesisSet@unchecked => {
                       val block = Block(key,h,txs)
                       Some(block)
                     }
@@ -102,7 +100,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
                 } else {
                   val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeTransactionSet)
                   serializer.fromBytes(byteStream) match {
-                    case txs:TransactionSet => {
+                    case txs:TransactionSet@unchecked => {
                       val block = Block(key,h,txs)
                       Some(block)
                     }
@@ -129,20 +127,18 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   def getBodyData(id:SlotId):Any = bodyStoreCache.get(id._1/epochLength).get(id._2)
 
   def getTxs(id:SlotId):TransactionSet = getBody(id) match {
-    case txs:TransactionSet => txs
-    case _ => Seq()
+    case txs:TransactionSet@unchecked => txs
   }
 
   def getGenSet(id:SlotId):GenesisSet = getBody(id) match {
-    case txs:GenesisSet => txs
-    case _ => Seq()
+    case txs:GenesisSet@unchecked => txs
   }
 
   def known(id:SlotId):Boolean = {
     blockCache.getIfPresent(id) match {
       case b:Block => b.header match {
-        case h:BlockHeader => true
         case None => false
+        case h:BlockHeader@unchecked => true
       }
       case _ => headerStoreCache.get(id._1/epochLength).known(id._2)
     }
@@ -151,8 +147,8 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   def known_then_load(id:SlotId):Boolean = {
     blockCache.get(id) match {
       case b:Block => b.header match {
-        case h:BlockHeader => true
         case None => false
+        case h:BlockHeader@unchecked => true
       }
       case _ => false
     }

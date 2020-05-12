@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import prosomo.components.Tine
 import prosomo.primitives.{Ratio, SharedData}
 
@@ -80,7 +80,7 @@ trait Staking extends Members {
   def eta_from_genesis(c:Tine, ep:Int): Eta = {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
-        case b:BlockHeader => b._1.data
+        case Some(b:BlockHeader) => b._1.data
         case _ => {
           println("error: ep 0 eta not recovered")
           SharedData.throwError(holderIndex)
@@ -108,7 +108,7 @@ trait Staking extends Members {
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta): Eta = {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
-        case b:BlockHeader => b._1.data
+        case Some(b:BlockHeader) => b._1.data
         case _ => {
           println("error: ep 0 eta not recovered")
           SharedData.throwError(holderIndex)

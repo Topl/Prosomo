@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.ActorPath
 import akka.util.Timeout
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import prosomo.cases._
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Mac, Parameters}
@@ -12,16 +12,6 @@ import scala.math.BigInt
 
 trait Messages extends Members {
   import Parameters._
-  /**
-    * Verifiable string for communicating between stakeholders
-    * @param str data to be diffused
-    * @param id holder identification information
-    * @param sk_sig holder signature secret key
-    * @return string to be diffused
-    */
-  def diffuse(str: String,id: String,sk_sig: PrivateKey): String = {
-    str+";"+id+";"+bytes2hex(sig.sign(sk_sig,serializer.getBytes(str+";"+id)))
-  }
 
   /**
     * Signed data message for verification between holders
@@ -69,12 +59,12 @@ trait Messages extends Members {
   def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
       if (holder.remote) {
-        routerRef ! (holder.path, command)
+        routerRef ! MessageFromLocalToRemote(holder.path, command)
       } else {
-        routerRef ! (sender, holder, command)
+        routerRef ! MessageFromLocalToLocal(sender, holder, command)
       }
     } else if (useFencing) {
-      routerRef ! (BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
+      routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
     } else {
       holder ! command
     }
@@ -89,12 +79,12 @@ trait Messages extends Members {
     for (holder <- holders){
       if (useRouting && !useFencing) {
         if (holder.remote) {
-          routerRef ! (holder.path, command)
+          routerRef ! MessageFromLocalToRemote(holder.path, command)
         } else {
-          routerRef ! (sender, holder, command)
+          routerRef ! MessageFromLocalToLocal(sender, holder, command)
         }
       } else if (useFencing) {
-        routerRef ! (BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
+        routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
       } else {
         holder ! command
       }

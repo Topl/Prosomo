@@ -5,7 +5,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
 
-import scala.concurrent.duration.MINUTES
+import scala.util.Try
 
 class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.components.Serializer._
@@ -35,7 +35,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       }
     })
 
-  def refresh():Unit = {
+  def refresh:Unit = {
     etaStoreCache.asMap().keySet().forEach(etaStoreCache.get(_).refresh())
     stateStoreCache.asMap().keySet().forEach(stateStoreCache.get(_).refresh())
   }
@@ -65,15 +65,15 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     })
 
   def known(id:SlotId):Boolean = {
-    stateCache.getIfPresent(id) match {
-      case s:(State,Eta) => true
+    Try{stateCache.getIfPresent(id)}.toOption match {
+      case Some(s:(State,Eta)) => true
       case _ => stateStoreCache.get(id._1/epochLength).known(id._2)
     }
   }
 
   def known_then_load(id:SlotId):Boolean = {
-    stateCache.get(id) match {
-      case s:(State,Eta) => true
+    Try{stateCache.get(id)}.toOption match {
+      case Some(s:(State,Eta)) => true
       case _ => false
     }
   }
@@ -86,6 +86,13 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     stateCache.put(id,(ls,eta))
   }
 
-  def get(id:SlotId):Any = stateCache.get(id)
+  def get(id:SlotId):Option[(State,Eta)] = {
+    val out = stateCache.get(id)
+    if (out._2.isEmpty || out._1.isEmpty) {
+      None
+    } else {
+      Some(out)
+    }
+  }
 
 }

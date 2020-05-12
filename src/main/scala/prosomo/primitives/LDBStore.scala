@@ -4,7 +4,6 @@ import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.iq80.leveldb._
 import org.iq80.leveldb.impl.Iq80DBFactory._
-
 import io.iohk.iodb.ByteArrayWrapper
 
 case class LDBStore(dir:String) {

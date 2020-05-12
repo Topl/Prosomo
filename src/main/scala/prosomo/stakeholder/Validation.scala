@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
 import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
-import scorex.crypto.encode.Base58
+import scorex.util.encode.Base58
 
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
@@ -34,8 +34,8 @@ trait Validation extends Members {
     val header = b.prosomoHeader
     val headerVer = verifyBlockHeader(header)
     val ledgerVer = if (header._3 == 0) {
-      b.body match {
-        case txs:GenesisSet => {
+      b.genesisSet match {
+        case Some(txs:GenesisSet) => {
           if (txs.nonEmpty) {
             hashGen(txs,serializer) == header._2.dataHash && txs.map(
               _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
@@ -49,8 +49,8 @@ trait Validation extends Members {
         case _ => {println("error: tx set match in block verify");false}
       }
     } else {
-      b.body match {
-        case txs:TransactionSet => {
+      b.blockBody match {
+        case Some(txs:TransactionSet) => {
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
               val (out1,out2) = (hash(txs,serializer) == header._2.dataHash , txs.map(verifyTransaction).reduceLeft(_ && _))
@@ -92,16 +92,16 @@ trait Validation extends Members {
     var i = 0
 
     getBlockHeader(c.get(0)) match {
-      case b:BlockHeader => bool &&= hash(b,serializer) == gh
+      case Some(b:BlockHeader) => bool &&= hash(b,serializer) == gh
       case _ => bool &&= false
     }
     if (!bool) println("Holder "+holderIndex.toString+" invalid genesis block")
 
     for (id <- c.ordered.tail) {
       getBlockHeader(id) match {
-        case b:BlockHeader => {
+        case Some(b:BlockHeader) => {
           getParentBlockHeader(b) match {
-            case pb:BlockHeader => {
+            case Some(pb:BlockHeader) => {
               bool &&= getParentId(b) == pid
               if (getParentId(b) != pid) {
                 println("Holder "+holderIndex.toString+" pid mismatch")
@@ -127,7 +127,7 @@ trait Validation extends Members {
           val toUpdate:State = if(ep == 0 || ep == 1) {Map()} else {staking_state_tine}
           val epochChain = subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)
           updateLocalState(toUpdate,epochChain) match {
-            case value:State =>  staking_state_tine = value
+            case Some(value:State) =>  staking_state_tine = value
             case _ => {
               println("Error: encountered invalid ledger in local chain")
               bool &&= false
@@ -181,7 +181,7 @@ trait Validation extends Members {
     val candidateTine = subChain(localChain, 0, prefix) ++ tine
 
     history.get(candidateTine.getLastActiveSlot(prefix)) match {
-      case value:(State,Eta) => {
+      case Some(value:(State,Eta)) => {
         val ep_prefix = prefix/epochLength
         val eta_prefix = value._2
         val ls_prefix = value._1
@@ -196,11 +196,11 @@ trait Validation extends Members {
         breakable{
           for (id <- tine.ordered) {
             updateLocalState(ls,id) match {
-              case newState:State => {
+              case Some(newState:State) => {
                 getBlockHeader(id) match {
-                  case block:BlockHeader => {
+                  case Some(block:BlockHeader) => {
                     getParentBlockHeader(block) match {
-                      case parent:BlockHeader => {
+                      case Some(parent:BlockHeader) => {
                         if (getParentId(block) == pid) {
                           val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
                           val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert

@@ -1,12 +1,12 @@
 package prosomo.stakeholder
 
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
 import prosomo.primitives.{Mac, Keys, MalkinKey, Ratio, SharedData}
-import scorex.crypto.encode.Base58
+import scorex.util.encode.Base58
 
 import scala.math.BigInt
 
@@ -37,10 +37,10 @@ trait Forging extends Members {
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
-      val block = Block(hb,b,txs)
+      val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
-        case forgedState:State => {
+        case Some(forgedState:State) => {
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(ActorRefWrapper(self),gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
           history.add((slot,block.id),forgedState,eta)
@@ -101,7 +101,7 @@ trait Forging extends Members {
     val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
-    Block(hash(genesisHeader,serializer),genesisHeader,genesisEntries)
+    Block(hash(genesisHeader,serializer),Some(genesisHeader),None,Some(genesisEntries))
   }
 
 }

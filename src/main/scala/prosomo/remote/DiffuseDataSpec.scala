@@ -1,27 +1,34 @@
 package prosomo.remote
 
-import bifrost.network.message.Message.MessageCode
-import bifrost.network.message.MessageSpec
+import scorex.core.network.message.Message.MessageCode
+import scorex.core.network.message.MessageSpecV1
+import scorex.util.serialization.{Reader, Writer}
 import prosomo.components.SerializationMethods
 import prosomo.components.Serializer.DeserializeDiffuse
 import prosomo.primitives.ByteStream
-import prosomo.remote.SpecTypes._
+import prosomo.remote.SpecTypes.{DiffuseDataType,diffuseCode}
 
-import scala.util.Try
 
-object DiffuseDataSpec extends MessageSpec[DiffuseDataType] with SerializationMethods {
+object DiffuseDataSpec extends MessageSpecV1[DiffuseDataType] with SerializationMethods {
   override val messageCode: MessageCode = diffuseCode
   override val messageName: String = "Diffuse"
 
-  override def parseBytes(bytes: Array[Byte]): Try[DiffuseDataType] = Try{
+  override def parse(r: Reader):DiffuseDataType = {
+    diffuseFromBytes(r.getBytes(r.remaining))
+  }
+
+  override def serialize(obj: DiffuseDataType, w: Writer): Unit = {
+    w.putBytes(diffuseToBytes(obj))
+  }
+
+  def diffuseFromBytes(bytes: Array[Byte]): DiffuseDataType = {
     val msgBytes = new ByteStream(bytes,DeserializeDiffuse)
     fromBytes(msgBytes) match {
       case msg:DiffuseDataType => msg
     }
   }
 
-  override def toBytes(msg:DiffuseDataType): Array[Byte] = {
+  def diffuseToBytes(msg:DiffuseDataType): Array[Byte] = {
     getDiffuseBytes(msg)
   }
-
 }

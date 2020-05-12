@@ -1,8 +1,6 @@
 package prosomo.history
 
-import java.io.File
-
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, Types}
@@ -10,7 +8,6 @@ import prosomo.primitives.{ByteStream, LDBStore, Types}
 class SlotHistoryStorage(dir:String) extends Types {
   import prosomo.components.Serializer._
 
-  //import prosomo.primitives.Parameters.storageFlag
   val storageFlag = false
   val skipUpdate = true
 

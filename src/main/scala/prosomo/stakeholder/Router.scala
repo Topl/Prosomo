@@ -2,35 +2,22 @@ package prosomo.stakeholder
 
 import akka.actor.{Actor,ActorRef, ActorPath, Props, Timers}
 import akka.util.Timeout
-import bifrost.LocalInterface.{LocallyGeneratedModifier, LocallyGeneratedTransaction}
-import bifrost.blocks.BifrostBlock
-import bifrost.history.{BifrostHistory, BifrostSyncInfo}
-import bifrost.mempool.BifrostMemPool
-import bifrost.network.NetworkController._
-import bifrost.network.message.BasicMsgDataTypes.ModifiersData
-import bifrost.network.message._
-import bifrost.network._
-import bifrost.scorexMod.GenericNodeViewHolder
-import bifrost.scorexMod.GenericNodeViewHolder.{GetCurrentView, GetSyncInfo}
-import bifrost.scorexMod.GenericNodeViewSynchronizer.{CompareViews, GetLocalObjects, ModifiersFromRemote, OtherNodeSyncingInfo}
-import bifrost.state.BifrostState
-import bifrost.transaction.bifrostTransaction.BifrostTransaction
-import bifrost.transaction.box.BifrostBox
-import bifrost.transaction.box.proposition.ProofOfKnowledgeProposition
-import bifrost.transaction.state.PrivateKey25519
-import bifrost.wallet.BWallet
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Parameters, SharedData, Types}
 import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
-import scorex.crypto.encode.Base58
-
+import scorex.util.encode.Base58
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.{Failure, Random, Success, Try}
+import scorex.core.network._
+import scorex.core.network.ConnectedPeer
+import scorex.core.network.message.{MessageSpec,Message}
+import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
+import scorex.core.network.NetworkController.ReceivableMessages.{SendToNetwork,RegisterMessageSpecs}
 
 
 class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
@@ -154,7 +141,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
               case _ => " "
             }
           )
-          if (!r.remote) context.system.scheduler.scheduleOnce(0 nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
+          if (!r.remote) context.system.scheduler.scheduleOnce(0.nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
           if (messageMap.nonEmpty) queue += (holder->messageMap)
         }
       }
@@ -174,7 +161,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
-        context.system.scheduler.scheduleOnce(0 nano,holder1.actorRef,IssueTx(holder2,delta))(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(0.nano,holder1.actorRef,IssueTx(holder2,delta))(context.system.dispatcher,self)
       }
     }
   }
@@ -247,8 +234,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   def routerReceive: Receive = {
 
-    case flag:(ActorRefWrapper,String) => {
-      val (ref,value) = flag
+    case Flag(ref,value) => {
 //      if (value == "updateChain" || value == "passData") {if (printSteps) println(value+" "+holders.indexOf(sender).toString)
 //        for (holder<-holders) {
 //          if (printSteps) println(holders.indexOf(holder).toString+" "+holderReady(holder))
@@ -266,8 +252,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       roundDone = false
     }
 
-    case newIdMessage:(BigInt,ActorRefWrapper,ActorRefWrapper,Any) => {
-      val (uid,s,r,c) = newIdMessage
+    case MessageFromLocalToLocalId(uid,s,r,c) => {
       val newMessage = (s,r,c)
       val nsDelay = delay(s,r,c)
       val messageDelta:Slot = ((nsDelay.toNanos+ts)/(slotT*1000000)).toInt
@@ -300,7 +285,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
 
     case Run => {
-      timers.startPeriodicTimer(TimerKey, Update, 1 nano)
+      timers.startPeriodicTimer(TimerKey, Update, 1.nano)
       coordinatorRef ! NextSlot
     }
 
@@ -346,50 +331,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     result
   }
 
-  type P = ProofOfKnowledgeProposition[PrivateKey25519]
-  type TX = BifrostTransaction
-  type PMOD = BifrostBlock
-  type BX = BifrostBox
-  type SI = BifrostSyncInfo
-  type HIS = BifrostHistory
-  type MS = BifrostState
-  type VL = BWallet
-  type MP = BifrostMemPool
-
-  private def handleSubscribe: Receive = {
-    case GenericNodeViewHolder.Subscribe(events) =>
-  }
-
-  private def compareViews: Receive = {
-    case CompareViews(sid, modifierTypeId, modifierIds) =>
-  }
-
-  private def readLocalObjects: Receive = {
-    case GetLocalObjects(sid, modifierTypeId, modifierIds) =>
-  }
-
-  private def processRemoteModifiers: Receive = {
-    case ModifiersFromRemote(remote, modifierTypeId, remoteObjects) =>
-  }
-
-  private def processLocallyGeneratedModifiers: Receive = {
-    case lt: LocallyGeneratedTransaction[P, TX] =>
-
-    case lm: LocallyGeneratedModifier[P, TX, PMOD] =>
-  }
-
-  private def getCurrentInfo: Receive = {
-    case GetCurrentView =>
-  }
-
-  private def compareSyncInfo: Receive = {
-    case OtherNodeSyncingInfo(remote, syncInfo:SI) =>
-  }
-
-  private def getSyncInfo: Receive = {
-    case GetSyncInfo =>
-  }
-
   def getRefs(sender:String,recipient:String):Option[(ActorRefWrapper,ActorRefWrapper)] = {
     Try{ActorPath.fromString(sender)} match {
       case Success(snd:ActorPath) =>
@@ -415,10 +356,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       spec.messageCode match {
         case DiffuseDataSpec.messageCode =>{
           data match {
-            case msg:DiffuseDataType =>
+            case msg:DiffuseDataType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     DiffuseData(s,msg._3,msg._4)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -428,10 +369,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case HelloSpec.messageCode => {
           data match {
-            case msg:HelloDataType =>
+            case msg:HelloDataType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     Hello(s,msg._3)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -441,10 +382,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case RequestBlockSpec.messageCode => {
           data match {
-            case msg:RequestBlockType =>
+            case msg:RequestBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestBlock(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -454,10 +395,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case RequestTineSpec.messageCode => {
           data match {
-            case msg:RequestTineType =>
+            case msg:RequestTineType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestTine(msg._3,msg._4,msg._5,msg._6)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -467,10 +408,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case ReturnBlocksSpec.messageCode => {
           data match {
-            case msg:ReturnBlocksType =>
+            case msg:ReturnBlocksType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     ReturnBlocks(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -480,10 +421,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case SendBlockSpec.messageCode => {
           data match {
-            case msg:SendBlockType =>
+            case msg:SendBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendBlock(msg._3,msg._4)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -493,10 +434,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case SendTxSpec.messageCode => {
           data match {
-            case msg:SendTxType =>
+            case msg:SendTxType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0 nanos,r.actorRef,
+                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendTx(msg._3)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -506,7 +447,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
         case HoldersFromRemoteSpec.messageCode => {
           data match {
-            case msg:List[String] =>
+            case msg:List[String]@unchecked =>
               for (string<-msg) {
                 Try{ActorPath.fromString(string)} match {
                   case Success(newPath:ActorPath) => {
@@ -515,11 +456,11 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         holders ::= ActorRefWrapper(newPath)
                         pathToPeer += (newPath -> remote)
                         println("New holder "+newPath.toString)
-                        coordinatorRef ! holders
+                        coordinatorRef ! HoldersFromRemote(holders)
                         toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case Some(actorRef:ActorRefWrapper) => {
-                        if (pathToPeer(actorRef.path).socketAddress.toString != remote.socketAddress.toString) {
+                        if (pathToPeer(actorRef.path) == remote) {
                           val key = actorRef.path
                           pathToPeer -= key
                           pathToPeer += (key -> remote)
@@ -542,7 +483,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private def holdersFromLocal: Receive = {
     /** accepts list of other holders from coordinator */
-    case list:List[ActorRefWrapper] => {
+    case HoldersFromLocal(list:List[ActorRefWrapper]) => {
       for (holder<-list) {
         if (!holders.contains(holder)) holders ::= holder
       }
@@ -569,16 +510,14 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private def messageFromLocal: Receive = {
     /** adds delay to locally routed message*/
-    case newMessage:(ActorRefWrapper,ActorRefWrapper,Any) => {
-      val (s,r,c) = newMessage
+    case MessageFromLocalToLocal(s,r,c) => {
       assert(!s.remote && !r.remote)
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
     }
 
-    case newMessage:(ActorPath,Any) => {
+    case MessageFromLocalToRemote(r,command) => {
       val s:ActorPath = sender().path
-      val (r,c) = newMessage
-      c match {
+      command match {
         case c:DiffuseData => {
           val content:DiffuseDataType = (c.ref.toString,r.toString,c.pks,c.mac)
           toNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
@@ -607,6 +546,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           val content:SendTxType = (s.toString,r.toString,c.transaction)
           toNetwork[SendTxType,SendTxSpec.type](SendTxSpec,content,r)
         }
+        case _ =>
       }
     }
   }
@@ -629,7 +569,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private def registerNC: Receive = {
     case Register => {
-      networkController ! NetworkController.RegisterMessagesHandler(messageSpecs, self)
+      networkController ! RegisterMessageSpecs(messageSpecs, self)
       sender() ! "done"
     }
   }
@@ -639,15 +579,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       holdersFromLocal orElse
       messageFromLocal orElse
       messageFromPeer orElse
-      routerReceive orElse
-      handleSubscribe orElse
-      compareViews orElse
-      readLocalObjects orElse
-      processRemoteModifiers orElse
-      processLocallyGeneratedModifiers orElse
-      getCurrentInfo orElse
-      getSyncInfo orElse
-      compareSyncInfo orElse {
+      routerReceive orElse {
       case a: Any =>
     }
 

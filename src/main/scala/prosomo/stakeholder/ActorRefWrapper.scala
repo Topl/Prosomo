@@ -2,6 +2,8 @@ package prosomo.stakeholder
 
 import akka.pattern.ask
 import akka.util.Timeout
+import prosomo.cases.MessageFromLocalToRemote
+
 import scala.concurrent.Future
 
 //wrapper class for akka ActorRef, remote and local actors handled accordingly
@@ -38,16 +40,16 @@ case class ActorRefWrapper(
 
   def path:akka.actor.ActorPath = actorPath
 
-  override def toString():String = path.toString
+  override def toString:String = path.toString
 
   def ! (that:Any)(implicit sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Unit = if (this.remote) {
-    routerRef ! (actorPath,that)
+    routerRef ! MessageFromLocalToRemote(actorPath,that)
   } else {
     this.actorRef ! that
   }
 
   def ? (that:Any)(implicit timeout: Timeout, sender: akka.actor.ActorRef = akka.actor.Actor.noSender):Future[Any] = if (this.remote) {
-    routerRef ? (actorPath,that)
+    routerRef ? MessageFromLocalToRemote(actorPath,that)
   } else {
     this.actorRef ? that
   }

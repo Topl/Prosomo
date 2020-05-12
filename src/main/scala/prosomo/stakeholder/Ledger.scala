@@ -2,10 +2,8 @@ package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.Parameters.fee_r
 import prosomo.primitives.{Parameters, SharedData}
-import scorex.crypto.encode.Base58
-
+import scorex.util.encode.Base58
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
@@ -18,7 +16,7 @@ trait Ledger extends Members {
     * @param c chain of block ids
     * @return updated localstate
     */
-  def updateLocalState(ls:State, c:Tine): Any = {
+  def updateLocalState(ls:State, c:Tine): Option[State] = {
     var nls:State = ls
     var isValid = true
     for (id <- c.ordered) {
@@ -60,7 +58,7 @@ trait Ledger extends Members {
               for (trans <- blocks.getTxs(id)) {
                 if (verifyTransaction(trans)) {
                   applyTransaction(trans, nls, pk_f, fee_r) match {
-                    case value: State => {
+                    case Some(value: State) => {
                       nls = value
                     }
                     case _ => isValid = false
@@ -82,13 +80,13 @@ trait Ledger extends Members {
       }
     }
     if (isValid) {
-      nls
+      Some(nls)
     } else {
-      0
+      None
     }
   }
 
-  def updateLocalState(ls:State, id:SlotId):Any = {
+  def updateLocalState(ls:State, id:SlotId):Option[State] = {
     var nls:State = ls
     var isValid = true
     if (isValid) getBlockHeader(id) match {
@@ -129,7 +127,7 @@ trait Ledger extends Members {
             for (trans <- blocks.getTxs(id)) {
               if (verifyTransaction(trans)) {
                 applyTransaction(trans, nls, pk_f, fee_r) match {
-                  case value: State => {
+                  case Some(value:State) => {
                     nls = value
                   }
                   case _ => isValid = false
@@ -150,9 +148,9 @@ trait Ledger extends Members {
       SharedData.throwError(holderIndex)
     }
     if (isValid) {
-      nls
+      Some(nls)
     } else {
-      0
+      None
     }
   }
 
@@ -201,7 +199,7 @@ trait Ledger extends Members {
         val transactionCount:Int = transaction.nonce
         if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
           applyTransaction(transaction,ls, pkw,fee_r) match {
-            case value:State => {
+            case Some(value:State) => {
               ledger ::= entry._2._1
               ls = value
             }

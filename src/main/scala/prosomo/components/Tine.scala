@@ -2,7 +2,7 @@ package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.SimpleTypes
-import scorex.crypto.encode.Base58
+import scorex.util.encode.Base58
 import prosomo.primitives.Types._
 
 import scala.collection.immutable.ListMap

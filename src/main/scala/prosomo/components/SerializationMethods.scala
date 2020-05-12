@@ -4,10 +4,8 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.Types.SlotId
 import prosomo.primitives._
 import prosomo.wallet.Wallet
-
 import scala.math.BigInt
 
 trait SerializationMethods extends SimpleTypes {
@@ -43,8 +41,8 @@ trait SerializationMethods extends SimpleTypes {
       case block:Block => sBlock(block)
       case mac:Mac => sMac(mac)
       case transaction: Transaction => sTransaction(transaction)
-      case blockHeader: BlockHeader => sBlockHeader(blockHeader)
       case ratio: Ratio => sRatio(ratio)
+      case blockHeader: BlockHeader@unchecked => sBlockHeader(blockHeader)
       case _ => serialize(input)
     }
   }
@@ -414,7 +412,7 @@ trait SerializationMethods extends SimpleTypes {
   }
 
   private def dMac(stream:ByteStream):Mac = {
-    val out = new Mac(
+    val out = Mac(
       ByteArrayWrapper(stream.get(hash_length)),
       ByteArrayWrapper(stream.get(hash_length)),
       stream.get(sig_length),
@@ -769,10 +767,12 @@ trait SerializationMethods extends SimpleTypes {
   private def sBlock(block:Block):Array[Byte] = {
     val idBytes = block.id.data
     val headerBytes = getBytes(block.prosomoHeader)
-    val bodyBytes = block.body match {
-      case txs:TransactionSet => getBytes(txs)
-      case txs:GenesisSet => getGenesisBytes(txs)
-      case _ => Array[Byte]()
+    val bodyBytes = {
+      if (block.slot == 0) {
+        getGenesisBytes(block.genesisSet.get)
+      } else {
+        getBytes(block.blockBody.get)
+      }
     }
     Bytes.concat(
       idBytes,
@@ -787,20 +787,31 @@ trait SerializationMethods extends SimpleTypes {
     val id:ByteArrayWrapper = ByteArrayWrapper(stream.get(id_length))
     val headerLen = stream.getInt
     val headerBytes = new ByteStream(stream.get(headerLen),stream.caseObject)
-    val header:BlockHeader = dBlockHeader(headerBytes)
+    val header = Some(dBlockHeader(headerBytes))
     val bodyLen = stream.getInt
     val bodyBytes = new ByteStream(stream.get(bodyLen),stream.caseObject)
     val body = stream.caseObject match {
       case DeserializeBlock if !bodyBytes.empty => {
-        dTransactionSet(bodyBytes)
+        Some(dTransactionSet(bodyBytes))
+      }
+      case DeserializeBlock if bodyBytes.empty => {
+        Some(Seq())
+      }
+      case _ => None
+    }
+    val genSet = stream.caseObject match {
+      case DeserializeGenesisBlock if !bodyBytes.empty => {
+        Some(dGenesisSet(bodyBytes))
       }
       case DeserializeGenesisBlock if !bodyBytes.empty => {
-        dGenesisSet(bodyBytes)
+        Some(Seq())
       }
-      case _ => Seq()
+      case _ => {
+        None
+      }
     }
     assert(stream.empty)
-    Block(id,header,body)
+    Block(id,header,body,genSet)
   }
 
   private def sTxMap(txs:Map[Sid,Transaction]):Array[Byte] = {

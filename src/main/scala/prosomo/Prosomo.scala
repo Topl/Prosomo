@@ -1,140 +1,126 @@
 package prosomo
 
-import java.lang.management.ManagementFactory
-
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.http.scaladsl.Http
-import akka.stream.ActorMaterializer
-import bifrost.{BifrostLocalInterface, BifrostNodeViewHolder}
-import bifrost.api.http._
-import bifrost.crypto.hash.FastCryptographicHash
-import bifrost.forging.{Forger, ForgingSettings}
-import bifrost.history.BifrostSyncInfoMessageSpec
-import bifrost.network.message.{MessageSpec, _}
-import bifrost.network.peer.PeerManager
-import bifrost.network.{BifrostNodeViewSynchronizer, NetworkController, UPnP}
-import bifrost.utils.ScorexLogging
-import com.sun.management.HotSpotDiagnosticMXBean
-import io.circe
-import prosomo.cases._
-import prosomo.primitives.Parameters.{inputSeed,messageSpecs}
+import prosomo.primitives.Parameters.{inputSeed, messageSpecs}
+import prosomo.primitives.FastCryptographicHash
 import prosomo.stakeholder.{Coordinator, Router}
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.runtime.universe.{Type, _}
+import java.net.InetSocketAddress
+import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import akka.stream.ActorMaterializer
+import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
+import scorex.core.app.{Application, ScorexContext}
+import scorex.core.network._
+import scorex.core.network.message._
+import scorex.core.network.peer.PeerManagerRef
+import scorex.core.settings.ScorexSettings
+import scorex.core.utils.NetworkTimeProvider
+import scorex.util.ScorexLogging
+import scala.concurrent.ExecutionContext
 
 class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
-  val ApplicationNameLimit = 50
+  import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
-  val settings:ForgingSettings = new ForgingSettings {
-    override val settingsJSON: Map[String, circe.Json] = settingsFromFile(settingsFilename)
+  //settings
+  implicit val settings: ScorexSettings = ScorexSettings.read(Some(settingsFilename))
+
+  //api
+  val apiRoutes: Seq[ApiRoute] = Seq()
+
+  implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
+  implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
+
+  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName)
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+
+  protected val features: Seq[PeerFeature] = Seq()
+  protected val additionalMessageSpecs: Seq[MessageSpec[_]] = messageSpecs
+
+  //p2p
+  private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
+  // TODO use available port on gateway instead settings.network.bindAddress.getPort
+  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
+
+  private lazy val basicSpecs = {
+    val invSpec = new InvSpec(settings.network.maxInvObjects)
+    val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
+    val modifiersSpec = new ModifiersSpec(settings.network.maxPacketSize)
+    val featureSerializers: PeerFeature.Serializers = features.map(f => f.featureId -> f.serializer).toMap
+    Seq(
+      GetPeersSpec,
+      new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects),
+      invSpec,
+      requestModifierSpec,
+      modifiersSpec
+    )
   }
-  log.debug(s"Starting application with settings \n$settings")
 
-  implicit val actorSystem:ActorSystem = ActorSystem(settings.agentName)
+  val timeProvider = new NetworkTimeProvider(settings.ntp)
 
-  val additionalMessageSpecs: Seq[MessageSpec[_]] =
-    Seq(BifrostSyncInfoMessageSpec)
+  //an address to send to peers
+  lazy val externalSocketAddress: Option[InetSocketAddress] = {
+    settings.network.declaredAddress orElse {
+      // TODO use available port on gateway instead settings.bindAddress.getPort
+      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort))
+    }
+  }
 
-  val upnp:UPnP = new UPnP(settings)
-
-  val basicSpecs = Seq(GetPeersSpec,PeersSpec,InvSpec,RequestModifierSpec,ModifiersSpec)
-
-  val messagesHandler: MessageHandler = MessageHandler(basicSpecs ++ additionalMessageSpecs ++ messageSpecs)
-
-  println("Using seed: "+inputSeed)
-
-  //val nodeViewHolderRef: ActorRef = actorSystem.actorOf(Props(new BifrostNodeViewHolder(settings)))
-
-  //val forger: ActorRef = actorSystem.actorOf(Props(classOf[Forger], settings, nodeViewHolderRef))
-
-  //val localInterface: ActorRef = actorSystem.actorOf(
-  //  Props(classOf[BifrostLocalInterface], nodeViewHolderRef, forger, settings)
-  //)
-
-  //val nodeViewSynchronizer: ActorRef = actorSystem.actorOf(
-  //  Props(classOf[BifrostNodeViewSynchronizer],
-  //    networkController,
-  //    nodeViewHolderRef,
-  //    localInterface,
-  //    BifrostSyncInfoMessageSpec)
-  //)
-
-  val peerManagerRef:ActorRef = actorSystem.actorOf(Props(classOf[PeerManager], settings))
-
-  val networkController:ActorRef = actorSystem.actorOf(Props(classOf[NetworkController], settings, messagesHandler, upnp, peerManagerRef), "networkController")
-
-  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkController,peerManagerRef)), "Router")
-  val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
-  coordinator ! NewDataFile
-  coordinator ! Populate
-
-  val apiRoutes:Seq[ApiRoute] = Seq(
-    DebugApiRoute(settings, routerRef),
-    WalletApiRoute(settings, routerRef),
-    ProgramApiRoute(settings, routerRef, networkController),
-    AssetApiRoute(settings, routerRef),
-    UtilsApiRoute(settings),
-    NodeViewApiRoute(settings, routerRef)
+  val scorexContext = ScorexContext(
+    messageSpecs = basicSpecs ++ additionalMessageSpecs,
+    features = features,
+    upnpGateway = upnpGateway,
+    timeProvider = timeProvider,
+    externalNodeAddress = externalSocketAddress
   )
 
-  val apiTypes:Seq[Type] = Seq(typeOf[UtilsApiRoute],
-    typeOf[DebugApiRoute],
-    typeOf[WalletApiRoute],
-    typeOf[ProgramApiRoute],
-    typeOf[AssetApiRoute],
-    typeOf[NodeViewApiRoute])
+  val peerManagerRef = PeerManagerRef(settings, scorexContext)
 
-  val combinedRoute = CompositeHttpService(actorSystem, apiTypes, apiRoutes, settings).compositeRoute
+  val networkControllerRef: ActorRef = NetworkControllerRef(
+    "networkController", settings.network, peerManagerRef, scorexContext)
 
-  val vm_version = System.getProperty("java.vm.version")
-  System.out.printf("java.vm.version = %s%n", vm_version)
+  val swaggerConfig:String = ""
 
-  val bean = ManagementFactory.getPlatformMXBean(classOf[HotSpotDiagnosticMXBean])
+  lazy val combinedRoute: Route = CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
 
-  val enableJVMCI = bean.getVMOption("EnableJVMCI")
-  System.out.println(enableJVMCI)
+  log.debug(s"Starting application with settings \n$settings")
+  log.info("Using seed: "+inputSeed)
 
-  val useJVMCICompiler = bean.getVMOption("UseJVMCICompiler")
-  System.out.println(useJVMCICompiler)
-
-  val compiler = System.getProperty("jvmci.Compiler")
-  System.out.printf("jvmci.Compiler = %s%n", compiler)
+  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
+  val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
 
   def run(): Unit = {
-    require(settings.agentName.length <= ApplicationNameLimit)
+    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
 
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
-    log.debug(s"RPC is allowed at 0.0.0.0:${settings.rpcPort}")
+    log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
 
-    implicit val materializer:ActorMaterializer = ActorMaterializer()
-    Http().bindAndHandle(combinedRoute, "0.0.0.0", settings.rpcPort)
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    val bindAddress = settings.restApi.bindAddress
+
+    Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
 
     //on unexpected shutdown
-    val newThread = new Thread() {
+    Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run() {
         log.error("Unexpected shutdown")
         stopAll()
       }
-    }
-    Runtime.getRuntime.addShutdownHook(newThread)
+    })
   }
 
   def stopAll(): Unit = synchronized {
     log.info("Stopping network services")
-    if (settings.upnpEnabled) upnp.deletePort(settings.port)
-    networkController ! NetworkController.ShutdownNetwork
+    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
+    networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors (incl. block generator)")
     actorSystem.terminate().onComplete { _ =>
-
       log.info("Exiting from the app...")
       System.exit(0)
     }
   }
-
 }
 
 object Prosomo extends App {

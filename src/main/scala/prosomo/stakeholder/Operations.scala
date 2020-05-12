@@ -58,15 +58,15 @@ trait Operations extends Members {
     * @param bid
     * @return block if found, 0 otherwise
     */
-  def getBlockHeader(bid:SlotId): Any = {
+  def getBlockHeader(bid:SlotId): Option[BlockHeader] = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
       if (blocks.known_then_load(bid)) {
-        blocks.get(bid).prosomoHeader
+        Some(blocks.get(bid).prosomoHeader)
       } else {
-        0
+        None
       }
     } else {
-      0
+      None
     }
   }
 
@@ -75,15 +75,15 @@ trait Operations extends Members {
     * @param b
     * @return parent block if found, 0 otherwise
     */
-  def getParentBlockHeader(b:BlockHeader): Any = {
+  def getParentBlockHeader(b:BlockHeader): Option[BlockHeader] = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
       if (blocks.known_then_load((b._10,b._1))) {
-        blocks.get((b._10,b._1)).prosomoHeader
+        Some(blocks.get((b._10,b._1)).prosomoHeader)
       } else {
-        0
+        None
       }
     } else {
-      0
+      None
     }
   }
 
@@ -92,17 +92,17 @@ trait Operations extends Members {
     * @param bid
     * @return parent id if found, 0 otherwise
     */
-  def getParentId(bid:SlotId): Any = {
+  def getParentId(bid:SlotId): Option[SlotId] = {
     getBlockHeader(bid) match {
-      case b:BlockHeader => (b._10,b._1)
-      case _ => 0
+      case Some(b:BlockHeader) => Some((b._10,b._1))
+      case _ => None
     }
   }
 
-  def getNonce(id:SlotId):Rho = {
+  def getNonce(id:SlotId):Option[Rho] = {
     getBlockHeader(id) match {
-      case header:BlockHeader => header._5
-      case _ => Array()
+      case Some(header:BlockHeader) => Some(header._5)
+      case _ => None
     }
   }
 

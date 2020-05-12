@@ -4,8 +4,6 @@ import java.io.{BufferedWriter, FileWriter}
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-
-import bifrost.crypto.hash.FastCryptographicHash
 import io.circe.parser.parse
 import io.circe.syntax._
 import io.circe.{Decoder, HCursor, Json}
@@ -16,13 +14,11 @@ import org.bouncycastle.crypto.generators.SCrypt
 import org.bouncycastle.crypto.modes.SICBlockCipher
 import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
 import prosomo.components.Serializer.DeserializeMalkinKey
-import scorex.crypto.encode.Base58
+import scorex.util.encode.Base58
 import scorex.crypto.hash.Keccak256
 import java.io.File
-
 import com.google.common.primitives.Ints
 import prosomo.components.Serializer
-
 import scala.util.{Failure, Success, Try}
 import prosomo.primitives.Types.Slot
 

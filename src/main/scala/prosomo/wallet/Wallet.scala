@@ -67,7 +67,7 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
     for (entry <- sortPendingTx) {
       val trans = entry._2
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case value:State => {
+        case Some(value:State) => {
           issueState = value
         }
         case _ => {
@@ -131,24 +131,24 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   }
 
 
-  def issueTx(data:(ByteArrayWrapper,BigInt),sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Any = {
+  def issueTx(data:(ByteArrayWrapper,BigInt),sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Option[Transaction] = {
     if (issueState.keySet.contains(pkw)) {
       val (pk_r,delta) = data
       val scaledDelta = BigDecimal(delta.toDouble*netStake.toDouble/netStake0.toDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
       val txC = issueState(pkw)._3
       val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case value:State => {
+        case Some(value:State) => {
           issueState = value
           pendingTxsOut += (trans.sid->trans)
-          trans
+          Some(trans)
         }
         case _ => {
-          0
+          None
         }
       }
     } else {
-      0
+      None
     }
   }
 }

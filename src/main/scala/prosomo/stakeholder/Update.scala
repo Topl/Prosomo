@@ -1,14 +1,9 @@
 package prosomo.stakeholder
 
-import prosomo.cases.{Hello, WriteFile}
+import prosomo.cases.{Flag, Hello, WriteFile}
 import prosomo.components.Tine
-import prosomo.primitives.{KeyFile, MalkinKey, Parameters, SharedData}
-import scorex.crypto.encode.Base58
-import akka.actor.Actor
-import akka.actor.Props
-import io.iohk.iodb.ByteArrayWrapper
-
-import scala.concurrent.duration._
+import prosomo.primitives.{KeyFile, Parameters, SharedData}
+import scorex.util.encode.Base58
 
 trait Update extends Members {
   import Parameters.{printFlag,epochLength,useGossipProtocol,numGossipers,dataOutInterval,dataOutFlag,useFencing}
@@ -29,7 +24,7 @@ trait Update extends Members {
   def getStakingState(ep:Int, chain:Tine):State = if (ep > 1) {
     val eps:Slot = (ep-1)*epochLength
     history.get(chain.getLastActiveSlot(eps)) match {
-      case value:(State,Eta) =>
+      case Some(value:(State,Eta)) =>
         value._1
       case _ =>
         val thisSlot = lastActiveSlot(chain,eps)
@@ -40,7 +35,7 @@ trait Update extends Members {
     }
   } else {
     history.get(chain.get(0)) match {
-      case value:(State,Eta) =>
+      case Some(value:(State,Eta)) =>
         value._1
       case _ =>
         println("Could not recover staking state ep 0")
@@ -118,7 +113,7 @@ trait Update extends Members {
         case 0 => {
           forgeBlock(keys)
           roundBlock = 1
-          routerRef ! (self,"updateSlot")
+          routerRef ! Flag(ActorRefWrapper(self),"updateSlot")
         }
         case _ if chainUpdateLock => {
           if (candidateTines.isEmpty) {

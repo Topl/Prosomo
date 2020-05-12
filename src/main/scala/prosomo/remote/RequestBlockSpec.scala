@@ -1,26 +1,33 @@
 package prosomo.remote
 
-import bifrost.network.message.Message.MessageCode
-import bifrost.network.message.MessageSpec
+import scorex.core.network.message.Message.MessageCode
+import scorex.core.network.message.MessageSpecV1
+import scorex.util.serialization.{Reader, Writer}
 import prosomo.components.SerializationMethods
 import prosomo.components.Serializer.DeserializeRequestBlock
 import prosomo.primitives.ByteStream
-import prosomo.remote.SpecTypes._
+import prosomo.remote.SpecTypes.{RequestBlockType, requestBlockCode}
 
-import scala.util.{Success, Try}
-
-object RequestBlockSpec extends MessageSpec[RequestBlockType] with SerializationMethods {
+object RequestBlockSpec extends MessageSpecV1[RequestBlockType] with SerializationMethods {
   override val messageCode: MessageCode = requestBlockCode
   override val messageName: String = "Request Block"
 
-  override def parseBytes(bytes: Array[Byte]): Try[RequestBlockType] = Try{
+  override def parse(r:Reader): RequestBlockType = {
+    requestFromBytes(r.getBytes(r.remaining))
+  }
+
+  override def serialize(obj: RequestBlockType, w: Writer): Unit = {
+    w.putBytes(requestToBytes(obj))
+  }
+
+  def requestFromBytes(bytes: Array[Byte]): RequestBlockType = {
     val msgBytes = new ByteStream(bytes,DeserializeRequestBlock)
     fromBytes(msgBytes) match {
       case msg:RequestBlockType => msg
     }
   }
 
-  override def toBytes(msg: RequestBlockType): Array[Byte] = {
+  def requestToBytes(msg: RequestBlockType): Array[Byte] = {
     getRequestBlockBytes(msg)
   }
 

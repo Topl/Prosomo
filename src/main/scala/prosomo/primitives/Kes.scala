@@ -1,9 +1,7 @@
 package prosomo.primitives
 
-import bifrost.crypto.hash.FastCryptographicHash
 import org.bouncycastle.math.ec.rfc8032.Ed25519
-import scorex.crypto.encode.Base58
-
+import scorex.util.encode.Base58
 import scala.math.BigInt
 
 /**

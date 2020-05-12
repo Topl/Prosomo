@@ -3,14 +3,14 @@ package prosomo.stakeholder
 import java.io.BufferedWriter
 
 import akka.actor.Cancellable
-import bifrost.crypto.hash.FastCryptographicHash
+import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
 import prosomo.cases._
 import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
-import scorex.crypto.encode.Base58
+import scorex.util.encode.Base58
 
 import scala.math.BigInt
 import scala.util.Random
@@ -42,7 +42,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -80,7 +80,7 @@ trait Receive extends Members {
         while (chainUpdateLock) {
           update
         }
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -110,7 +110,7 @@ trait Receive extends Members {
                         case scheduledMessage:Cancellable => scheduledMessage.cancel
                         case null =>
                       }
-                      bootStrapMessage = context.system.scheduler.scheduleOnce(5*slotT millis,self,BootstrapJob)(context.system.dispatcher,self)
+                      bootStrapMessage = context.system.scheduler.scheduleOnce(5*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
                     }
                   } else {
                     buildTine((value.job,tines(value.job)))
@@ -126,7 +126,7 @@ trait Receive extends Members {
         while (chainUpdateLock) {
           update
         }
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -152,7 +152,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -195,7 +195,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -213,7 +213,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -228,7 +228,7 @@ trait Receive extends Members {
             val pks = data._2._2
             val pkw = ByteArrayWrapper(pks._1 ++ pks._2 ++ pks._3)
             wallet.issueTx((pkw,value.delta),keys.sk_sig,sig,rng,serializer) match {
-              case trans:Transaction => {
+              case Some(trans:Transaction) => {
                 walletStorage.store(wallet,serializer)
                 txCounter += 1
                 memPool += (trans.sid->(trans,0))
@@ -241,7 +241,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! (self,"passData")
+        routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
     }
 
@@ -295,7 +295,7 @@ trait Receive extends Members {
           generateNewKeys
         }
         case Failure(exception) => {
-          exception.printStackTrace
+          exception.printStackTrace()
           generateNewKeys
         }
       }
@@ -308,9 +308,7 @@ trait Receive extends Members {
           localChain.update((0,genBlockHash),genesisBlock.prosomoHeader._5)
           //chainHistory.update((0,genBlockHash),serializer)
           updateLocalState(localState, (0,genBlockHash)) match {
-            case value:State => localState = {
-              value
-            }
+            case Some(value:State) => localState = value
             case _ => {
               SharedData.throwError(holderIndex)
               println("error: invalid genesis block")
@@ -327,7 +325,7 @@ trait Receive extends Members {
           val lastId = localChain.last
           localSlot = localChain.last._1
           currentEpoch = localSlot/epochLength
-          val loadState = history.get(lastId) match {case data:(State,Eta) => data}
+          val loadState = history.get(lastId) match {case Some(data:(State,Eta)) => data}
           localState = loadState._1
           eta = loadState._2
           stakingState = getStakingState(currentEpoch,localChain)
@@ -345,8 +343,8 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt) millis,self,Refresh)(context.system.dispatcher,self)
-        context.system.scheduler.scheduleOnce(5*slotT millis,self,Diffuse)(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt).millis,self,Refresh)(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(5*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
       }
     }
 
@@ -355,7 +353,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
-      context.system.scheduler.scheduleOnce(slotT*refreshInterval millis,self,Refresh)(context.system.dispatcher,self)
+      context.system.scheduler.scheduleOnce(slotT*refreshInterval.millis,self,Refresh)(context.system.dispatcher,self)
     }
 
     case GetTime => {
@@ -374,7 +372,7 @@ trait Receive extends Members {
     }
 
     /**accepts list of other holders from coordinator */
-    case list:List[ActorRefWrapper] => {
+    case HoldersFromLocal(list:List[ActorRefWrapper]) => {
       holders = list
       if (useGossipProtocol) {
         gossipers = List()
@@ -399,31 +397,22 @@ trait Receive extends Members {
     }
 
     /**accepts coordinator ref*/
-    case value:CoordRef => {
-      coordinatorRef = value.ref
+    case CoordRef(ref) => {
+      coordinatorRef = ref
       sender() ! "done"
     }
 
     /**sets new list of holders resets gossipers*/
-    case value:Party => {
-      value.list match {
-        case list: List[ActorRefWrapper] => {
-          holders = list
-          if (useGossipProtocol) {
-            gossipers = List()
-            numHello = 0
-          } else {
-            gossipers = gossipSet(holderId,holders)
-          }
-          if (value.clear) inbox = Map()
-        }
-        case _ =>
+    case Party(list,clear) => {
+      holders = list
+      if (useGossipProtocol) {
+        gossipers = List()
+        numHello = 0
+      } else {
+        gossipers = gossipSet(holderId,holders)
       }
+      if (clear) inbox = Map()
       sender() ! "done"
-    }
-
-    case RequestKeys => {
-      sender() ! diffuse(bytes2hex(keys.pk_sig)+";"+bytes2hex(keys.pk_vrf)+";"+bytes2hex(keys.pk_kes), s"{$holderId}", keys.sk_sig)
     }
 
     /************************************************** Tests ***********************************************************/
@@ -475,7 +464,7 @@ trait Receive extends Members {
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
-          case b:BlockHeader => chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
+          case Some(b:BlockHeader) => chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
           case _ =>
         }
       }
@@ -498,7 +487,7 @@ trait Receive extends Members {
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
-          case b:BlockHeader => {
+          case Some(b:BlockHeader) => {
             chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
           }
           case _ =>
@@ -559,18 +548,18 @@ trait Receive extends Members {
           update
         }
       } else {
-        if (useFencing) {routerRef ! (self,"updateSlot")}
+        if (useFencing) {routerRef ! Flag(ActorRefWrapper(self),"updateSlot")}
       }
       sender() ! "done"
     }
 
     case "endStep" => if (useFencing) {
       roundBlock = 0
-      routerRef ! (self,"endStep")
+      routerRef ! Flag(ActorRefWrapper(self),"endStep")
     }
 
     case "passData" => if (useFencing) {
-      routerRef ! (self,"passData")
+      routerRef ! Flag(ActorRefWrapper(self),"passData")
     }
 
     case value:Adversary => {

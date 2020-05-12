@@ -1,7 +1,5 @@
 package prosomo.history
 
-import java.io.File
-
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Tine, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
@@ -12,7 +10,7 @@ class ChainStorage(dir:String) extends SimpleTypes {
 
   var chainStore:LDBStore = LDBStore(s"$dir/history/chain")
 
-  def refresh():Unit = {
+  def refresh:Unit = {
     chainStore.refresh()
   }
 

@@ -1,9 +1,12 @@
 package prosomo.cases
 
+import akka.actor.ActorPath
 import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
 import prosomo.primitives.Mac
+
+import scala.math.BigInt
 
 // case objects and classes for pattern matching messages between actors
 case object Diffuse
@@ -11,7 +14,6 @@ case object Inbox
 case object CloseDataFile
 case object Status
 case object Run
-case object RequestKeys
 case object GetTime
 case object Update
 case object WriteFile
@@ -43,6 +45,12 @@ case class SendBlock(block:Block,mac:Mac)
 case class SendTx(transaction:Transaction)
 
 //messages between coordinator/router and holders
+case class MessageFromLocalToRemote(r:ActorPath,c:Any)
+case class MessageFromLocalToLocal(s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
+case class MessageFromLocalToLocalId(uid:BigInt,s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
+case class HoldersFromLocal(list:List[ActorRefWrapper])
+case class HoldersFromRemote(list:List[ActorRefWrapper])
+case class Flag(s:ActorRefWrapper,f:String)
 case class GetSlot(s:Int)
 case class CoordRef(ref: ActorRefWrapper)
 case class GetTime(t1:Long)
@@ -52,7 +60,7 @@ case class IssueTx(ref:ActorRefWrapper,delta:BigInt)
 case class WriteFile(fw: Any)
 case class NewGraphFile(name:String)
 case class GetGossipers(list:Any)
-case class Party(list:Any,clear:Boolean)
+case class Party(list:List[ActorRefWrapper],clear:Boolean)
 case class GetState(s:Any)
 case class GetBlockTree(t:Any,h:Any)
 case class GetPositionData(s:Any)

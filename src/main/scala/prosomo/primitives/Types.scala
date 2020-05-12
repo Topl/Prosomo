@@ -1,7 +1,6 @@
 package prosomo.primitives
 
 import prosomo.stakeholder.ActorRefWrapper
-import bifrost.crypto.hash.FastCryptographicHash
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Transaction}

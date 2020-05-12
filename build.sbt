@@ -17,14 +17,17 @@ mainClass in assembly := Some("prosomo.Prosomo")
 
 test in assembly := {}
 
-val circeVersion = "0.7+"
-
 enablePlugins(UniversalPlugin)
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
+
+val circeVersion = "0.9.0"
+val akkaVersion = "2.5.24"
+val akkaHttpVersion = "10.1.9"
+
 val networkDependencies = Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.5.19",
+  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "org.bitlet" % "weupnp" % "0.1.+",
   "commons-net" % "commons-net" % "3.+"
 )
@@ -35,10 +38,6 @@ val apiDependencies = Seq(
   "io.circe" %% "circe-parser" % circeVersion,
   "io.circe" %% "circe-literal" % circeVersion,
   "io.swagger" %% "swagger-scala-module" % "1.0.3",
-  // "io.swagger" % "swagger-core" % "1.5.10",
-  // "io.swagger" % "swagger-annotations" % "1.5.10",
-  // "io.swagger" % "swagger-models" % "1.5.10",
-  // "io.swagger" % "swagger-jaxrs" % "1.5.10",
   "com.github.swagger-akka-http" %% "swagger-akka-http" % "0.+",
   "com.typesafe.akka" %% "akka-http" % "10.+"
 )
@@ -77,8 +76,6 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.5.19"
-
-
 libraryDependencies += "org.json4s" %% "json4s-native" % "3.5.2"
 libraryDependencies += "com.thesamet.scalapb" %% "scalapb-json4s" % "0.7.0"
 
@@ -102,7 +99,6 @@ libraryDependencies += "org.graalvm.truffle" % "truffle-api" % "19.2.0"
 
 libraryDependencies ++= consoleDependencies
 
-
 libraryDependencies  ++= Seq(
   // Last snapshot
   "org.scalanlp" %% "breeze" % "latest.integration"
@@ -117,6 +113,78 @@ javaOptions ++= Seq(
 
 testOptions in Test += Tests.Argument("-oD", "-u", "target/test-reports")
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-verbosity", "2")
+
+
+val networkDependencies2 = Seq(
+  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-parsing" % akkaHttpVersion,
+  "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+  "org.bitlet" % "weupnp" % "0.1.4",
+  "commons-net" % "commons-net" % "3.6"
+)
+
+val apiDependencies2 = Seq(
+  "io.circe" %% "circe-core" % circeVersion,
+  "io.circe" %% "circe-generic" % circeVersion,
+  "io.circe" %% "circe-parser" % circeVersion,
+  "de.heikoseeberger" %% "akka-http-circe" % "1.20.0"
+)
+
+val loggingDependencies2 = Seq(
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4"
+)
+
+val scorexUtil = "org.scorexfoundation" %% "scorex-util" % "0.1.6"
+
+val testingDependencies2 = Seq(
+  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
+  "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
+  "org.scalactic" %% "scalactic" % "3.0.3" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.3" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.+",
+  scorexUtil, (scorexUtil % Test).classifier("tests")
+)
+
+libraryDependencies ++= Seq(
+  "com.iheart" %% "ficus" % "1.4.2",
+  "org.scorexfoundation" %% "scrypto" % "2.1.7",
+  scorexUtil
+) ++ networkDependencies2 ++ apiDependencies2 ++ loggingDependencies2 ++ testingDependencies2
+
+
+scalacOptions ++= Seq("-Xfatal-warnings", "-feature", "-deprecation")
+
+javaOptions ++= Seq(
+  "-server"
+)
+
+testOptions in Test += Tests.Argument("-oD", "-u", "target/test-reports")
+
+pomIncludeRepository := { _ => false }
+
+val credentialFile = Path.userHome / ".ivy2" / ".credentials"
+credentials ++= (for {
+  file <- if (credentialFile.exists) Some(credentialFile) else None
+} yield Credentials(file)).toSeq
+
+lazy val testkit = Project(id = "testkit", base = file(s"testkit"))
+  .dependsOn(basics)
+  .settings(commonSettings: _*)
+
+lazy val examples = Project(id = "examples", base = file(s"examples"))
+  .dependsOn(basics, testkit)
+  .settings(commonSettings: _*)
+
+lazy val basics = Project(id = "scorex", base = file("."))
+  .settings(commonSettings: _*)
+
+credentials ++= (for {
+  username <- Option(System.getenv().get("SONATYPE_USERNAME"))
+  password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
+} yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)).toSeq
 
 //publishing settings
 
@@ -134,9 +202,8 @@ fork := false
 
 pomIncludeRepository := { _ => false }
 
-homepage := Some(url("https://github.com/Topl/Bifrost"))
+homepage := Some(url("https://github.com/Topl/Prosomo"))
 
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 assemblyMergeStrategy in assembly ~= { old: ((String) => MergeStrategy) => {
     case ps if ps.endsWith(".SF")      => MergeStrategy.discard
@@ -151,23 +218,3 @@ assemblyMergeStrategy in assembly ~= { old: ((String) => MergeStrategy) => {
     case x => old(x)
   }
 }
-
-connectInput in run := true
-outputStrategy := Some(StdoutOutput)
-
-PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value
-)
-
-PB.pythonExe := "C:\\Python27\\python.exe"
-
-connectInput in run := true
-outputStrategy := Some(StdoutOutput)
-
-lazy val bifrost = Project(id = "project-bifrost", base = file("."))
-  .settings(commonSettings: _*)
-
-lazy val programModules = Project(id = "program-modules", base = file("program-modules"))
-  .settings(commonSettings: _*)
-  .enablePlugins(ScalaJSPlugin)
-  .disablePlugins(sbtassembly.AssemblyPlugin)

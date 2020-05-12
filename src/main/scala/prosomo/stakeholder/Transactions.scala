@@ -25,7 +25,7 @@ trait Transactions {
     * @param forger sig public key of the forger
     * @return updated localstate
     */
-  def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio): Any = {
+  def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio): Option[State] = {
     var nls:State = ls
     val validSender = nls.keySet.contains(t.sender)
     val txC_s:Int = nls(t.sender)._3
@@ -91,7 +91,7 @@ trait Transactions {
           nls += (t.receiver -> (r_new,true,r_txC))
           nls += (forger -> (f_new,true,f_txC))
         }
-        nls
+        Some(nls)
       } else if (validFunds) {
         if (t.sender == forger) {
           val s_net:BigInt = nls(t.sender)._1
@@ -123,10 +123,12 @@ trait Transactions {
           nls += (t.receiver -> (r_new,true,0))
           nls += (forger -> (f_new,true,f_txC))
         }
-        nls
+        Some(nls)
+      } else {
+        None
       }
     } else {
-      0
+      None
     }
   }
 }
