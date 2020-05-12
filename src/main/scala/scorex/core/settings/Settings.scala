@@ -63,7 +63,7 @@ object ScorexSettings extends ScorexLogging with SettingsReaders {
   protected val configPath: String = "scorex"
 
   def readConfigFromPath(userConfigPath: Option[String], configPath: String): Config = {
-
+      log.info(s"Reading config file $userConfigPath")
     val maybeConfigFile: Option[File] = userConfigPath.map(filename => new File(filename)).filter(_.exists())
       .orElse(userConfigPath.flatMap(filename => Option(getClass.getClassLoader.getResource(filename))).
         map(r => new File(r.toURI)).filter(_.exists()))
