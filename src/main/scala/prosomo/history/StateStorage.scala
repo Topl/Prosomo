@@ -50,8 +50,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
             case Some(bytes:ByteArrayWrapper) => {
               val byteStream = new ByteStream(bytes.data,DeserializeState)
               serializer.fromBytes(byteStream) match {
-                case s:State => s
-                case _ => Map()
+                case s:State@unchecked => s
               }
             }
             case None => Map()

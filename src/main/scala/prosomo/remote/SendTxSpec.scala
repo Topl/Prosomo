@@ -23,7 +23,7 @@ object SendTxSpec extends MessageSpecV1[SendTxType] with SerializationMethods {
   def sendFromBytes(bytes: Array[Byte]): SendTxType = {
     val msgBytes = new ByteStream(bytes,DeserializeSendTx)
     fromBytes(msgBytes) match {
-      case msg:SendTxType => msg
+      case msg:SendTxType@unchecked => msg
     }
   }
 

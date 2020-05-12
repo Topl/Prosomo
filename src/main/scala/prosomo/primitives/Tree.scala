@@ -1,5 +1,6 @@
 package prosomo.primitives
 
+import scala.language.postfixOps
 /**
   * D Holbrook
   *

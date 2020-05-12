@@ -150,11 +150,11 @@ object Parameters {
   //data write interval in slots
   val dataOutInterval:Int = epochLength
   //time out for dropped messages from coordinator
-  val waitTime:FiniteDuration = config.getInt("params.waitTime") seconds
+  val waitTime:FiniteDuration = config.getInt("params.waitTime").seconds
   //duration between update tics that stakeholder actors send to themselves
-  val updateTime:FiniteDuration = config.getInt("params.updateTime") millis
+  val updateTime:FiniteDuration = config.getInt("params.updateTime").millis
   //duration between command read tics and transaction generation for the coordinator
-  val commandUpdateTime:FiniteDuration = config.getInt("params.commandUpdateTime") millis
+  val commandUpdateTime:FiniteDuration = config.getInt("params.commandUpdateTime").millis
   //number of txs per block
   val txPerBlock:Int = config.getInt("params.txPerBlock")
   //max number of transactions to be issued over lifetime of simulation

@@ -23,7 +23,7 @@ object HelloSpec extends MessageSpecV1[HelloDataType] with SerializationMethods 
   def helloFromBytes(bytes: Array[Byte]): HelloDataType = {
     val msgBytes = new ByteStream(bytes,DeserializeHello)
     fromBytes(msgBytes) match {
-      case msg:HelloDataType => msg
+      case msg:HelloDataType@unchecked => msg
     }
   }
 

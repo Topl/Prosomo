@@ -896,23 +896,28 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                     "thr" -> thr.toString.asJson,
                     "info" -> info.asJson,
                     "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {blocks.getBody((bs,value._1)) match {case txs:Seq[Any]=>txs}}.toArray.map{
-                      case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
-                        val delta = entry._3
-                        val pk_g:PublicKeyW = entry._2
-                        Map(
-                          "genesis" -> Base58.encode(pk_g.data).asJson,
-                          "amount" -> delta.toLong.asJson
-                        ).asJson
-                      }
-                      case trans:Transaction => {
-                        Map(
-                          "txid" -> Base58.encode(trans.sid.data).asJson,
-                          "count" -> trans.nonce.asJson,
-                          "sender" -> Base58.encode(trans.sender.data).asJson,
-                          "recipient" -> Base58.encode(trans.receiver.data).asJson,
-                          "amount" -> trans.delta.toLong.asJson
-                        ).asJson
+                    "ledger" -> {
+                      if (bs == 0) {
+                        blocks.get((bs,value._1)).genesisSet match {case Some(genesisSet: GenesisSet)=>genesisSet}}.toArray.map{
+                        case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
+                          val delta = entry._3
+                          val pk_g:PublicKeyW = entry._2
+                          Map(
+                            "genesis" -> Base58.encode(pk_g.data).asJson,
+                            "amount" -> delta.toLong.asJson
+                          ).asJson
+                        }
+                      } else {
+                        blocks.getBody((bs,value._1)) match {case Some(txs:TransactionSet)=>txs}}.toArray.map{
+                        case trans:Transaction => {
+                          Map(
+                            "txid" -> Base58.encode(trans.sid.data).asJson,
+                            "count" -> trans.nonce.asJson,
+                            "sender" -> Base58.encode(trans.sender.data).asJson,
+                            "recipient" -> Base58.encode(trans.receiver.data).asJson,
+                            "amount" -> trans.delta.toLong.asJson
+                          ).asJson
+                        }
                       }
                     }.asJson
                   ).asJson

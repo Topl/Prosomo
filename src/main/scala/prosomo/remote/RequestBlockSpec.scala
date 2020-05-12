@@ -23,7 +23,7 @@ object RequestBlockSpec extends MessageSpecV1[RequestBlockType] with Serializati
   def requestFromBytes(bytes: Array[Byte]): RequestBlockType = {
     val msgBytes = new ByteStream(bytes,DeserializeRequestBlock)
     fromBytes(msgBytes) match {
-      case msg:RequestBlockType => msg
+      case msg:RequestBlockType@unchecked => msg
     }
   }
 

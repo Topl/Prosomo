@@ -23,7 +23,7 @@ object RequestTineSpec extends MessageSpecV1[RequestTineType] with Serialization
   def requestFromBytes(bytes: Array[Byte]): RequestTineType = {
     val msgBytes = new ByteStream(bytes,DeserializeRequestTine)
     fromBytes(msgBytes) match {
-      case msg:RequestTineType => msg
+      case msg:RequestTineType@unchecked => msg
     }
   }
 

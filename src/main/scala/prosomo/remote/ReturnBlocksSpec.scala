@@ -23,7 +23,7 @@ object ReturnBlocksSpec extends MessageSpecV1[ReturnBlocksType] with Serializati
   def returnFromBytes(bytes: Array[Byte]): ReturnBlocksType = {
     val msgBytes = new ByteStream(bytes,DeserializeReturnBlocks)
     fromBytes(msgBytes) match {
-      case msg:ReturnBlocksType => msg
+      case msg:ReturnBlocksType@unchecked => msg
     }
   }
 

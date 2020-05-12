@@ -107,7 +107,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getBlockHeader(bid:SlotId):Option[BlockHeader]
   def getParentBlockHeader(b:BlockHeader):Option[BlockHeader]
   def getParentId(bid:SlotId):Option[SlotId]
-  def getNonce(id:SlotId):Rho
+  def getNonce(id:SlotId):Option[Rho]
   def eta_from_genesis(c:Tine, ep:Int):Eta
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta):Eta
   def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac

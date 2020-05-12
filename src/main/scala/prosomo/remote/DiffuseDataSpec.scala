@@ -24,7 +24,7 @@ object DiffuseDataSpec extends MessageSpecV1[DiffuseDataType] with Serialization
   def diffuseFromBytes(bytes: Array[Byte]): DiffuseDataType = {
     val msgBytes = new ByteStream(bytes,DeserializeDiffuse)
     fromBytes(msgBytes) match {
-      case msg:DiffuseDataType => msg
+      case msg:DiffuseDataType@unchecked => msg
     }
   }
 

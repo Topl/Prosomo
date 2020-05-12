@@ -5,7 +5,7 @@ import java.security.SecureRandom
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.{Ed25519KeyGenerationParameters, Ed25519PrivateKeyParameters, Ed25519PublicKeyParameters}
 import prosomo.primitives.Ed25519VRF.{PointAccum, PointExt}
-import scorex.crypto.hash.Sha512
+import java.security._
 
 /**
   * ECVRF-ED25519-SHA512-TAI
@@ -56,6 +56,12 @@ class Vrf {
   oneScalar.update(0,0x01.toByte)
   Ed25519VRF.pointSetNeutral(NP)
   Ed25519VRF.encodePoint(NP,neutralPointBytes,0)
+
+  def Sha512(bytes: Array[Byte]):Array[Byte] = {
+    val digest = MessageDigest.getInstance("SHA-512")
+    digest.update(bytes)
+    digest.digest()
+  }
 
   def vrfKeypair: (Array[Byte],Array[Byte]) = {
     val kpg = new Ed25519KeyPairGenerator

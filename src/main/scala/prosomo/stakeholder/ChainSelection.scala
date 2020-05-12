@@ -18,8 +18,8 @@ trait ChainSelection extends Members {
       breakable{
         while(foundAncestor) {
           getParentId(tine.least) match {
-            case pb:SlotId => {
-              tine = Tine(pb,getNonce(pb)) ++ tine
+            case Some(pb:SlotId) => {
+              tine = Tine(pb,getNonce(pb).get) ++ tine
               if (tine.least == localChain.get(tine.least._1)) {
                 prefix = tine.least._1
                 tine.remove(prefix)
@@ -45,13 +45,13 @@ trait ChainSelection extends Members {
 
   def updateWallet = {
     var id = localChain.getLastActiveSlot(globalSlot)
-    val bn = {getBlockHeader(id) match {case b:BlockHeader => b._9}}
+    val bn = {getBlockHeader(id) match {case Some(b:BlockHeader) => b._9}}
     if (bn == 0) {
       getBlockHeader(id) match {
-        case b:BlockHeader => {
+        case Some(b:BlockHeader) => {
           val bni = b._9
           history.get(id) match {
-            case value:(State,Eta) => {
+            case Some(value:(State,Eta)) => {
               wallet.update(value._1)
             }
           }
@@ -60,13 +60,13 @@ trait ChainSelection extends Members {
     } else {
       breakable{
         while (true) {
-          id = getParentId(id) match {case value:SlotId => value}
+          id = getParentId(id) match {case Some(value:SlotId) => value}
           getBlockHeader(id) match {
-            case b:BlockHeader => {
+            case Some(b:BlockHeader) => {
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
                 history.get(id) match {
-                  case value:(State,Eta) => {
+                  case Some(value:(State,Eta)) => {
                     wallet.update(value._1)
                   }
                 }
@@ -96,8 +96,8 @@ trait ChainSelection extends Members {
     breakable{
       while(foundAncestor) {
         getParentId(tine.least) match {
-          case pb:SlotId => {
-            tine = Tine(pb,getNonce(pb)) ++ tine
+          case Some(pb:SlotId) => {
+            tine = Tine(pb,getNonce(pb).get) ++ tine
             if (tine.least == localChain.get(tine.least._1)) {
               prefix = tine.least._1
               tine.remove(prefix)
@@ -157,8 +157,8 @@ trait ChainSelection extends Members {
     val tine:Tine = Tine(candidateTines.last._1)
     val job:Int = candidateTines.last._3
     val tineMaxSlot = tine.last._1
-    val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
-    val bnl = {getBlockHeader(localChain.getLastActiveSlot(globalSlot)) match {case b:BlockHeader => b._9}}
+    val bnt = {getBlockHeader(tine.getLastActiveSlot(globalSlot)) match {case Some(b:BlockHeader) => b._9}}
+    val bnl = {getBlockHeader(localChain.getLastActiveSlot(globalSlot)) match {case Some(b:BlockHeader) => b._9}}
 
     if (job == bootStrapJob) {
       bootStrapJob = -1
@@ -203,13 +203,13 @@ trait ChainSelection extends Members {
           //chainHistory.update(id,serializer)
           assert(
             getParentId(id) match {
-              case pid:SlotId => {
+              case Some(pid:SlotId) => {
                 localChain.getLastActiveSlot(i) == pid
               }
               case _ => false
             }
           )
-          localChain.update(id,getNonce(id))
+          localChain.update(id,getNonce(id).get)
           val blockLedger:TransactionSet = blocks.getTxs(id)
           for (trans<-blockLedger) {
             if (memPool.keySet.contains(trans.sid)) {
@@ -222,7 +222,7 @@ trait ChainSelection extends Members {
       }
       val lastSlot = localChain.lastActiveSlot(globalSlot)
       history.get(localChain.get(lastSlot)) match {
-        case reorgState:(State,Eta) => {
+        case Some(reorgState:(State,Eta)) => {
           localState = reorgState._1
           eta = reorgState._2
           //println(s"Holder $holderIndex set eta to "+Base58.encode(eta))
@@ -252,7 +252,7 @@ trait ChainSelection extends Members {
       var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- candidateTines) {
         val bid:SlotId = entry._1.last
-        val newTine = updateTine(Tine(bid,getNonce(bid)))
+        val newTine = updateTine(Tine(bid,getNonce(bid).get))
         if (newTine._2 > 0) {
           newCandidateTines = newCandidateTines ++ Array((newTine._1,newTine._2,entry._3))
         }
@@ -283,7 +283,7 @@ trait ChainSelection extends Members {
     var out = true
     for (id <- c.ordered.tail) {
       getParentId(id) match {
-        case bid:SlotId => {
+        case Some(bid:SlotId) => {
           if (bid == pid) {
             if (history.known(id)) {
               pid = id

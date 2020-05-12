@@ -21,8 +21,9 @@ trait Ledger extends Members {
     var isValid = true
     for (id <- c.ordered) {
       if (isValid) getBlockHeader(id) match {
-        case b:BlockHeader => {
-          val (_,_,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
+        case Some(b:BlockHeader) => {
+          val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
+          val cert:Cert = b._4
           val (pk_vrf,_,_,pk_sig,_,_) = cert
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
           var validForger = true
@@ -90,8 +91,9 @@ trait Ledger extends Members {
     var nls:State = ls
     var isValid = true
     if (isValid) getBlockHeader(id) match {
-      case b:BlockHeader => {
-        val (_,_,slot:Slot,cert:Cert,_,_,_,pk_kes:PublicKey,_,_) = b
+      case Some(b:BlockHeader) => {
+        val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
+        val cert:Cert = b._4
         val (pk_vrf,_,_,pk_sig,_,_) = cert
         val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
         var validForger = true

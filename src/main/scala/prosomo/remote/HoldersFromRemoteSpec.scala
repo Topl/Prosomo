@@ -23,7 +23,7 @@ object HoldersFromRemoteSpec extends MessageSpecV1[List[String]] with Serializat
   def holdersFromBytes(bytes: Array[Byte]): List[String] = {
     val msgBytes = new ByteStream(bytes,DeserializeHoldersFromRemote)
     fromBytes(msgBytes) match {
-      case msg:List[String] => msg
+      case msg:List[String]@unchecked => msg
     }
   }
 

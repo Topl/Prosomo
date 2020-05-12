@@ -13,7 +13,7 @@ import scala.math.BigInt
 trait Forging extends Members {
 
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
-  def forgeBlock(forgerKeys:Keys) = {
+  def forgeBlock(forgerKeys:Keys):Unit = {
     def blockInfo:String = {
       "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
     }
@@ -21,7 +21,7 @@ trait Forging extends Members {
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
-      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)) match {case b:BlockHeader =>
+      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)) match {case Some(b:BlockHeader) =>
         assert(b._3 != slot)
         b
       }

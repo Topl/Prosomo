@@ -130,12 +130,8 @@ trait Messages extends Members {
       val result = Await.result(future, timeout.duration)
       result match {
         case value:GetGossipers => {
-          value.list match {
-            case l:List[ActorRefWrapper] => gossipersMap += (holder->l)
-            case _ => println("error")
-          }
+          gossipersMap += (holder->value.list)
         }
-        case _ => println("error")
       }
     }
     gossipersMap
@@ -147,20 +143,14 @@ trait Messages extends Members {
     * @return
     */
   def getStakingState(holder:ActorRefWrapper):State = {
-    var state:State = Map()
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestState
     val result = Await.result(future, timeout.duration)
     result match {
       case value:GetState => {
-        value.s match {
-          case s:State => state = s
-          case _ => println("error")
-        }
+        value.s
       }
-      case _ => println("error")
     }
-    state
   }
 
   /**
@@ -191,13 +181,7 @@ trait Messages extends Members {
     val future = router ? RequestPositionData
     val result = Await.result(future, timeout.duration)
     result match {
-      case value:GetPositionData => {
-        value.s match {
-          case data:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) => {
-            data
-          }
-        }
-      }
+      case value:GetPositionData => value.s
     }
   }
 

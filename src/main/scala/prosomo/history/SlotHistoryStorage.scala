@@ -37,7 +37,7 @@ class SlotHistoryStorage(dir:String) extends Types {
     blockReorgStore.get(blockSlotHash) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream = new ByteStream(bytes.data,DeserializeIdList)
-        serializer.fromBytes(byteStream) match {case idl:List[BlockId] => idl}
+        serializer.fromBytes(byteStream) match {case idl:List[BlockId]@unchecked => idl}
       }
       case None => List(ByteArrayWrapper(Array()))
     }
@@ -53,7 +53,7 @@ class SlotHistoryStorage(dir:String) extends Types {
     blockReorgStore.get(blockSlotHash) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream = new ByteStream(bytes.data,DeserializeIdList)
-        serializer.fromBytes(byteStream) match {case idl:List[BlockId] => idl}
+        serializer.fromBytes(byteStream) match {case idl:List[BlockId]@unchecked => idl}
       }
       case _ => List(ByteArrayWrapper(Array()))
     }

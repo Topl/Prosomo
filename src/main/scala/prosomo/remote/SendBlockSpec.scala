@@ -23,7 +23,7 @@ object SendBlockSpec extends MessageSpecV1[SendBlockType] with SerializationMeth
   def sendFromBytes(bytes: Array[Byte]): SendBlockType = {
     val msgBytes = new ByteStream(bytes,DeserializeSendBlock)
     fromBytes(msgBytes) match {
-      case msg:SendBlockType => msg
+      case msg:SendBlockType@unchecked => msg
     }
   }
 

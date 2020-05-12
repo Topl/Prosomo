@@ -2,7 +2,7 @@ package prosomo.primitives
 
 import scala.math.BigInt
 import java.math.BigInteger
-
+import scala.language.implicitConversions
 /*
   Ratio class for handling stake distribution and threshold quantities that range from 0.0 to 1.0
 
@@ -15,10 +15,10 @@ import java.math.BigInteger
 
 case class Ratio(n: BigInt, d: BigInt) {
 
-  require(denom != 0)
   private val g = gcd(n.abs, d.abs)
   val numer: BigInt = n / g
   val denom: BigInt = d / g
+  require(denom != 0)
 
   private def gcd(a: BigInt, b: BigInt): BigInt =
     if (b == 0) a else gcd(b, a % b)
