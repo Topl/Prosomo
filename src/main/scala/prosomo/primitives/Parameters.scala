@@ -33,7 +33,7 @@ object Parameters {
     }
   }
 
-  val config:Config = getConfig
+  lazy val config:Config = getConfig
 
   val inputCommands:Map[Int,List[String]] = if (config.hasPath("command")) {
     var out:Map[Int,List[String]] = Map()
@@ -195,11 +195,6 @@ object Parameters {
   val stakeDistribution:String = config.getString("params.stakeDistribution")
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
-  val settingsFilename:String = config.getString("params.settingsFilename")
-  val knownPeer:String = config.getString("params.knownPeer")
-  val rpcPort:String = config.getString("params.rpcPort")
-  val myAddress:String = config.getString("params.myAddress")
-  val bindAddress:String = config.getString("params.bindAddress")
   val timeServer:String = config.getString("params.timeServer")
   val messageSpecs = Seq(
     DiffuseDataSpec,

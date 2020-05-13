@@ -19,16 +19,25 @@ trait ChainSelection extends Members {
         while(foundAncestor) {
           getParentId(tine.least) match {
             case Some(pb:SlotId) => {
-              tine = Tine(pb,getNonce(pb).get) ++ tine
-              if (tine.least == localChain.get(tine.least._1)) {
-                prefix = tine.least._1
-                tine.remove(prefix)
-                break
-              }
-              if (tine.least._1 == 0) {
-                prefix = 0
-                tine.remove(prefix)
-                break
+              getBlockHeader(pb) match {
+                case Some(pbh:BlockHeader) => {
+                  tine = Tine(pb,getNonce(pb).get) ++ tine
+                  if (tine.least == localChain.get(tine.least._1)) {
+                    prefix = tine.least._1
+                    tine.remove(prefix)
+                    break
+                  }
+                  if (tine.least._1 == 0) {
+                    prefix = 0
+                    tine.remove(prefix)
+                    break
+                  }
+                }
+                case None => {
+                  foundAncestor = false
+                  println("Error: update tine found no common prefix")
+                  prefix = -1
+                }
               }
             }
             case _ => {
@@ -97,19 +106,27 @@ trait ChainSelection extends Members {
       while(foundAncestor) {
         getParentId(tine.least) match {
           case Some(pb:SlotId) => {
-            tine = Tine(pb,getNonce(pb).get) ++ tine
-            if (tine.least == localChain.get(tine.least._1)) {
-              prefix = tine.least._1
-              tine.remove(prefix)
-              break
-            }
-            if (tine.least._1 == 0) {
-              prefix = 0
-              tine.remove(prefix)
-              break
+            getBlockHeader(pb) match {
+              case Some(pbh:BlockHeader) => {
+                tine = Tine(pb,getNonce(pb).get) ++ tine
+                if (tine.least == localChain.get(tine.least._1)) {
+                  prefix = tine.least._1
+                  tine.remove(prefix)
+                  break
+                }
+                if (tine.least._1 == 0) {
+                  prefix = 0
+                  tine.remove(prefix)
+                  break
+                }
+              }
+              case None => {
+                if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
+                foundAncestor = false
+              }
             }
           }
-          case _ => {
+          case None => {
             if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
             foundAncestor = false
           }

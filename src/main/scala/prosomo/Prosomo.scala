@@ -4,6 +4,7 @@ import prosomo.primitives.Parameters.{inputSeed, messageSpecs}
 import prosomo.primitives.FastCryptographicHash
 import prosomo.stakeholder.{Coordinator, Router}
 import java.net.InetSocketAddress
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
@@ -16,14 +17,16 @@ import scorex.core.network.peer.PeerManagerRef
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
+import com.typesafe.config.Config
+
 import scala.concurrent.ExecutionContext
 
-class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
+class Prosomo(config:Config) extends Runnable with ScorexLogging {
 
   import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
   //settings
-  implicit val settings: ScorexSettings = ScorexSettings.read(Some(settingsFilename))
+  implicit val settings: ScorexSettings = ScorexSettings.fromConfig(config)
 
   //api
   val apiRoutes: Seq[ApiRoute] = Seq()
@@ -125,5 +128,5 @@ class Prosomo(settingsFilename: String) extends Runnable with ScorexLogging {
 
 object Prosomo extends App {
   val input = args
-  new Prosomo(prosomo.primitives.Parameters.settingsFilename).run()
+  new Prosomo(prosomo.primitives.Parameters.config).run()
 }
