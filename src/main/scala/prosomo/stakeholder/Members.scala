@@ -72,7 +72,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   case object TimerKey
 
   def forgeBlock(forgerKeys:Keys):Unit
-  def updateTine(inputTine:Tine):(Tine,Slot)
+  def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet:Unit
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG:Unit

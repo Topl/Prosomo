@@ -46,18 +46,16 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       def load(id:SlotId):(State,Eta) = {
         SharedData.throwDiskWarning
         (
-          stateStoreCache.get(id._1/epochLength).get(id._2) match {
-            case Some(bytes:ByteArrayWrapper) => {
+          stateStoreCache.get(id._1/epochLength).get(id._2).get match {
+            case bytes:ByteArrayWrapper => {
               val byteStream = new ByteStream(bytes.data,DeserializeState)
               serializer.fromBytes(byteStream) match {
                 case s:State@unchecked => s
               }
             }
-            case None => Map()
           },
-          etaStoreCache.get(id._1/epochLength).get(id._2) match {
-            case Some(bytes:ByteArrayWrapper) => bytes.data
-            case None => Array()
+          etaStoreCache.get(id._1/epochLength).get(id._2).get match {
+            case bytes:ByteArrayWrapper => bytes.data
           }
         )
       }
@@ -73,7 +71,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   def known_then_load(id:SlotId):Boolean = {
     Try{stateCache.get(id)}.toOption match {
       case Some(s:(State,Eta)) => true
-      case _ => false
+      case None => false
     }
   }
 
@@ -85,13 +83,5 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     stateCache.put(id,(ls,eta))
   }
 
-  def get(id:SlotId):Option[(State,Eta)] = {
-    val out = stateCache.get(id)
-    if (out._2.isEmpty || out._1.isEmpty) {
-      None
-    } else {
-      Some(out)
-    }
-  }
-
+  def get(id:SlotId):Option[(State,Eta)] = Try{stateCache.get(id)}.toOption
 }

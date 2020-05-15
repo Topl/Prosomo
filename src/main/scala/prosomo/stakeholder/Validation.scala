@@ -13,7 +13,7 @@ trait Validation extends Members {
   /**
     * Block verify using key evolving signature
     * @param b input block
-    * @returnt true if signature is valid, false otherwise
+    * @return true if signature is valid, false otherwise
     */
   def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b

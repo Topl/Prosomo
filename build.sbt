@@ -74,7 +74,7 @@ libraryDependencies ++= Seq(
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
 scalacOptions ++= Seq(
-//  "-Xfatal-warnings",
+  "-Xfatal-warnings",
   "-feature",
   "-deprecation")
 

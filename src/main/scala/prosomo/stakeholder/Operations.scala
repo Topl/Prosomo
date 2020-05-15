@@ -2,6 +2,8 @@ package prosomo.stakeholder
 
 import prosomo.components.Tine
 
+import scala.util.Try
+
 trait Operations extends Members {
 
   /**
@@ -60,11 +62,7 @@ trait Operations extends Members {
     */
   def getBlockHeader(bid:SlotId): Option[BlockHeader] = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
-      if (blocks.known_then_load(bid)) {
-        Some(blocks.get(bid).prosomoHeader)
-      } else {
-        None
-      }
+      Try{blocks.get(bid).get.blockHeader.get}.toOption
     } else {
       None
     }
@@ -77,11 +75,7 @@ trait Operations extends Members {
     */
   def getParentBlockHeader(b:BlockHeader): Option[BlockHeader] = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
-      if (blocks.known_then_load((b._10,b._1))) {
-        Some(blocks.get((b._10,b._1)).prosomoHeader)
-      } else {
-        None
-      }
+      Try{blocks.get(b._10,b._1).get.blockHeader.get}.toOption
     } else {
       None
     }

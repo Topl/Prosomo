@@ -736,8 +736,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         com(0) match {
           case s:String => {
             if (com.length == 2){
-              com(1).toInt match {
-                case i:Int => {
+              Try{com(1).toInt}.toOption match {
+                case Some(i:Int) => {
                   if (cmdQueue.keySet.contains(i)) {
                     val nl = s::cmdQueue(i)
                     cmdQueue -= i
@@ -746,7 +746,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                     cmdQueue += (i->List(s))
                   }
                 }
-                case _ =>
+                case None =>
               }
             } else {
               if (cmdQueue.keySet.contains(t)){
@@ -876,53 +876,32 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           ).asJson,
           "data" -> (0 to tn).toArray.map{
             case i:Int => Map(
-              "slot" -> i.asJson,
-              "blocks" -> blocks.slotBlocks(i).map{
-                case value:(ByteArrayWrapper,BlockHeader) => {
-                  val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
-                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
-                  val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
-                  Map(
-                    "forger"-> Base58.encode(pk_f.data).asJson,
-                    "id" -> Base58.encode(value._1.data).asJson,
-                    "bn" -> bn.asJson,
-                    "bs" -> bs.asJson,
-                    "pid" -> Base58.encode(pid.data).asJson,
-                    "ps" -> ps.asJson,
-                    "nonce" -> Base58.encode(vrfNonce).asJson,
-                    "npi" -> Base58.encode(noncePi).asJson,
-                    "y" -> Base58.encode(y).asJson,
-                    "ypi" -> Base58.encode(ypi).asJson,
-                    "thr" -> thr.toString.asJson,
-                    "info" -> info.asJson,
-                    "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-                    "ledger" -> {
-                      if (bs == 0) {
-                        blocks.get((bs,value._1)).genesisSet match {case Some(genesisSet: GenesisSet)=>genesisSet}}.toArray.map{
-                        case entry:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
-                          val delta = entry._3
-                          val pk_g:PublicKeyW = entry._2
-                          Map(
-                            "genesis" -> Base58.encode(pk_g.data).asJson,
-                            "amount" -> delta.toLong.asJson
-                          ).asJson
-                        }
-                      } else {
-                        blocks.getBody((bs,value._1)) match {case Some(txs:TransactionSet)=>txs}}.toArray.map{
-                        case trans:Transaction => {
-                          Map(
-                            "txid" -> Base58.encode(trans.sid.data).asJson,
-                            "count" -> trans.nonce.asJson,
-                            "sender" -> Base58.encode(trans.sender.data).asJson,
-                            "recipient" -> Base58.encode(trans.receiver.data).asJson,
-                            "amount" -> trans.delta.toLong.asJson
-                          ).asJson
-                        }
-                      }
-                    }.asJson
-                  ).asJson
-                }
-              }.asJson
+              "slot" -> i.asJson
+//              "blocks" -> blocks.slotBlocks(i).map{
+//                case value:(ByteArrayWrapper,BlockHeader) => {
+//                  val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
+//                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
+//                  val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+//                  Map(
+//                    "forger"-> Base58.encode(pk_f.data).asJson,
+//                    "id" -> Base58.encode(value._1.data).asJson,
+//                    "bn" -> bn.asJson,
+//                    "bs" -> bs.asJson,
+//                    "pid" -> Base58.encode(pid.data).asJson,
+//                    "ps" -> ps.asJson,
+//                    "nonce" -> Base58.encode(vrfNonce).asJson,
+//                    "npi" -> Base58.encode(noncePi).asJson,
+//                    "y" -> Base58.encode(y).asJson,
+//                    "ypi" -> Base58.encode(ypi).asJson,
+//                    "thr" -> thr.toString.asJson,
+//                    "info" -> info.asJson,
+//                    "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
+//                    "ledger" -> {
+//
+//                    }.asJson
+//                  ).asJson
+//                }
+//              }.asJson
 //              ,
 //              "history" -> chainHistory.get(i,serializer).map{
 //                case value:BlockId => Map(

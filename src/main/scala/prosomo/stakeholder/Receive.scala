@@ -50,7 +50,7 @@ trait Receive extends Members {
     case value:SendBlock => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
-          val foundBlock = blocks.known((value.block.slot,value.block.id))
+          val foundBlock = blocks.knownIfPresent((value.block.slot,value.block.id))
           if (!foundBlock) {
             val b:BlockHeader = value.block.prosomoHeader
             val bHash = hash(b,serializer)
@@ -94,9 +94,9 @@ trait Receive extends Members {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           def blockToId(b:Block):SlotId = (b.slot,b.id)
-          if (verifyMac(hash((value.blocks.map(blockToId(_)),0,value.job),serializer),value.mac)) {
+          if (verifyMac(hash((value.blocks.map(block => blockToId(block)),0,value.job),serializer),value.mac)) {
             for (block <- value.blocks) {
-              if (!blocks.known(blockToId(block))) {
+              if (!blocks.knownIfPresent(blockToId(block))) {
                 if (verifyBlock(block)) {
                   if (holderIndex == SharedData.printingHolder && printFlag) {
                     println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
@@ -139,14 +139,14 @@ trait Receive extends Members {
           }
           if (verifyMac(hash((List(value.id),0,value.job),serializer),value.mac)) {
             val ref = inbox(value.mac.sid)._1
-            if (blocks.known_then_load(value.id)) {
-              val returnedBlock:List[Block] = List(blocks.get(value.id))
-              send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlock,signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Returned Block")
+            blocks.getIfPresent(value.id) match {
+              case Some(returnedBlock:Block) => {
+                send(ActorRefWrapper(self),ref,ReturnBlocks(List(returnedBlock),signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+                if (holderIndex == SharedData.printingHolder && printFlag) {
+                  println("Holder " + holderIndex.toString + " Returned Block")
+                }
               }
-            } else {
-              send(ActorRefWrapper(self),ref,ReturnBlocks(List(),signMac(hash((List(),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+              case None =>
             }
           } else {println("error: request block invalid mac")}
         }
@@ -162,18 +162,16 @@ trait Receive extends Members {
         if (inbox.keySet.contains(value.mac.sid)) {
           val request:Request = (List(value.id),value.depth,value.job)
           if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
-            //if (holderIndex == SharedData.printingHolder && printFlag) {
+            if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Was Requested Tine")
-            //}
+            }
             val ref = inbox(value.mac.sid)._1
             val startId:SlotId = value.id
             val depth:Int = value.depth
-            val job:Int = value.job
-            var returnedBlockList:List[Block] = List()
             var returnedIdList:List[SlotId] = List()
             var id:SlotId = startId
             breakable{
-              while (returnedBlockList.length <= depth) {
+              while (returnedIdList.length <= depth) {
                 blocks.restore(id) match {
                   case Some(block:Block) =>{
                     returnedIdList ::= id
@@ -185,12 +183,9 @@ trait Receive extends Members {
 
               }
             }
-
-            //if (holderIndex == SharedData.printingHolder && printFlag) {
+            if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Returned Tine")
-            //}
-
-            //send(ActorRefWrapper(self),ref,ReturnBlocks(returnedBlockList,signMac(hash((returnedIdList,0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+            }
           } else {println("error:chain request mac invalid")}
         }
       }
@@ -302,10 +297,10 @@ trait Receive extends Members {
       keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
       globalSlot = kes.getKeyTimeStep(keys.sk_kes)
-      val genesisBlock = blocks.get((0,genBlockHash))
+      val genesisBlock = blocks.getIfPresent((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {
-          localChain.update((0,genBlockHash),genesisBlock.prosomoHeader._5)
+          localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
           //chainHistory.update((0,genBlockHash),serializer)
           updateLocalState(localState, (0,genBlockHash)) match {
             case Some(value:State) => localState = value
@@ -325,7 +320,7 @@ trait Receive extends Members {
           val lastId = localChain.last
           localSlot = localChain.last._1
           currentEpoch = localSlot/epochLength
-          val loadState = history.get(lastId) match {case Some(data:(State,Eta)) => data}
+          val loadState = history.get(lastId).get
           localState = loadState._1
           eta = loadState._2
           stakingState = getStakingState(currentEpoch,localChain)
@@ -333,7 +328,7 @@ trait Receive extends Members {
       }
       keys.alpha = relativeStake(keys.pkw,stakingState)
       keys.threshold = phi(keys.alpha)
-      assert(genBlockHash == hash(genesisBlock.prosomoHeader,serializer))
+      assert(genBlockHash == hash(genesisBlock.get.blockHeader.get,serializer))
       println("Valid Genesis Block")
       sender() ! "done"
     }
@@ -390,7 +385,7 @@ trait Receive extends Members {
       println("Holder "+holderIndex.toString+" got genesis block "+Base58.encode(genBlockHash.data))
       assert(genBlockHash == gb.b.id)
       assert(verifyBlock(gb.b))
-      if (!blocks.known((0,gb.b.id))){
+      if (!blocks.knownIfPresent((0,gb.b.id))){
         blocks.add(gb.b)
       }
       sender() ! "done"
@@ -500,7 +495,7 @@ trait Receive extends Members {
       var allTxSlots:List[Slot] = List()
       var holderTxOnChain:List[(Sid,Transaction)] = List()
       for (id <- subChain(localChain,1,localSlot).ordered) {
-        for (trans<-blocks.getTxs(id)) {
+        for (trans<-blocks.getIfPresent(id).get.blockBody.get) {
           if (!allTx.contains(trans.sid)) {
             if (trans.sender == keys.pkw) holderTxOnChain ::= (trans.sid,trans)
             allTx ::= trans.sid

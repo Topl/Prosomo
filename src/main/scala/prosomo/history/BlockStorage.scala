@@ -5,6 +5,8 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
 
+import scala.util.Try
+
 class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.{cacheSize,epochLength}
@@ -42,10 +44,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     .maximumSize(cacheSize)
     .build[SlotId,Block](new CacheLoader[SlotId,Block] {
       def load(id:SlotId):Block = {
-        restore(id) match {
-          case Some(b:Block) => b
-          case None => Block(id._2,None,None,None)
-        }
+        restore(id).get
       }
     })
 
@@ -120,43 +119,36 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     }
   }
 
-  def get(id:SlotId):Block = blockCache.get(id)
+  def get(id:SlotId):Option[Block] = Try{blockCache.get(id)}.toOption
 
-  def getBody(id:SlotId):Option[TransactionSet] = blockCache.get(id).blockBody
-
-  def getGenBody(id:SlotId):Option[GenesisSet] = blockCache.get(id).genesisSet
-
-  def getTxs(id:SlotId):TransactionSet = getBody(id) match {
-    case Some(txs:TransactionSet) => txs
-  }
-
-  def getGenSet(id:SlotId):GenesisSet = getGenBody(id) match {
-    case Some(txs:GenesisSet) => txs
+  def getIfPresent(id:SlotId):Option[Block] = {
+    Try{
+      blockCache.getIfPresent(id) match {
+        case b:Block => b
+      }
+    }.toOption match {
+      case Some(b:Block) => Some(b)
+      case None => restore(id)
+    }
   }
 
   def known(id:SlotId):Boolean = {
-    blockCache.getIfPresent(id) match {
-      case b:Block => b.blockHeader match {
-        case None => false
-        case Some(h:BlockHeader) => true
-      }
-      case _ => headerStoreCache.get(id._1/epochLength).known(id._2)
+    Try{blockCache.get(id)}.toOption match {
+      case Some(b:Block) => true
+      case None => false
     }
   }
 
-  def known_then_load(id:SlotId):Boolean = {
-    blockCache.get(id) match {
-      case b:Block => b.blockHeader match {
-        case None => false
-        case Some(h:BlockHeader) => true
+  def knownIfPresent(id:SlotId):Boolean = {
+    Try{
+      blockCache.getIfPresent(id) match {
+        case b:Block => b
       }
-      case _ => false
+    }.toOption match {
+      case Some(b:Block) => true
+      case None => {
+        headerStoreCache.get(id._1/epochLength).known(id._2)
+      }
     }
   }
-
-  def slotBlocks(slot:Slot):Map[ByteArrayWrapper,BlockHeader] = {
-    var out:Map[ByteArrayWrapper,BlockHeader] = Map()
-    out
-  }
-
 }

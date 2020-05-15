@@ -5,15 +5,16 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
-import prosomo.primitives.{Mac, Keys, MalkinKey, Ratio, SharedData}
+import prosomo.primitives.{Keys, Mac, MalkinKey, Ratio, SharedData}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
+import scala.util.Try
 
 trait Forging extends Members {
 
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
-  def forgeBlock(forgerKeys:Keys):Unit = {
+  def forgeBlock(forgerKeys:Keys):Unit = Try{
     def blockInfo:String = {
       "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
     }
@@ -21,10 +22,8 @@ trait Forging extends Members {
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
     if (compare(y, forgerKeys.threshold)) {
-      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)) match {case Some(b:BlockHeader) =>
-        assert(b._3 != slot)
-        b
-      }
+      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)).get
+      assert(pb._3 != slot)
       val bn:Int = pb._9 + 1
       val ps:Slot = pb._3
       val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)

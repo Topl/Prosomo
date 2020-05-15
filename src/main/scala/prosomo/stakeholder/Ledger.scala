@@ -28,7 +28,7 @@ trait Ledger extends Members {
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
           var validForger = true
           if (slot == 0) {
-            val genesisSet:GenesisSet = blocks.getGenSet(id)
+            val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
             if (genesisSet.isEmpty) isValid = false
             if (isValid) for (entry <- genesisSet) {
               if (ByteArrayWrapper(entry._1) == genesisBytes && verifyMac(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
@@ -56,7 +56,7 @@ trait Ledger extends Members {
             }
             //apply transactions
             if (validForger) {
-              for (trans <- blocks.getTxs(id)) {
+              for (trans <- blocks.get(id).get.blockBody.get) {
                 if (verifyTransaction(trans)) {
                   applyTransaction(trans, nls, pk_f, fee_r) match {
                     case Some(value: State) => {
@@ -98,7 +98,7 @@ trait Ledger extends Members {
         val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
         var validForger = true
         if (slot == 0) {
-          val genesisSet:GenesisSet = blocks.getGenSet(id)
+          val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
           if (genesisSet.isEmpty) isValid = false
           if (isValid) for (entry <- genesisSet) {
             if (ByteArrayWrapper(entry._1) == genesisBytes && verifyMac(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
@@ -126,7 +126,7 @@ trait Ledger extends Members {
           }
           //apply transactions
           if (validForger) {
-            for (trans <- blocks.getTxs(id)) {
+            for (trans <- blocks.get(id).get.blockBody.get) {
               if (verifyTransaction(trans)) {
                 applyTransaction(trans, nls, pk_f, fee_r) match {
                   case Some(value:State) => {
@@ -178,7 +178,7 @@ trait Ledger extends Members {
     */
   def collectLedger(c:Tine): Unit = {
     for (id <- c.ordered) {
-      for (trans <- blocks.getTxs(id)) {
+      for (trans <- blocks.get(id).get.blockBody.get) {
         if (!memPool.keySet.contains(trans.sid)) {
           if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
         }

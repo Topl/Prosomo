@@ -1,13 +1,17 @@
 package prosomo.primitives
 
 import java.io.File
+
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import prosomo.remote._
+
 import scala.math.BigInt
+import scala.util.Try
 
 object Parameters {
 
@@ -43,8 +47,8 @@ object Parameters {
       com(0) match {
         case s:String => {
           if (com.length == 2){
-            com(1).toInt match {
-              case i:Int => {
+            Try{com(1).toInt}.toOption match {
+              case Some(i:Int) => {
                 if (out.keySet.contains(i)) {
                   val nl = s::out(i)
                   out -= i
@@ -53,7 +57,7 @@ object Parameters {
                   out += (i->List(s))
                 }
               }
-              case _ =>
+              case None =>
             }
           }
         }

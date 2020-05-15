@@ -53,20 +53,20 @@ trait Messages extends Members {
 
   /**
     * Sends command to one of the stakeholders
-    * @param holder actor list
+    * @param ref actor list
     * @param command object to be sent
     */
-  def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any) = {
+  def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
-      if (holder.remote) {
-        routerRef ! MessageFromLocalToRemote(holder.path, command)
+      if (ref.remote) {
+        routerRef ! MessageFromLocalToRemote(ref.path, command)
       } else {
-        routerRef ! MessageFromLocalToLocal(sender, holder, command)
+        routerRef ! MessageFromLocalToLocal(sender, ref, command)
       }
     } else if (useFencing) {
-      routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
+      routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,ref,command)
     } else {
-      holder ! command
+      ref ! command
     }
   }
 
