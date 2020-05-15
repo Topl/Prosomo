@@ -158,7 +158,8 @@ object PeerManager {
           excludedPeers.exists(_.peerSpec.address == p.peerSpec.address) &&
             blacklistedPeers.exists(addr => p.peerSpec.address.map(_.getAddress).contains(addr))
         }.toSeq
-        if (candidates.nonEmpty) Some(candidates(Random.nextInt(candidates.size)))
+        val candidatesByName = candidates.filterNot(p => excludedPeers.exists(_.peerSpec.agentName == p.peerSpec.agentName))
+        if (candidatesByName.nonEmpty) Some(candidatesByName(Random.nextInt(candidatesByName.size)))
         else None
       }
     }

@@ -28,7 +28,7 @@ object PeerInfo {
   }
 
   def bootStrapAddress(address: InetSocketAddress): PeerInfo = {
-    val peerSpec = PeerSpec("bootstrap", Version.initial, s"bootstrap-$address", Some(address), Seq())
+    val peerSpec = PeerSpec("bootstrap", Version.last, "bootstrap", Some(address), Seq())
     PeerInfo(peerSpec, 0L, None)
   }
 
