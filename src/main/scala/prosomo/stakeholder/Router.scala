@@ -45,7 +45,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var txRoundCounter = 0
   var maxDelay:Double = 0
   var transactionCounter:Int = 0
-  var pathToPeer:Map[ActorPath,ConnectedPeer] = Map()
+  var pathToPeer:Map[ActorPath,String] = Map()
   var connectedPeer:Set[ConnectedPeer] = Set()
   implicit val routerRef = ActorRefWrapper.routerRef(self)
 
@@ -449,28 +449,28 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:List[String]@unchecked => {
               for (string<-msg) {
-                Try{ActorPath.fromString(string)} match {
-                  case Success(newPath:ActorPath) => {
+                Try{ActorPath.fromString(string)}.toOption match {
+                  case Some(newPath:ActorPath) => {
                     holders.find(_.path == newPath) match {
                       case None => {
                         holders ::= ActorRefWrapper(newPath)
-                        pathToPeer += (newPath -> remote)
+                        pathToPeer += (newPath -> remote.peerInfo.get.peerSpec.agentName)
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
                         toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case Some(actorRef:ActorRefWrapper) => {
-                        if (pathToPeer(actorRef.path) == remote) {
+                        if (pathToPeer(actorRef.path) == remote.peerInfo.get.peerSpec.agentName) {
                           val key = actorRef.path
                           pathToPeer -= key
-                          pathToPeer += (key -> remote)
+                          pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
                           println("Updated Peer "+newPath.toString)
                           holders.filterNot(_.remote).foreach(_ ! Diffuse)
                         }
                       }
                     }
                   }
-                  case _ => println("error: could not parse actor path")
+                  case None => println("error: could not parse actor path")
                 }
               }
             }
@@ -553,18 +553,18 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ActorPath):Unit = {
-    Try{spec.toBytes(c)} match {
-      case Success(bytes:Array[Byte]) =>
-        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeer(pathToPeer(r)))
-      case _ =>
+    Try{spec.toBytes(c)}.toOption match {
+      case Some(bytes:Array[Byte]) =>
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(pathToPeer(r)))
+      case None =>
     }
   }
 
   private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content):Unit = {
-    Try{spec.toBytes(c)} match {
-      case Success(bytes:Array[Byte]) =>
+    Try{spec.toBytes(c)}.toOption match {
+      case Some(bytes:Array[Byte]) =>
         networkController ! SendToNetwork(Message(spec,Left(bytes),None),Broadcast)
-      case _ =>
+      case None =>
     }
   }
 

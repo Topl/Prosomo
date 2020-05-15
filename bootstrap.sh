@@ -8,5 +8,5 @@ fi
 stakeHolderAddress=$(dig @resolver1.opendns.com ANY myip.opendns.com +short)
 echo "Declared Address = $stakeHolderAddress"
 echo "Holder Index = $stakeHolderIndex"
-inputString="input{params{holderIndexMin=$stakeHolderIndex,holderIndexMax=$stakeHolderIndex}} input{scorex{network{declaredAddress=\"$stakeHolderAddress:9084\"}}}"
+inputString="input{params{holderIndexMin=$stakeHolderIndex,holderIndexMax=$stakeHolderIndex}} input{scorex{network{declaredAddress=\"$stakeHolderAddress:9084\",agentName=\"prosomo_$stakeHolderIndex\"}}}"
 sbt "run-main prosomo.Prosomo bootstrap.conf $inputString"
