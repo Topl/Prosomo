@@ -34,7 +34,7 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName)
+  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.nodeName)
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
 
   protected val features: Seq[PeerFeature] = Seq()
