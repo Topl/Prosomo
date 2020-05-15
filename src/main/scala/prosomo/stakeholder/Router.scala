@@ -448,7 +448,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         case HoldersFromRemoteSpec.messageCode => {
           data match {
             case msg:List[String]@unchecked => {
-              msg.foreach(println(_))
               for (string<-msg) {
                 Try{ActorPath.fromString(string)} match {
                   case Success(newPath:ActorPath) => {
