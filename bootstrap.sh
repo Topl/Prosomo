@@ -5,5 +5,8 @@ if read -t 10 response; then
 else
     stakeHolderIndex=$(((RANDOM<<15)|RANDOM))
 fi
+stakeHolderAddress=$(dig @resolver1.opendns.com ANY myip.opendns.com +short)
+echo "Declared Address = $stakeHolderAddress"
 echo "Holder Index = $stakeHolderIndex"
-sbt "run-main prosomo.Prosomo bootstrap.conf input{params{holderIndexMin=$stakeHolderIndex,holderIndexMax=$stakeHolderIndex}}"
+inputString="input{params{holderIndexMin=$stakeHolderIndex,holderIndexMax=$stakeHolderIndex}} input{scorex{network{declaredAddress=\"$stakeHolderAddress:9084\"}}}"
+sbt "run-main prosomo.Prosomo bootstrap.conf $inputString"

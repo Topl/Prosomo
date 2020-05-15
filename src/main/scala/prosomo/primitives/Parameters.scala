@@ -21,19 +21,27 @@ object Parameters {
   def getConfig:Config = {
     import Prosomo.input
     if (input.length > 0) {
-      val inputConfigFile = new File(input.head.stripSuffix(".conf")+".conf")
-      val localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input")
       val baseConfig = ConfigFactory.load
-      if (input.length == 2) {
-        val lineConfig = ConfigFactory.parseString(input(1)).getConfig("input")
-        ConfigFactory.load(lineConfig.withFallback(localConfig)).withFallback(baseConfig)
-      } else {
-        ConfigFactory.load(localConfig).withFallback(baseConfig)
-      }
+      var localConfig = baseConfig
+      input.foreach(str =>
+        Try{
+          val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
+          localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None => {
+            Try{
+              localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+            }.toOption match {
+              case None => println("Error: input not parsed")
+              case _ =>
+            }
+          }
+          case _ =>
+        }
+      )
+      localConfig
     } else {
-      val baseConfig = ConfigFactory.load
-      val localConfig = ConfigFactory.load("local")
-      localConfig.withFallback(baseConfig)
+      ConfigFactory.load
     }
   }
 
