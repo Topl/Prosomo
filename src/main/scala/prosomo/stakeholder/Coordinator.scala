@@ -271,7 +271,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def setupLocal:Unit = {
     if (holderIndexMin > -1 && holderIndexMax > -1) {
       SharedData.printingHolder = holderIndexMin
-      sendAssertDone(routerRef, HoldersFromLocal(holders.filterNot(_.remote)))
     }
     println("Sending holders list")
     sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
@@ -524,7 +523,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(newHolder,Initialize)
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
-              sendAssertDone(routerRef,HoldersFromLocal(holders.filterNot(_.remote)))
+              sendAssertDone(routerRef,HoldersFromLocal(holders))
+              sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
               newHolder ! Run
             }
             case _ => newHolder ! PoisonPill
@@ -702,7 +702,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(newHolder,Initialize)
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
-                sendAssertDone(routerRef,HoldersFromLocal(holders.filterNot(_.remote)))
+                sendAssertDone(routerRef,HoldersFromLocal(holders))
+                sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
                 newHolder ! Run
               }
               case _ => newHolder ! PoisonPill

@@ -375,9 +375,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     Hello(s,msg._3)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: Hello message not parsed")
               }
-            case _ =>
+            case _ => println("error: Hello message not parsed")
           }
         }
         case RequestBlockSpec.messageCode => {
@@ -388,9 +388,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestBlock(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: RequestBlock message not parsed")
               }
-            case _ =>
+            case _ => println("error: RequestBlock message not parsed")
           }
         }
         case RequestTineSpec.messageCode => {
@@ -401,9 +401,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestTine(msg._3,msg._4,msg._5,msg._6)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: RequestTine message not parsed")
               }
-            case _ =>
+            case _ => println("error: RequestTine message not parsed")
           }
         }
         case ReturnBlocksSpec.messageCode => {
@@ -414,9 +414,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     ReturnBlocks(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: ReturnBlocks message not parsed")
               }
-            case _ =>
+            case _ => println("error: ReturnBlocks message not parsed")
           }
         }
         case SendBlockSpec.messageCode => {
@@ -427,9 +427,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendBlock(msg._3,msg._4)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: SendBlock message not parsed")
               }
-            case _ =>
+            case _ => println("error: SendBlock message not parsed")
           }
         }
         case SendTxSpec.messageCode => {
@@ -440,9 +440,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendTx(msg._3)
                   )(context.system.dispatcher,self)
-                case None =>
+                case None => println("error: SendTx message not parsed")
               }
-            case _ =>
+            case _ => println("error: SendTx message not parsed")
           }
         }
         case HoldersFromRemoteSpec.messageCode => {
@@ -474,7 +474,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                 }
               }
             }
-            case _ => println("error: remote holders data not a list of strings")
+            case _ => println("error: remote holders data not parsed")
           }
         }
         case _ => println("error: message code did not match any specs")
@@ -492,7 +492,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       for (holder<-holders.filterNot(_.remote)) {
         if (!holdersPosition.keySet.contains(holder)) {
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))
-          println("local holder given position")
+          println("Local holder given position")
         }
       }
       if (useFencing) {
