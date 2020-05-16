@@ -302,7 +302,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case Update => update
 
     case ActorPathSendTimerKey => {
-      toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+      if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
       holders.filterNot(_.remote).foreach(_ ! NewGossipers)
     }
 
@@ -457,7 +457,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         pathToPeer += (newPath -> remote.peerInfo.get.peerSpec.agentName)
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
-                        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+                        if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case Some(actorRef:ActorRefWrapper) => {
                         if (pathToPeer(actorRef.path) != remote.peerInfo.get.peerSpec.agentName) {
