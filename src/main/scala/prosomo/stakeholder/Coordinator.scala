@@ -476,9 +476,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           val (holders1,holders2) = rng.shuffle(holders).splitAt(rng.nextInt(holders.length-2)+1)
           println("Splitting Party into groups of "+holders1.length.toString+" and "+holders2.length.toString)
           sendAssertDone(holders1,Party(holders1,true))
-          sendAssertDone(holders1,Diffuse)
           sendAssertDone(holders2,Party(holders2,true))
-          sendAssertDone(holders2,Diffuse)
+          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
           gossipersMap = getGossipers(holders)
@@ -491,11 +490,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           val commonRef = holders1.head
           sendAssertDone(holders,Party(List(),true))
           sendAssertDone(List(commonRef),Party(holders,false))
-          sendAssertDone(List(commonRef),Diffuse)
           sendAssertDone(holders1.tail,Party(holders1,false))
-          sendAssertDone(holders1.tail,Diffuse)
           sendAssertDone(holders2,Party(commonRef::holders2,false))
-          sendAssertDone(holders2,Diffuse)
+          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
           gossipersMap = getGossipers(holders)
@@ -526,6 +523,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(routerRef,HoldersFromLocal(holders))
               sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
               newHolder ! Run
+              holders.filterNot(_.remote).foreach(_ ! Diffuse)
             }
             case _ => newHolder ! PoisonPill
           }
@@ -583,9 +581,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
             println(s"Splitting Stake to $alpha1 and $alpha2 with $numh1 and $numh2 holders")
             sendAssertDone(holders1,Party(holders1,true))
-            sendAssertDone(holders1,Diffuse)
             sendAssertDone(holders2,Party(holders2,true))
-            sendAssertDone(holders2,Diffuse)
+            holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
             gossipersMap = getGossipers(holders)
@@ -628,11 +625,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             val commonRef = holders1.head
             sendAssertDone(holders,Party(List(),true))
             sendAssertDone(List(commonRef),Party(holders,false))
-            sendAssertDone(List(commonRef),Diffuse)
             sendAssertDone(holders1.tail,Party(holders1,false))
-            sendAssertDone(holders1.tail,Diffuse)
             sendAssertDone(holders2,Party(commonRef::holders2,false))
-            sendAssertDone(holders2,Diffuse)
+            holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
             gossipersMap = getGossipers(holders)
@@ -705,6 +700,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(routerRef,HoldersFromLocal(holders))
                 sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
                 newHolder ! Run
+                holders.filterNot(_.remote).foreach(_ ! Diffuse)
               }
               case _ => newHolder ! PoisonPill
             }

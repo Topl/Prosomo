@@ -466,6 +466,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                           val key = actorRef.path
                           pathToPeer -= key
                           pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
+                          toDiffuse = true
+                          if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                           println("Updated Peer "+newPath.toString)
                         }
                       }
