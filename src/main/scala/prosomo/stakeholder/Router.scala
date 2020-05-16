@@ -565,7 +565,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content):Unit = {
     Try{spec.toBytes(c)}.toOption match {
       case Some(bytes:Array[Byte]) =>
-        networkController ! SendToNetwork(Message(spec,Left(bytes),None),Broadcast)
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),BroadcastExceptOfByName("bootstrap"))
       case None =>
     }
   }

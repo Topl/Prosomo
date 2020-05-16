@@ -25,6 +25,11 @@ case class BroadcastExceptOf(exceptOf: Seq[ConnectedPeer]) extends SendingStrate
     peers.filterNot(exceptOf.contains)
 }
 
+case class BroadcastExceptOfByName(exceptOf: String) extends SendingStrategy {
+  override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] =
+    peers.filterNot(p => p.peerInfo.get.peerSpec.agentName == exceptOf)
+}
+
 case class SendToPeer(chosenPeer: ConnectedPeer) extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = Seq(chosenPeer)
 }
