@@ -21,7 +21,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
       if (ref.remote) {
-        routerRef ! MessageFromLocalToRemote(ref.path, command)
+        routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
       } else {
         routerRef ! MessageFromLocalToLocal(sender, ref, command)
       }
@@ -53,7 +53,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
             }
             case None => break
           }
-          Thread.sleep(100)
+          if (!useFencing) Thread.sleep(100)
         }
       }
       if (holderIndex == SharedData.printingHolder && printFlag) {

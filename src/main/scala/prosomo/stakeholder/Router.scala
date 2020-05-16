@@ -522,8 +522,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
     }
 
-    case MessageFromLocalToRemote(r,command) => {
-      val s:ActorPath = sender().path
+    case MessageFromLocalToRemote(sender,r,command) => {
+      val s = sender.actorPath
       command match {
         case c:DiffuseData => {
           val content:DiffuseDataType = (c.ref.toString,r.toString,c.pks,c.mac)

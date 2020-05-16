@@ -59,7 +59,7 @@ trait Messages extends Members {
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any) = {
     if (useRouting && !useFencing) {
       if (ref.remote) {
-        routerRef ! MessageFromLocalToRemote(ref.path, command)
+        routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
       } else {
         routerRef ! MessageFromLocalToLocal(sender, ref, command)
       }
@@ -79,7 +79,7 @@ trait Messages extends Members {
     for (holder <- holders){
       if (useRouting && !useFencing) {
         if (holder.remote) {
-          routerRef ! MessageFromLocalToRemote(holder.path, command)
+          routerRef ! MessageFromLocalToRemote(sender,holder.path, command)
         } else {
           routerRef ! MessageFromLocalToLocal(sender, holder, command)
         }
