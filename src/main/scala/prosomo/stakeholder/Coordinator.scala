@@ -351,14 +351,18 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   /**randomly picks two holders and creates a transaction between the two*/
   def issueRandTx:Unit = {
     for (i <- 0 to txProbability.floor.toInt) if (holders.length > 1) {
-      val holder1 = rng.shuffle(holders.filterNot(_.remote)).head
-      val r = rng.nextDouble
-      if (r<txProbability%1.0) {
-        val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
-        assert(holder1 != holder2)
-        val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
-        holder1 ! IssueTx(holder2,delta)
-        transactionCounter += 1
+      Try{rng.shuffle(holders.filterNot(_.remote)).head}.toOption match {
+        case Some(holder1:ActorRefWrapper) => {
+          val r = rng.nextDouble
+          if (r<txProbability%1.0) {
+            val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
+            assert(holder1 != holder2)
+            val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+            holder1 ! IssueTx(holder2,delta)
+            transactionCounter += 1
+          }
+        }
+        case None =>
       }
     }
   }
