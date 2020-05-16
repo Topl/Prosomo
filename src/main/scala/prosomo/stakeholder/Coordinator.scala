@@ -217,7 +217,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def receiveRemoteHolders: Receive = {
     case HoldersFromRemote(remoteHolders:List[ActorRefWrapper]) => {
       holders = remoteHolders
-      holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromRemote(holders)))
+      holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromLocal(holders)))
     }
   }
 
