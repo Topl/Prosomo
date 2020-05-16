@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor,ActorRef, ActorPath, Props, Timers}
+import akka.actor.{Actor, ActorPath, Props, Timers}
 import akka.util.Timeout
 import prosomo.cases._
 import prosomo.components.Serializer

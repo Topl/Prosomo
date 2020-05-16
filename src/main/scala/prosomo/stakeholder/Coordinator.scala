@@ -100,6 +100,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var bootStrapLock:Boolean = false
   var bootStrapJob:Int = 0
   var bootStrapMessage:Cancellable = _
+  var tineProvider: Option[ActorRefWrapper] = None
 
   val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
 

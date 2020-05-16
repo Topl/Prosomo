@@ -121,34 +121,27 @@ trait ChainSelection extends Members {
     val headIdOpt:Option[SlotId] = Try{inputTine.last}.toOption
     headIdOpt match {
       case Some(headId:SlotId) => {
-        var prefix = -1
-        var tine:Tine = Tine(subChain(inputTine,headId._1,headId._1))
-        def loop(id:SlotId):Option[Tine] = {
-          getParentId(id) match {
-            case Some(pid:SlotId) => {
-              if (pid == localChain.get(pid._1)) {
-                prefix = pid._1
-                Some(tine)
-              } else {
-                tine = tine ++ Tine(subChain(inputTine,pid._1,pid._1))
-                loop(pid)
+        if (headId == localChain.get(headId._1)) {
+          None
+        } else {
+          var prefix = -1
+          var tine:Tine = Tine(subChain(inputTine,headId._1,headId._1))
+          def loop(id:SlotId):Unit = {
+            getParentId(id) match {
+              case Some(pid:SlotId) => {
+                if (pid == localChain.get(pid._1)) {
+                  prefix = pid._1
+                } else {
+                  tine = tine ++ Tine(subChain(inputTine,pid._1,pid._1))
+                  loop(pid)
+                }
               }
-
-            }
-            case None => {
-              println("Error: tineUpdate found no common prefix")
-              None
+              case None => {
+                println("Error: tineUpdate found no common prefix")
+              }
             }
           }
-        }
-        loop(headId) match {
-          case Some(t:Tine) => {
-            Some((t,prefix))
-          }
-          case None => {
-            println("Error: tineUpdate loop failed")
-            None
-          }
+          Some((tine,prefix))
         }
       }
       case None => {
@@ -166,6 +159,8 @@ trait ChainSelection extends Members {
     val tineMaxSlot = tine.last._1
     val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
     val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
+
+    assert(!tine.isEmpty)
 
     if (job == bootStrapJob) {
       bootStrapJob = -1
@@ -257,7 +252,7 @@ trait ChainSelection extends Members {
       for (entry <- candidateTines) {
         updateTine(entry._1) match {
           case Some((newTine:Tine,prefix:Slot)) => {
-            if (prefix > 0) {
+            if (prefix > 0 && !newTine.isEmpty) {
               newCandidateTines = newCandidateTines ++ Array((newTine,prefix,entry._3))
             }
           }

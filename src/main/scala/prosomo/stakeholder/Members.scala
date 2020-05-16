@@ -68,6 +68,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var bootStrapLock:Boolean
   var bootStrapJob:Int
   var bootStrapMessage:Cancellable
+  var tineProvider:Option[ActorRefWrapper]
 
   case object TimerKey
 

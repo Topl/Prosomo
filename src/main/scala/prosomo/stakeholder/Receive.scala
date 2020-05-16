@@ -159,39 +159,33 @@ trait Receive extends Members {
     /**block passing, parent ids are requested with increasing depth of chain up to a finite number of attempts*/
     case value:RequestTine => {
       if (!actorStalled) {
-        if (inbox.keySet.contains(value.mac.sid)) {
-          val request:Request = (List(value.id),value.depth,value.job)
-          if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
-            if (holderIndex == SharedData.printingHolder && printFlag) {
-              println("Holder " + holderIndex.toString + " Was Requested Tine")
-            }
-            val ref = inbox(value.mac.sid)._1
-            val startId:SlotId = value.id
-            val depth:Int = value.depth
-            var returnedIdList:List[SlotId] = List()
-            var id:SlotId = startId
-            breakable{
-              while (returnedIdList.length <= depth) {
-                blocks.restore(id) match {
-                  case Some(block:Block) =>{
-                    returnedIdList ::= id
-                    send(ActorRefWrapper(self),ref,ReturnBlocks(List(block),signMac(hash((List(id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
-                    id = block.parentSlotId
-                  }
-                  case None => break
+        tineProvider match {
+          case None => {
+            if (inbox.keySet.contains(value.mac.sid)) {
+              val request:Request = (List(value.id),value.depth,value.job)
+              if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
+                val refToSend = inbox(value.mac.sid)._1
+                val startId:SlotId = value.id
+                val depth:Int = value.depth
+                tineProvider = Try{ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))}.toOption
+                tineProvider match {
+                  case Some(ref:ActorRefWrapper) =>
+                    ref ! RequestTineProvider.Info(refToSend,startId,depth,ActorRefWrapper(self),holderIndex,sessionId,keys.sk_sig,keys.pk_sig,value.job)
+                  case None => println("error: tine provider not initialized")
                 }
-
-              }
-            }
-            if (holderIndex == SharedData.printingHolder && printFlag) {
-              println("Holder " + holderIndex.toString + " Returned Tine")
-            }
-          } else {println("error:chain request mac invalid")}
+              } else {println("error: chain request mac invalid")}
+            } else {println("error: invalid sid")}
+          }
+          case _ =>
         }
       }
       if (useFencing) {
         routerRef ! Flag(ActorRefWrapper(self),"passData")
       }
+    }
+
+    case RequestTineProvider.Done => {
+      tineProvider = None
     }
 
     /**gossip protocol greeting message for populating inbox*/

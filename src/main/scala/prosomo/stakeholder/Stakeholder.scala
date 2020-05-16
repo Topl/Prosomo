@@ -116,6 +116,7 @@ class Stakeholder(
   var bootStrapLock:Boolean = false
   var bootStrapJob:Int = -1
   var bootStrapMessage: Cancellable = _
+  var tineProvider:Option[ActorRefWrapper] = None
 
 }
 
