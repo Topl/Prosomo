@@ -448,6 +448,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         case HoldersFromRemoteSpec.messageCode => {
           data match {
             case msg:List[String]@unchecked => {
+              var toDiffuse = false
               for (string<-msg) {
                 Try{ActorPath.fromString(string)}.toOption match {
                   case Some(newPath:ActorPath) => {
@@ -457,6 +458,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         pathToPeer += (newPath -> remote.peerInfo.get.peerSpec.agentName)
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
+                        toDiffuse = true
                         if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case Some(actorRef:ActorRefWrapper) => {
@@ -465,7 +467,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                           pathToPeer -= key
                           pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
                           println("Updated Peer "+newPath.toString)
-                          holders.filterNot(_.remote).foreach(_ ! Diffuse)
                         }
                       }
                     }
@@ -473,6 +474,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                   case None => println("error: could not parse actor path")
                 }
               }
+              if (toDiffuse) holders.filterNot(_.remote).foreach(_ ! Diffuse)
             }
             case _ => println("error: remote holders data not parsed")
           }
