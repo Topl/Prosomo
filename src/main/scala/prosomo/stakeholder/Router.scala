@@ -49,7 +49,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var connectedPeer:Set[ConnectedPeer] = Set()
   implicit val routerRef = ActorRefWrapper.routerRef(self)
 
-  private case object TimerKey
+  private case object ActorPathSendTimerKey
 
   /**
     * Sends commands one by one to list of stakeholders
@@ -285,7 +285,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     }
 
     case Run => {
-      timers.startPeriodicTimer(TimerKey, Update, 1.nano)
+      timers.startPeriodicTimer(ActorPathSendTimerKey, Update, 1.nano)
       coordinatorRef ! NextSlot
     }
 
@@ -301,7 +301,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
     case Update => update
 
-    case TimerKey => {
+    case ActorPathSendTimerKey => {
       toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
       holders.filterNot(_.remote).foreach(_ ! NewGossipers)
     }
@@ -460,7 +460,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                       }
                       case Some(actorRef:ActorRefWrapper) => {
-                        if (pathToPeer(actorRef.path) == remote.peerInfo.get.peerSpec.agentName) {
+                        if (pathToPeer(actorRef.path) != remote.peerInfo.get.peerSpec.agentName) {
                           val key = actorRef.path
                           pathToPeer -= key
                           pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
@@ -502,8 +502,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         }
       }
-      timers.startPeriodicTimer(TimerKey, TimerKey, 10.seconds)
-      toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+      if (holders.filterNot(_.remote).nonEmpty) {
+        timers.startPeriodicTimer(ActorPathSendTimerKey, ActorPathSendTimerKey, 10.seconds)
+        toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+      }
       sender() ! "done"
     }
   }
