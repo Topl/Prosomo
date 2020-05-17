@@ -4,6 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, Removal
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
+import scorex.util.encode.Base58
 
 import scala.util.Try
 
@@ -44,7 +45,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     .maximumSize(cacheSize)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
       def load(id:SlotId):(State,Eta) = {
-        SharedData.throwDiskWarning(s"Load State ${id._2.data}")
+        SharedData.throwDiskWarning(s"Load State ${Base58.encode(id._2.data)}")
         (
           stateStoreCache.get(id._1/epochLength).get(id._2).get match {
             case bytes:ByteArrayWrapper => {
