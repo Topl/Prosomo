@@ -78,7 +78,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     }
   }
 
-  def restore(id:SlotId):Option[Block] = {
+  def restore(id:SlotId):Option[Block] = Try{
     val key = id._2
     SharedData.throwDiskWarning(s"Restore block ${Base58.encode(key.data)}")
     headerStoreCache.get(id._1/epochLength).get(key) match {
@@ -118,6 +118,9 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
       }
       case None => None
     }
+  }.toOption match {
+    case Some(value) => value
+    case None => None
   }
 
   def get(id:SlotId):Option[Block] = Try{blockCache.get(id)}.toOption
