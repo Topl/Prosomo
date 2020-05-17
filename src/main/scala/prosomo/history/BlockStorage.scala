@@ -4,6 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, Removal
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
+import scorex.util.encode.Base58
 
 import scala.util.Try
 
@@ -79,7 +80,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   def restore(id:SlotId):Option[Block] = {
     val key = id._2
-    SharedData.throwDiskWarning
+    SharedData.throwDiskWarning(s"Restore block ${Base58.encode(key.data)}")
     headerStoreCache.get(id._1/epochLength).get(key) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeBlockHeader)

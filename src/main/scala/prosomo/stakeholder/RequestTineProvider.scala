@@ -6,7 +6,6 @@ import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{FastCryptographicHash, Mac, SharedData, Sig, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
-
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random

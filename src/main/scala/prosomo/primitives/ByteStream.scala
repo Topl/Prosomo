@@ -4,7 +4,7 @@ import com.google.common.primitives.{Ints, Longs}
 
 class ByteStream(var data:Array[Byte],co:Any) {
   def get(n:Int):Array[Byte] = {
-    if (n>data.length) println("Error: bytestream reached early end of stream")
+    if (n>data.length) println("Error: ByteStream reached early end of stream")
     assert(n<=data.length)
     val out = data.take(n)
     data = data.drop(n)

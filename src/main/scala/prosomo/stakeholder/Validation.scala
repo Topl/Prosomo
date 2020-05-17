@@ -46,7 +46,7 @@ trait Validation extends Members {
             false
           }
         }
-        case _ => {println("error: tx set match in block verify");false}
+        case _ => {println("Error: tx set match in block verify");false}
       }
     } else {
       b.blockBody match {
@@ -54,20 +54,20 @@ trait Validation extends Members {
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
               val (out1,out2) = (hash(txs,serializer) == header._2.dataHash , txs.map(verifyTransaction).reduceLeft(_ && _))
-              if (!out1) println("error: txs hash failed")
-              if (!out2) println("error: txs verify failed")
+              if (!out1) println("Error: txs hash failed")
+              if (!out2) println("Error: txs verify failed")
               out1 && out2
             } else {
               val out = hash(txs,serializer) == header._2.dataHash
-              if (!out) println("error: empty txs failed hash")
+              if (!out) println("Error: empty txs failed hash")
               out
             }
           } else {
-            println("error: txs length greater than tx/block")
+            println("Error: txs length greater than tx/block")
             false
           }
         }
-        case _ => {println("error: tx set match in block verify");false}
+        case _ => {println("Error: tx set match in block verify");false}
       }
     }
     val out = headerVer && b.id == hash(header,serializer) && ledgerVer
@@ -235,7 +235,7 @@ trait Validation extends Members {
                             ls = newState
                             pid = id
                           } else {
-                            print("error: Holder "+holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
+                            print("Error: Holder "+holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
                             println(Seq(
                               hash(parent,serializer) == h0 //1
                               , verifyBlockHeader(block) //2
@@ -253,7 +253,7 @@ trait Validation extends Members {
                             break()
                           }
                         } else {
-                          println("error: parent id mismatch")
+                          println("Error: parent id mismatch")
                           println(s"pid ${Base58.encode(pid._2.data)}")
                           println(s"id ${Base58.encode(id._2.data)}")
                           isValid &&= false
@@ -261,7 +261,7 @@ trait Validation extends Members {
                         }
                       }
                       case _ => {
-                        println("error: could not recover parent header")
+                        println("Error: could not recover parent header")
                         println("block id:"+Base58.encode(id._2.data))
                         println("parentId:"+Base58.encode(block._1.data))
                         isValid &&= false
@@ -270,14 +270,14 @@ trait Validation extends Members {
                     }
                   }
                   case _ => {
-                    println("error: encountered invalid header in tine")
+                    println("Error: encountered invalid header in tine")
                     isValid &&= false
                     break()
                   }
                 }
               }
               case _ => {
-                println("error: encountered invalid ledger in tine")
+                println("Error: encountered invalid ledger in tine")
                 isValid &&= false
                 break()
               }
@@ -286,7 +286,7 @@ trait Validation extends Members {
         }
       }
       case _ => {
-        println("error: could not recover prefix state")
+        println("Error: could not recover prefix state")
         isValid &&= false
       }
     }

@@ -141,6 +141,7 @@ trait ChainSelection extends Members {
               }
             }
           }
+          loop(headId)
           Some((tine,prefix))
         }
       }
@@ -180,7 +181,7 @@ trait ChainSelection extends Members {
         adoptTine
         chainStorage.store(localChain,localChainId,serializer)
       } else {
-        println("error: invalid best chain")
+        println("Error: invalid best chain")
         candidateTines = candidateTines.dropRight(1)
         SharedData.throwError(holderIndex)
       }
