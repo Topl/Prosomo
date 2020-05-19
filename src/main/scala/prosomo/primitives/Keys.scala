@@ -14,7 +14,6 @@ class Keys extends Types {
   var publicKeys:PublicKeys = (Array(),Array(),Array())
   var pkw:PublicKeyW = ByteArrayWrapper(Array())
   var alpha:Ratio = new Ratio(BigInt(0),BigInt(1))
-  var threshold:Ratio = new Ratio(BigInt(0),BigInt(1))
 
   //for testing only, not secure entropy sampling
   def seedKeys(seed:Array[Byte],sig:Sig,vrf:Vrf,kes:Kes,t:Int):Unit = {

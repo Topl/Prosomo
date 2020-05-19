@@ -10,7 +10,7 @@ import scala.util.Try
 
 class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.{cacheSize,epochLength}
+  import prosomo.primitives.Parameters.{cacheSize,one_third_epoch}
   val dbCacheSize = 4
   type DB = LDBStore
 
@@ -20,8 +20,8 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
       notification.getValue.close()
     })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
-      def load(epoch:BigInt):DB = {
-        LDBStore(s"$dir/blocks/header/epoch_$epoch")
+      def load(epoch3rd:BigInt):DB = {
+        LDBStore(s"$dir/blocks/header/epoch_${epoch3rd/3}_${epoch3rd%3}")
       }
     })
 
@@ -31,8 +31,8 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
       notification.getValue.close()
     })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
-      def load(epoch:BigInt):DB = {
-        LDBStore(s"$dir/blocks/body/epoch_$epoch")
+      def load(epoch3rd:BigInt):DB = {
+        LDBStore(s"$dir/blocks/body/epoch_${epoch3rd/3}_${epoch3rd%3}")
       }
     })
 
@@ -51,13 +51,13 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   def add(block:Block):Unit = {
     val blockHeader = block.prosomoHeader
-    headerStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
+    headerStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
-      bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getGenesisBytes(
+      bodyStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getGenesisBytes(
         block.genesisSet.get
       ))))
     } else {
-      bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(
+      bodyStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(block.id -> ByteArrayWrapper(serializer.getBytes(
         block.blockBody.get
       ))))
     }
@@ -66,13 +66,13 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   def store(key:ByteArrayWrapper,block:Block):Unit = {
     val blockHeader = block.prosomoHeader
-    headerStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
+    headerStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(blockHeader))))
     if (blockHeader._3 == 0) {
-      bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
+      bodyStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getGenesisBytes(
         block.genesisSet.get
       ))))
     } else {
-      bodyStoreCache.get(blockHeader._3/epochLength).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
+      bodyStoreCache.get(blockHeader._3/one_third_epoch).update(Seq(),Seq(key -> ByteArrayWrapper(serializer.getBytes(
         block.blockBody.get
       ))))
     }
@@ -81,12 +81,12 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   def restore(id:SlotId):Option[Block] = Try{
     val key = id._2
     SharedData.throwDiskWarning(s"Restore block ${Base58.encode(key.data)}")
-    headerStoreCache.get(id._1/epochLength).get(key) match {
+    headerStoreCache.get(id._1/one_third_epoch).get(key) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeBlockHeader)
         serializer.fromBytes(byteStream) match {
           case h:BlockHeader@unchecked => {
-            bodyStoreCache.get(id._1/epochLength).get(key) match {
+            bodyStoreCache.get(id._1/one_third_epoch).get(key) match {
               case Some(bytes:ByteArrayWrapper) => {
                 if (h._3 == 0) {
                   val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeGenesisSet)
@@ -151,7 +151,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     }.toOption match {
       case Some(b:Block) => true
       case None => {
-        headerStoreCache.get(id._1/epochLength).known(id._2)
+        headerStoreCache.get(id._1/one_third_epoch).known(id._2)
       }
     }
   }

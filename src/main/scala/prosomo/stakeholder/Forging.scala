@@ -15,23 +15,28 @@ trait Forging extends Members {
 
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
   def forgeBlock(forgerKeys:Keys):Unit = Try{
-    def blockInfo:String = {
-      "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
-    }
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
-    if (compare(y, forgerKeys.threshold)) {
-      val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)).get
-      assert(pb._3 != slot)
+    val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)).get
+    assert(pb._3 != slot)
+    val ps:Slot = pb._3
+    if (f_dynamic) {
+      forge(threshold(forgerKeys.alpha,slot,ps))
+    } else {
+      forge(phi(forgerKeys.alpha))
+    }
+    def forge(thr:Ratio) = if (compare(y, thr)) {
+      def blockInfo:String = {
+        "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
+      }
       val bn:Int = pb._9 + 1
-      val ps:Slot = pb._3
       val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
       val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"))
       val rho: Rho = vrf.vrfProofToHash(pi)
       val h: Hash = hash(pb,serializer)
       val ledger:Mac = signMac(hash(txs,serializer), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
-      val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, forgerKeys.threshold,blockInfo)
+      val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,blockInfo)
       val kes_sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)

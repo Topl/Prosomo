@@ -17,11 +17,34 @@ trait Staking extends Members {
     */
   def phi(a:Ratio): Ratio = {
     var out = Ratio(0)
-    val base = maclaurin_coefficient * a
+    val base = m_f_root * a
     for (n <- 1 to o_n) {
       out = out - ( base.pow(n) / factorial(n) )
     }
     out
+  }
+
+  /**
+    * Aggregate staking function used for calculating threshold per epoch
+    * @param a relative stake
+    * @param m_f coefficient
+    * @return probability of being elected slot leader
+    */
+  def phi(a:Ratio,m_f:Ratio): Ratio = {
+    var out = Ratio(0)
+    val base = m_f * a
+    for (n <- 1 to o_n) {
+      out = out - ( base.pow(n) / factorial(n) )
+    }
+    out
+  }
+
+  def threshold(a:Ratio,s:Slot,p:Slot):Ratio = {
+    val index:Int = s-p-1 match {
+      case int: Int if int < m_f_range.length => int
+      case _ => m_f_range.length-1
+    }
+    phi(a,m_f_range(index))
   }
 
   def factorial(n: Int): Int = n match {

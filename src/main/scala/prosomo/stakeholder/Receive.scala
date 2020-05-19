@@ -63,11 +63,15 @@ trait Receive extends Members {
                   //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
                   send(ActorRefWrapper(self),gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
-                  if (tines.keySet.size < tineMaxTries && !bootStrapLock) {
-                    val jobNumber = tineCounter
-                    tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
-                    buildTine((jobNumber,tines(jobNumber)))
-                    tineCounter += 1
+                  if (!bootStrapLock) {
+                    if (tines.keySet.size < tineMaxTries) {
+                      val jobNumber = tineCounter
+                      tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
+                      buildTine((jobNumber,tines(jobNumber)))
+                      tineCounter += 1
+                    } else {
+                      tines.foreach(job => buildTine(job))
+                    }
                   }
                 }
               } else {println("error: invalid block")}
@@ -321,7 +325,6 @@ trait Receive extends Members {
         }
       }
       keys.alpha = relativeStake(keys.pkw,stakingState)
-      keys.threshold = phi(keys.alpha)
       assert(genBlockHash == hash(genesisBlock.get.blockHeader.get,serializer))
       println("Valid Genesis Block")
       sender() ! "done"

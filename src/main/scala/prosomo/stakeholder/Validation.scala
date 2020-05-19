@@ -137,7 +137,11 @@ trait Validation extends Members {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
-      tr_Ep = phi(alpha_Ep)
+      if (f_dynamic) {
+        tr_Ep = threshold(alpha_Ep,slot,ps)
+      } else {
+        tr_Ep = phi(alpha_Ep)
+      }
       bool &&= (
         hash(parent,serializer) == h0
           && verifyBlockHeader(block)
@@ -163,7 +167,7 @@ trait Validation extends Members {
           , vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y) //7
           , vrf.vrfProofToHash(pi_y).deep == y.deep //8
           , tr_Ep == tr_c //9
-          , compare(y, tr_Ep) //10
+          , compare(y, tr_Ep)//10
         ))
       }
     }
@@ -216,7 +220,12 @@ trait Validation extends Members {
                             currentSlot+=1
                           }
                           alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),staking_state_tine)
-                          tr_Ep = phi(alpha_Ep)
+                          if (f_dynamic) {
+                            tr_Ep = threshold(alpha_Ep,slot,ps)
+                          } else {
+                            tr_Ep = phi(alpha_Ep)
+                          }
+
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)
@@ -246,7 +255,7 @@ trait Validation extends Members {
                               , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
                               , vrf.vrfProofToHash(pi_y).deep == y.deep //8
                               , tr_Ep == tr_c //9
-                              , compare(y,tr_Ep) //10
+                              , compare(y, tr_Ep) //10
                             ))
                             println(s"Holder $holderIndex, ep: $ep, eta_tine: ${Base58.encode(eta_tine)}")
                             println(info)

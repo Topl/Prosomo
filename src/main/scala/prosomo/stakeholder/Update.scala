@@ -2,6 +2,7 @@ package prosomo.stakeholder
 
 import prosomo.cases.{Flag, Hello, WriteFile}
 import prosomo.components.Tine
+import prosomo.primitives.Parameters.{f_dynamic, m_f_range}
 import prosomo.primitives.{KeyFile, Parameters, SharedData}
 import scorex.util.encode.Base58
 
@@ -68,7 +69,6 @@ trait Update extends Members {
             eta = result._2
             stakingState = getStakingState(currentEpoch,localChain)
             keys.alpha = relativeStake(keys.pkw,stakingState)
-            keys.threshold = phi(keys.alpha)
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))

@@ -3,8 +3,6 @@ package prosomo.stakeholder
 import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases.MessageFromLocalToRemote
-import prosomo.stakeholder
-
 import scala.concurrent.Future
 
 //wrapper class for akka ActorRef, remote and local actors handled accordingly

@@ -10,9 +10,10 @@ import scala.util.Try
 
 class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.{cacheSize,epochLength}
+  import prosomo.primitives.Parameters.{cacheSize,one_third_epoch}
   val dbCacheSize = 4
   type DB = LDBStore
+
 
   private val stateStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
     .maximumSize(dbCacheSize)
@@ -20,8 +21,8 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       notification.getValue.close()
     })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
-      def load(epoch:BigInt):DB = {
-        LDBStore(s"$dir/history/state/epoch_$epoch")
+      def load(epoch3rd:BigInt):DB = {
+        LDBStore(s"$dir/history/state/epoch_${epoch3rd/3}_${epoch3rd%3}")
       }
     })
 
@@ -31,8 +32,8 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       notification.getValue.close()
     })
     .build[BigInt,DB](new CacheLoader[BigInt,DB] {
-      def load(epoch:BigInt):DB = {
-        LDBStore(s"$dir/history/eta/epoch_$epoch")
+      def load(epoch3rd:BigInt):DB = {
+        LDBStore(s"$dir/history/eta/epoch_${epoch3rd/3}_${epoch3rd%3}")
       }
     })
 
@@ -47,7 +48,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       def load(id:SlotId):(State,Eta) = {
         SharedData.throwDiskWarning(s"Load State ${Base58.encode(id._2.data)}")
         (
-          stateStoreCache.get(id._1/epochLength).get(id._2).get match {
+          stateStoreCache.get(id._1/one_third_epoch).get(id._2).get match {
             case bytes:ByteArrayWrapper => {
               val byteStream = new ByteStream(bytes.data,DeserializeState)
               serializer.fromBytes(byteStream) match {
@@ -55,7 +56,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
               }
             }
           },
-          etaStoreCache.get(id._1/epochLength).get(id._2).get match {
+          etaStoreCache.get(id._1/one_third_epoch).get(id._2).get match {
             case bytes:ByteArrayWrapper => bytes.data
           }
         )
@@ -65,7 +66,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   def known(id:SlotId):Boolean = {
     Try{stateCache.getIfPresent(id)}.toOption match {
       case Some(s:(State,Eta)) => true
-      case _ => stateStoreCache.get(id._1/epochLength).known(id._2)
+      case _ => stateStoreCache.get(id._1/one_third_epoch).known(id._2)
     }
   }
 
@@ -78,8 +79,8 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
 
   def add(id:SlotId,ls:State,eta:Eta):Unit = {
     if (!known(id)) {
-      stateStoreCache.get(id._1/epochLength).update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
-      etaStoreCache.get(id._1/epochLength).update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
+      stateStoreCache.get(id._1/one_third_epoch).update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
+      etaStoreCache.get(id._1/one_third_epoch).update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
     }
     stateCache.put(id,(ls,eta))
   }

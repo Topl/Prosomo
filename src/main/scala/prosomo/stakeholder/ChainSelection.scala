@@ -240,7 +240,6 @@ trait ChainSelection extends Members {
             eta = result._2
             stakingState = getStakingState(epoch,localChain)
             keys.alpha = relativeStake(keys.pkw,stakingState)
-            keys.threshold = phi(keys.alpha)
           }
           case _ =>
         }
