@@ -22,7 +22,7 @@ trait Forging extends Members {
     assert(pb._3 != slot)
     val ps:Slot = pb._3
     if (f_dynamic) {
-      forge(threshold(forgerKeys.alpha,slot-ps))
+      forge(threshold_cached(forgerKeys.alpha,slot-ps))
     } else {
       forge(phi(forgerKeys.alpha))
     }

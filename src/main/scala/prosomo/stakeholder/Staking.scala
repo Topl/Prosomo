@@ -20,7 +20,7 @@ trait Staking extends Members {
     var out = Ratio(0)
     val base = m_f_root * a
     for (n <- 1 to o_n) {
-      out = out - ( base.pow(n) / factorial(n) )
+      out = out - ( base.pow(n) / factorial_cache(n) )
     }
     out
   }
@@ -35,7 +35,7 @@ trait Staking extends Members {
     var out = Ratio(0)
     val base = m_f * a
     for (n <- 1 to o_n) {
-      out = out - ( base.pow(n) / factorial(n) )
+      out = out - ( base.pow(n) / factorial_cache(n) )
     }
     out
   }
@@ -46,14 +46,25 @@ trait Staking extends Members {
     * @param s_interval delta between slot of header and slot of parent
     * @return probability of being elected slot leader
     */
-  def threshold(a:Ratio,s_interval:Slot):Ratio = {
+
+  def threshold(a:Ratio, s_interval:Slot):Ratio = {
+    val index:Int = s_interval-1 match {
+      case int: Int if int < m_f_range.length => int
+      case _ => m_f_range.length-1
+    }
+    phi(a,m_f_range(index))
+  }
+
+  def threshold_cached(a:Ratio, s_interval:Slot):Ratio = {
     val index:Int = s_interval-1 match {
       case int: Int if int < m_f_range.length => int
       case _ => m_f_range.length-1
     }
     thresholdCache match {
       case None => {
-        thresholdCache = Some(CacheBuilder.newBuilder().build[(Ratio,Slot),Ratio](
+        thresholdCache = Some(CacheBuilder.newBuilder()
+          .maximumSize(1000)
+          .build[(Ratio,Slot),Ratio](
           new CacheLoader[(Ratio,Slot),Ratio] {
             def load(id:(Ratio,Slot)):Ratio = {phi(id._1,m_f_range(id._2))}
           }
@@ -63,6 +74,8 @@ trait Staking extends Members {
     }
     thresholdCache.get.get((a,index))
   }
+
+  var factorial_cache:Array[Int] = (0 to o_n).toArray.map(i=>factorial(i))
 
   def factorial(n: Int): Int = n match {
     case 0 => 1

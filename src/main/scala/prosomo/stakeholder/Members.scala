@@ -103,7 +103,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def subChain(c:Tine, t1:Int, t2:Int):Tine
   def phi(a:Ratio):Ratio
   def phi(a:Ratio,m_f:Ratio):Ratio
-  def threshold(a:Ratio,s_interval:Slot):Ratio
+  def threshold_cached(a:Ratio, s_interval:Slot):Ratio
+  def threshold(a:Ratio, s_interval:Slot):Ratio
   def factorial(n: Int):Int
   def compare(y: Array[Byte],t: Ratio):Boolean
   def relativeStake(holderKey:PublicKeyW,ls:State):Ratio
