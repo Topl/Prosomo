@@ -1,12 +1,13 @@
 package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Cancellable, Props}
-import prosomo.primitives.FastCryptographicHash
+import com.google.common.cache.LoadingCache
+import prosomo.primitives.{FastCryptographicHash, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
-import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Sig, Vrf}
 import prosomo.wallet.Wallet
+
 import scala.math.BigInt
 import scala.util.Random
 
@@ -117,6 +118,8 @@ class Stakeholder(
   var bootStrapJob:Int = -1
   var bootStrapMessage: Cancellable = _
   var tineProvider:Option[ActorRefWrapper] = None
+  var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
+  var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
 
 }
 

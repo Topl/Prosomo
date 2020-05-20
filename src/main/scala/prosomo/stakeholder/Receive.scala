@@ -3,19 +3,19 @@ package prosomo.stakeholder
 import java.io.BufferedWriter
 
 import akka.actor.Cancellable
-import prosomo.primitives.FastCryptographicHash
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import prosomo.primitives.{FastCryptographicHash, Kes, KeyFile, Parameters, Ratio, SharedData, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
 import prosomo.cases._
 import prosomo.components.{Block, Serializer, Tine, Transaction}
-import prosomo.primitives.{Kes, KeyFile, Parameters, SharedData, Sig, Vrf}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
-import scala.util.{Try,Success,Failure}
+import scala.util.{Failure, Success, Try}
 
 trait Receive extends Members {
   import Parameters._
@@ -311,6 +311,18 @@ trait Receive extends Members {
           println("Adding genesis state to history")
           history.add((0,genBlockHash),localState,eta)
           stakingState = getStakingState(currentEpoch,localChain)
+          alphaCache match {
+            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+              loadingCache.invalidateAll()
+            }
+            case None => alphaCache = Some(
+              CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                new CacheLoader[ByteArrayWrapper,Ratio] {
+                  def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                }
+              )
+            )
+          }
           updateWallet
         }
         case newChain:Tine if !newChain.isEmpty => {
@@ -322,9 +334,21 @@ trait Receive extends Members {
           localState = loadState._1
           eta = loadState._2
           stakingState = getStakingState(currentEpoch,localChain)
+          alphaCache match {
+            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+              loadingCache.invalidateAll()
+            }
+            case None => alphaCache = Some(
+              CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                new CacheLoader[ByteArrayWrapper,Ratio] {
+                  def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                }
+              )
+            )
+          }
         }
       }
-      keys.alpha = relativeStake(keys.pkw,stakingState)
+      keys.alpha = alphaCache.get.get(keys.pkw)
       assert(genBlockHash == hash(genesisBlock.get.blockHeader.get,serializer))
       println("Valid Genesis Block")
       sender() ! "done"

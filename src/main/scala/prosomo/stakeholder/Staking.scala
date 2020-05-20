@@ -3,6 +3,7 @@ package prosomo.stakeholder
 import prosomo.primitives.FastCryptographicHash
 import prosomo.components.Tine
 import prosomo.primitives.{Ratio, SharedData}
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 
 import scala.math.BigInt
 
@@ -39,12 +40,28 @@ trait Staking extends Members {
     out
   }
 
-  def threshold(a:Ratio,s:Slot,p:Slot):Ratio = {
-    val index:Int = s-p-1 match {
+  /**
+    * Aggregate staking function parameterized in terms of slot and parent slot
+    * @param a relative stake
+    * @param s_interval delta between slot of header and slot of parent
+    * @return probability of being elected slot leader
+    */
+  def threshold(a:Ratio,s_interval:Slot):Ratio = {
+    val index:Int = s_interval-1 match {
       case int: Int if int < m_f_range.length => int
       case _ => m_f_range.length-1
     }
-    phi(a,m_f_range(index))
+    thresholdCache match {
+      case None => {
+        thresholdCache = Some(CacheBuilder.newBuilder().build[(Ratio,Slot),Ratio](
+          new CacheLoader[(Ratio,Slot),Ratio] {
+            def load(id:(Ratio,Slot)):Ratio = {phi(id._1,m_f_range(id._2))}
+          }
+        ))
+      }
+      case _ =>
+    }
+    thresholdCache.get.get((a,index))
   }
 
   def factorial(n: Int): Int = n match {

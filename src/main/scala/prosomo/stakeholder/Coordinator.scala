@@ -16,11 +16,14 @@ import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
 import prosomo.wallet.Wallet
 import scorex.util.encode.Base58
+
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
 import scala.util.{Random, Try}
 import java.io.IOException
+
+import com.google.common.cache.LoadingCache
 
 
 /**
@@ -101,6 +104,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var bootStrapJob:Int = 0
   var bootStrapMessage:Cancellable = _
   var tineProvider: Option[ActorRefWrapper] = None
+  var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
+  var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
 
   val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
 

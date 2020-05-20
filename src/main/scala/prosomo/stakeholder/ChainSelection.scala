@@ -1,8 +1,10 @@
 package prosomo.stakeholder
 
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{RequestBlock, RequestTine, SendTx}
-import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.{Parameters, SharedData}
+import prosomo.components.{Block, Tine, Transaction}
+import prosomo.primitives.{Parameters, Ratio, SharedData}
 
 import scala.util.Try
 import scala.util.control.Breaks.{break, breakable}
@@ -239,7 +241,19 @@ trait ChainSelection extends Members {
             epoch = result._1
             eta = result._2
             stakingState = getStakingState(epoch,localChain)
-            keys.alpha = relativeStake(keys.pkw,stakingState)
+            alphaCache match {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+                loadingCache.invalidateAll()
+              }
+              case None => alphaCache = Some(
+                CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                  new CacheLoader[ByteArrayWrapper,Ratio] {
+                    def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                  }
+                )
+              )
+            }
+            keys.alpha = alphaCache.get.get(keys.pkw)
           }
           case _ =>
         }

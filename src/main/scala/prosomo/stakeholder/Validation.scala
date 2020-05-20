@@ -138,7 +138,7 @@ trait Validation extends Members {
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
       if (f_dynamic) {
-        tr_Ep = threshold(alpha_Ep,slot,ps)
+        tr_Ep = threshold(alpha_Ep,slot-ps)
       } else {
         tr_Ep = phi(alpha_Ep)
       }
@@ -221,7 +221,7 @@ trait Validation extends Members {
                           }
                           alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),staking_state_tine)
                           if (f_dynamic) {
-                            tr_Ep = threshold(alpha_Ep,slot,ps)
+                            tr_Ep = threshold(alpha_Ep,slot-ps)
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }

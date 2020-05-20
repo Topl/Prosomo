@@ -1,11 +1,13 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, Cancellable, Timers}
+import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.wallet._
+
 import scala.math.BigInt
 import scala.util.Random
 
@@ -69,6 +71,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   var bootStrapJob:Int
   var bootStrapMessage:Cancellable
   var tineProvider:Option[ActorRefWrapper]
+  var alphaCache:Option[LoadingCache[ByteArrayWrapper,Ratio]]
+  var thresholdCache:Option[LoadingCache[(Ratio,Slot),Ratio]]
 
   case object TimerKey
 
@@ -99,7 +103,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def subChain(c:Tine, t1:Int, t2:Int):Tine
   def phi(a:Ratio):Ratio
   def phi(a:Ratio,m_f:Ratio):Ratio
-  def threshold(a:Ratio,s:Slot,p:Slot):Ratio
+  def threshold(a:Ratio,s_interval:Slot):Ratio
   def factorial(n: Int):Int
   def compare(y: Array[Byte],t: Ratio):Boolean
   def relativeStake(holderKey:PublicKeyW,ls:State):Ratio

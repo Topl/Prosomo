@@ -1,9 +1,11 @@
 package prosomo.stakeholder
 
+import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, Hello, WriteFile}
 import prosomo.components.Tine
 import prosomo.primitives.Parameters.{f_dynamic, m_f_range}
-import prosomo.primitives.{KeyFile, Parameters, SharedData}
+import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
 trait Update extends Members {
@@ -68,7 +70,23 @@ trait Update extends Members {
             currentEpoch = result._1
             eta = result._2
             stakingState = getStakingState(currentEpoch,localChain)
-            keys.alpha = relativeStake(keys.pkw,stakingState)
+            alphaCache match {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+                loadingCache.invalidateAll()
+              }
+              case None => alphaCache = Some(
+                CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                  new CacheLoader[ByteArrayWrapper,Ratio] {
+                    def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                  }
+                )
+              )
+            }
+            thresholdCache match {
+              case Some(loadingCache: LoadingCache[(Ratio,Slot),Ratio]) => loadingCache.invalidateAll()
+              case None =>
+            }
+            keys.alpha = alphaCache.get.get(keys.pkw)
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
