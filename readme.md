@@ -6,7 +6,7 @@ Prosomo, short for *Prosomoiotís* - the Greek word for simulator, is a stand-al
 
 Ouroboros has been presented in a very rigorous and formal mathematical style that stands out among other protocol designs. The security properties of the protocol are formulated from probabilistic arguments drawn from mathematical proofs.  These proofs use a self consistent framework to make statements about the operation of several ideal functionalities acting in a specified order that completely defines the protocol.  Formal analysis in a self consistent framework assures that the protocol is mathematically sound but makes it difficult to conceptualize the procedure and how it operates over a real-world network.  We wish to form a better intuition about the protocol’s behavior under different circumstances to put theory to the test.  The papers specifying Ouroboros provide almost no data on the execution of the protocol, containing only one plot regarding transaction throughput.   Prosomo will remedy this by providing data from which metrics of the network can be directly calculated under controlled conditions.  Work has been done involving simulation of adversarial manipulation, network connectivity conditions, and chain visualization.
 
-The simulation can be executed locally or across many nodes.  Local communication is handled by a simplified global network model that adds artificial delay.  Scala and Akka were chosen as a platform so this implementation can be incorporated into Bifrost, Topl’s production blockchain client.  All cryptographic and consensus routines are executed by Stakeholder actors, serving as a test bed for the primitives that have been implemented for Prosomo and Bifrost.  Data output consists of block information, global position, network connectivity graphs, and stake distribution over time.  Block tree diagrams, i.e. the set of all tines, can be constructed from the database of blocks; no blocks are deleted so we may study the structure of tines produced by the protocol.  An account based transaction model is used for the ledger and stake is tracked as a ledger balance.  The simulation has many configuration options and simulations with 1 to ~100 Stakeholders per node can be executed provided enough system RAM.  About 0.5 GB per Stakeholder provides sufficient overhead for long term execution.
+The simulation can be executed locally or across many nodes.  Local communication is handled by a simplified global network model that adds artificial delay.  Scala and Akka were chosen as a platform so this implementation can be incorporated into Bifrost, Topl’s production blockchain client.  Remote communication is handled by a network controller provided in Scorex 2, an open source blockchain testbed that provides peer connections and dynamic peer synchronization.  All cryptographic and consensus routines are executed by Stakeholder actors that operate with a given genesis block with deterministically seeded private keys.  Data output consists of block information, global position, network connectivity graphs, and stake distribution over time.  Block tree diagrams, i.e. the set of all tines, can be constructed from the database of blocks; no blocks are deleted so we may study the structure of tines produced by the protocol.  An account based transaction model is used for the ledger and stake is tracked as a ledger balance.  The simulation has many configuration options and simulations with 1 to ~100 Stakeholders per node can be executed provided enough system RAM.  About 0.5 GB per Stakeholder provides sufficient overhead for long term execution.
 
 ## Key Features
 - Uses the Akka actor system for concurrent execution and communication between peers
@@ -50,7 +50,7 @@ The epoch nonce is generated from a set of seeds sampled the block headers of th
 
 ## Communication Between Peers
 
-Stakeholders participate in rounds by diffusing messages and registering the other parties present on the network.  The diffuse functionality lets Stakeholders assign a public key used for ledger tracking and forging to other peers .  Each set of remote and local stakeholders use a simplified gossip protocol to share transactions and blocks.  Stakeholders broadcast Hello messages to their neighbor and populate a list of gossipers based on who responds first.  The number of gossipers has a sinusoidal variation to allow bootstrapping Stakeholders to connect.  When the simulation begins, the initial set of stakeholders are all in one party that can be split into sub parties with scripted commands.  The sub parties can be later rejoined to emulate a network split scenario.  This scenario can also be scripted and carried out over a network.
+Stakeholders participate in rounds by diffusing messages and registering the other parties present on the network.  The diffuse functionality lets Stakeholders assign a public key used for ledger tracking and forging to other peers .  Each set of remote and local stakeholders use a simplified gossip protocol to share transactions and blocks.  Stakeholders broadcast Hello messages to their neighbor and populate a list of gossipers based on who responds first.  The number of gossipers has a sinusoidal variation to allow bootstrapping Stakeholders to connect.  When the simulation begins, the initial set of stakeholders are all in one party that can be split into sub parties with scripted commands.  The sub parties can be later rejoined to emulate a network split scenario. This scenario can also be scripted and carried out over a network.
 
 
 ## Global Delay Model
@@ -160,7 +160,6 @@ The parent block hash is the block identifier of the head of the blockchain duri
 
 Future epoch nonces are generated by hashing the concatenation of the previous epoch nonce with the VRF nonces from the first 2/3 of the block headers of the previous epoch.  All Stakeholders keep a view of local state from which the stake distribution and epoch threshold can be calculated for block validation.  In a given epoch, the relative stake for block validation and leader election is sampled from the stake distribution from two epochs prior. Every stakeholder will need the exact same snapshot of staking distribution to validate blocks that were forged in a given epoch.
 
-
 # Tine Construction
 
 Blocks are broadcast among stakeholders as they are forged and when a new block is received a holder will try to build a tine from it.  Tines represent candidates that may be adopted if they are validated and have a common block somewhere on the stakeholders local chain.  When an actor hears about a new block, it adds it to its database.  Blocks are identified by their hash.  If the blocks slot is at or below the current slot, its considered the head of a new tine.  The parent hash included in the new block is used to identify the parent block.  If a parent block is not found in the actors local database, the actor will request that block by querying the sender.  In return if any parent block is not found for subsequently fetched blocks, the sender will be queried again until a parent block is found that is on the local chain of the actor.  Once this common ancestor block is found the tine is then a candidate for chain validation.  If no common ancestor is found, the tine is discarded.
@@ -173,7 +172,7 @@ Chain selection occurs in accordance with *maxvalid-bg* specified in Ouroboros G
 
 The tines with appropriate block number are validated per the isValidChain specification in Ouroboros Genesis.  The transactions included in each ledger are verified and a new state is calculated for each block on the tine.  If an invalid state is produced then the entire tine is discarded.  If the resulting state is valid, then each block is verified according to the VRF proofs, KES signatures, and slot leader eligibility according to the forger public keys and the local staking state.  Once the tine has passed all tests it is adopted as the local chain.
 
-The implementation of chain validation in Prosomo has an additional check not specified in Ouroboros Genesis.  The threshold calculated upon forging is included in the block certificate.  The validator calculates this same threshold for the forger from its local staking state, and the locally calculated threshold must be equal to the certificate threshold for the block to be valid.  In Ouroboros Genesis, the locally calculated threshold is evaluated in an inequality against the VRF test nonce, and there is no assurance that the forger and verifier calculated the exact same threshold value.
+The implementation of chain validation in Prosomo has an additional check not specified in Ouroboros Genesis.  The threshold calculated upon forging is included in the block certificate.  The validator calculates this same threshold for the forger from its local staking state, and the locally calculated threshold must be equal to the certificate threshold for the block to be valid.  In Ouroboros Genesis, the locally calculated threshold is evaluated in an inequality against the VRF test nonce upon verification and no thresholds are provided in the block headers.  This leaves no assurance that the forger and verifier calculated the exact same threshold value.
 
 
 # Transactions and State
@@ -207,265 +206,6 @@ Transactions that are broadcast on the network file into stakeholders mempools a
 
 # Executing the Simulation
 
-The project can be run either in the scala build tool (sbt) console or staged for deployment to a server by running ‘sbt stage’ in the project directory.  This creates the executable Prosomo/target/universal/stage/bin/prosomo that can be run independently of sbt.  A command line script for interacting with the simulation is provided in the project directory.  To execute the command line, run Prosomo/cmd.sh in a separate terminal.  This is used to pass commands to Prosomo via a file and can be used to queue commands at a later slot.  Just enter the desired slot number next to the command.  The command line input is useful for debugging, setting up specific network conditions, and manipulating repeated simulation runs in real time.
+The project can be run either in the scala build tool (sbt) console or staged for deployment to a server by running ‘sbt stage’ in the project directory.  Check our github for the latest release candidate.  A command line script for interacting with the simulation is provided in the project directory.  To execute the command line, run ./cmd.sh in a separate terminal while in the project directory.  This is used to pass commands to Prosomo via a file and can be used to queue commands at a later slot.  Just enter the desired slot number next to the command.  The command line input is useful for debugging, setting up specific network conditions, and manipulating repeated simulation runs in real time.
 
-Prosomo has command line configuration capabilities.  The *.conf files are HOCON formatted configuration files that specify the simulation parameters and commands.  To run a simulation with a given input command, they can be entered into an array in the .conf file.  The default input.conf file is given below, and is included in the project directory:
-
-
-    input{
-      params {
-        //your parameters go here
-      }
-    
-      command {
-        //your commands go here
-        cmd = []
-      }
-    }
-
-The command line also accepts HOCON formatted strings in the command line to enable scripts to set values in batch jobs.  An example of a parameter sweep run in the bin directory is given below (using GNU parallel):
-
-
-    parallel --jobs 32 "./prosomo input \"input{params{f_s={1},delay_ms_km={2},inputSeed={3}}}\"" ::: 0.15 0.25 0.35 ::: 0.0 0.1 0.2 0.3 0.4 ::: seed1 seed2 seed3
-
-The prosomo executable will look for a file called input.conf in the local directory and load those values, then it loads the values specified in the string.  The first argument of the prosomo executable specifies the file to look for, e.g. ./prosomo run1 will look for a file called run1.conf
-
-
-## Commands
-
-Commands may be specified to execute in a given slot in the configuration file.
-Several commands are available:
-
-
-    status_all
-
-Prints the status of each stakeholder, including the chain hash and number of transactions in the mempool and on the chain.  Individual holders can be addressed by replacing all with the holder index.
-
-
-    verify_all
-
-Prints the status of each stakeholder, including the chain hash, transaction in mempool, and verifies the chain from the genesis block.  Individual holders can be addressed by replacing all with the holder index.
-
-
-    inbox
-
-Stakeholders print their inbox which represents a list of all known parties which they are aware of and communicating with.
-
-
-    print_0
-
-Specifies the holder of the given index to print to console if printing is on.  Default holder to print is holder 0, e.g. print_23 will tell the stakeholder at index 23 to print to console.
-
-
-    write
-
-Clears the file writer buffer and writes it to the data directory.  Run before plotting.
-
-
-    kill
-
-Stops all execution.
-
-
-    stall
-
-Stalls all actors except for the coordinator.  The global clock will continue to tick.
-
-
-    stall_0
-
-Stalls the holder with the given index.  e.g. stall_0 will stall only the 0th holder stall_2 will stall the 2nd holder etc.
-
-
-    pause
-
-Pauses the coordinator.  The global clock will stop but all stakeholders will continue to respond to messages they receive.
-
-
-    randtx
-
-Turns on or off the  coordinator issuing randomized transactions.
-
-
-    graph
-
-Outputs the network connectivity matrix of the system to the data directory, for plotting with obGraph.py
-
-
-    tree
-
-Outputs all block data, chain history, and parameters of the printing holder to the data directory.
-
-
-    tree_all
-
-Same as tree command but outputs all holders in the simulation.
-
-
-    split
-
-Splits all stakeholders into two randomly selected parties.
-
-
-    split_stake_0.5
-
-Splits the holders into two parties based on the relative stake.  The two parties will have a net relative stake split by the specified double value between 0.0 and 1.0, e.g. split_stake_0.4 would make two parties with 40% and 60% of the stake, respectively.
-
-
-    bridge
-
-Splits all stakeholders into two randomly selected parties with one stakeholder in both parties.
-
-
-    bridge_stake_0.5
-
-Splits all stakeholders into two randomly selected parties with one stakeholder in both parties but splits the parties in the specified stake ratio in the same fashion as split_stake_0.5.  Different value between 0.0 and 1.0 can be used.
-
-
-    join
-
-Joins the parties back together and resets all actors gossipers.
-
-
-    new_holder_0
-
-Creates a new holder with the specified index that bootstraps from the genesis block.  If the holder index is not on the genesis block, the new holder will not have any stake initially and won’t be able to forge blocks until future epochs.
-
-
-## Configuration Files
-
-In order to schedule commands and set parameters, spdecify the command in the cmd list of the input.conf file.  For example:
-
-
-    input{
-      params {
-        //your parameters go here
-        numHolders = 32
-      }
-    
-      command {
-        //your commands go here
-        cmd = ["split_stake_0.3 100","join 200"]
-      }
-    }
-
-would set the number of holders in the simulation to 32.  The simulation would evolve until slot 100 and the 32 holders would be split based on their stake into parties consisting of ~30% and ~70% of the net stake respectively.  Then once slot 200 is reached, the parties are joined back together.  This kind of control allows specific network conditions to be emulated to study how the protocol responds to these scenarios.  The plan is to model adversarial behavior with commands that stall parties and change the network connectivity.
-
-The parameters and their default values available to be set in the *.conf format files are listed below:
-
-
-    //bootstrap IP enabling peer discovery
-    knownPeer = "35.192.11.126:9084"
-    //Remote Procedure Calls port
-    rpcPort = "9085"
-    //bind address
-    bindAddress = "0.0.0.0:9084"
-    //declared address broadcast to other peers
-    myAddress = ""
-    //time server for NTP sync
-    timeServer = "time-a.nist.gov"
-    //seed for pseudo random runs
-    inputSeed = "prosomo_testnet"
-    //number genesis of stakeholders
-    numHolders = 8
-    //the minumum index of local holders, set to -1 for no holders
-    holderIndexMin = 0
-    //the maximum index of local holders, set to -1 for no holders
-    holderIndexMax = 7
-    //time scale for slot time and delay parameters
-    timeScale = 1.0
-    //duration of slot in milliseconds
-    slotT = 1000
-    //delay in milliseconds per killometer in router model
-    delay_ms_km = 0.02
-    //delay in ms per byte in router model
-    delay_ms_byte = 2.0e-4
-    //delay random noise
-    delay_ms_noise = 100.0
-    //use router if true, use direct communication if false
-    useRouting = true
-    //use network delay parameterization if true
-    useDelayParam = false
-    //alert stake ratio
-    alpha_s = 1.0
-    //participating stake ratio
-    beta_s = 1.0
-    //epoch paramter
-    epsilon_s = 0.081775
-    // checkpoint depth in slots, k > 192*delta/epsilon*beta useDelayParam = true
-    k_s = 23480
-    // epoch length, R >= 3k/2f if useDelayParam = true
-    epochLength = 86400
-    // slot window for chain selection, s = k/4f if useDelayParam = true
-    slotWindow = 14400
-    //active slot coefficient, f <= 1-exp(1/(delta_s+1))*(1+epsilon_s)/(2.0*alpha_s) if useDelayParam = true
-    f_s = 0.2
-    //order of accuracy for convergent series
-    o_n = 16
-    //simulation runtime in slots
-    L_s = 2000000
-    //number of holders on gossip list for sending new blocks and transactions
-    numGossipers = 6
-    //use gossiper protocol
-    useGossipProtocol = true
-    //max number of tries for a tine to ask for parent blocks
-    tineMaxTries = 10
-    //max depth in multiples of confirmation depth that can be returned from an actor
-    tineMaxDepth = 10
-    //time out for dropped messages from coordinator, in seconds
-    waitTime = 60
-    //duration between update tics that stakeholder actors send to themselves, in milliseconds
-    updateTime = 10
-    //duration between update tics that coordinator and router actors send to themselves, in milliseconds
-    commandUpdateTime = 10
-    //Issue transactions if true
-    transactionFlag = true
-    // p = txProbability => chance of issuing transaction per coordinator update
-    txProbability = 0.6
-    //number of txs per block
-    txPerBlock = 3000
-    //max number of transactions to be issued over lifetime of simulation
-    txMax = 20000000
-    //transaction confirmation depth in blocks
-    confirmationDepth = 10
-    //max initial stake
-    initStakeMax = 1.0e9
-    //min initial stake
-    initStakeMin = 1000.0
-    //max random transaction delta
-    maxTransfer = 5.0e6
-    //reward for forging blocks
-    forgerReward = 1000000
-    //ratio of transaction amount taken as fee by the forger
-    transactionFee = 0.01
-    //uses randomness for public key seed and initial stake, set to false for deterministic run
-    randomFlag = false
-    //use fencing and action based round progression to enforce deterministic runs, set true for deterministic run
-    useFencing = false
-    //when true, if system cpu load is too high the coordinator will stall to allow stakeholders to catch up
-    performanceFlag = false
-    //threshold of cpu usage above which coordinator will stall if performanceFlag = true
-    systemLoadThreshold = 0.95
-    //number of values to average for load threshold
-    numAverageLoad = 3
-    //print Stakeholder 0 status per slot if true
-    printFlag = true
-    //print Stakeholder 0 execution time per slot if true
-    timingFlag = true
-    //Record data if true, plot data points with ./cmd.sh and enter command: plot
-    dataOutFlag = false
-    //use LSMStore to store block data to disk
-    storageFlag = true
-    //max number of entries in cache for block and state storage
-    cacheSize = 50
-    //database refresh interval in slots
-    refreshInterval = 1800
-    //path for data output files
-    dataFileDir = "data"
-    //bifrost settings
-    settingsFilename = "bootstrap.json"
-    //type of genesis stake distribution
-    stakeDistribution = "flat"
-    //exponential scale factor for stake distribution
-    stakeScale = 0.5
-
+The project configuration can be altered in the 
