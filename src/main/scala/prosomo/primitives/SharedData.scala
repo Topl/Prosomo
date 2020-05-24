@@ -40,8 +40,8 @@ object SharedData extends Types {
     diskAccess = true
   }
 
-  def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<");errorFlag=true}
-  def throwError = {println("<---------Error------------<<<<");errorFlag=true}
+  def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<")}
+  def throwError = {println("<---------Error------------<<<<")}
   def error:Boolean = {errorFlag}
 
   var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
@@ -49,7 +49,7 @@ object SharedData extends Types {
     var out:Seq[String] = Seq()
     for (entry<-guiPeerInfo) {
       out ++= Seq(entry._1)
-      out ++= entry._2.map("  "+_.actorPath.toString)
+      out ++= entry._2.map("  "+_.actorPath.toString+"  ")
     }
     out
   }

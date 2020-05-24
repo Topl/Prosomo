@@ -1,5 +1,7 @@
 package prosomo
 
+import java.awt.Dimension
+
 import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
 import prosomo.primitives.{FastCryptographicHash, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
@@ -22,6 +24,7 @@ import prosomo.cases.GuiCommand
 
 import scala.concurrent.ExecutionContext
 import scala.swing._
+import scala.util.Try
 
 class Prosomo(config:Config) extends Runnable with ScorexLogging {
 
@@ -127,32 +130,38 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
     }
   }
   if (useGui) {
-    val window = new Frame {
-      title = "Prosomo 0.7"
-      contents = new BoxPanel(Orientation.Vertical) {
-        val textField = new TextField {
-          text = ""
-          columns = 20
-          editable = true
-        }
-        contents += textField
-        contents += new Button("Issue Command") {
-          reactions += {
-            case event.ButtonClicked(_) =>
-              coordinator ! GuiCommand(textField.text)
+    val window = Try{
+      new Frame {
+        title = "Prosomo 0.7"
+        contents = new BoxPanel(Orientation.Vertical) {
+          val commandElem = new BoxPanel(Orientation.Horizontal) {
+            val textField = new TextField {
+              text = ""
+              columns = 20
+              editable = true
+              maximumSize = new Dimension(1000,50)
+            }
+            contents += textField
+            contents += new Button("Issue Command") {
+              reactions += {
+                case event.ButtonClicked(_) =>
+                  coordinator ! GuiCommand(textField.text)
+              }
+            }
           }
+          contents += commandElem
+          val peerListElem = new ScrollPane(SharedData.peerList)
+          peerListElem.maximumSize = new Dimension(2000,2000)
+          peerListElem.preferredSize = new Dimension(500,500)
+          peerListElem.minimumSize = new Dimension(100,100)
+          contents += peerListElem
+          border = Swing.EmptyBorder(10, 10, 10, 10)
         }
-
-        contents += Swing.VStrut(5)
-        contents += new ScrollPane(SharedData.peerList)
-        border = Swing.EmptyBorder(10, 10, 10, 10)
+        pack()
+        centerOnScreen()
+        open()
       }
-
-
-      pack()
-      centerOnScreen()
-      open()
-    }
+    }.toOption
   }
 }
 
