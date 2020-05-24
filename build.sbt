@@ -28,6 +28,8 @@ val akkaHttpVersion = "10.1.9"
 
 resolvers ++= Seq("Bintray" at "https://jcenter.bintray.com/")
 
+libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
+
 libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "iodb" % "0.3.+",
 //  "org.consensusresearch" %% "scrypto" % "1.2.+",

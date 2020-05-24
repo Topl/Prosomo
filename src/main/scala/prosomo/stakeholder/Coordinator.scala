@@ -806,6 +806,59 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }
   }
 
+  def readCommand(cmd:String):Unit = {
+    if (!useFencing) {
+      if (!actorStalled) {
+        val t1 = globalTime-tp
+        t = ((t1 - t0) / slotT).toInt
+      } else {
+        t = ((tp - t0) / slotT).toInt
+      }
+    }
+    if (t>globalSlot) {
+      writeTimeInfo
+      globalSlot = t
+      SharedData.diskAccess = false
+    }
+    println("-----------------------------------------------------------")
+    val cmdList = cmd.split("\n")
+    for (line<-cmdList) {
+      val com = line.trim.split(" ")
+      com(0) match {
+        case s:String => {
+          if (com.length == 2){
+            Try{com(1).toInt}.toOption match {
+              case Some(i:Int) => {
+                if (cmdQueue.keySet.contains(i)) {
+                  val nl = s::cmdQueue(i)
+                  cmdQueue -= i
+                  cmdQueue += (i->nl)
+                } else {
+                  cmdQueue += (i->List(s))
+                }
+              }
+              case None =>
+            }
+          } else {
+            if (cmdQueue.keySet.contains(t)){
+              val nl = s::cmdQueue(t)
+              cmdQueue -= t
+              cmdQueue += (t->nl)
+            } else {
+              cmdQueue += (t->List(s))
+            }
+          }
+        }
+        case _ =>
+      }
+    }
+    if (cmdQueue.keySet.contains(t)) {
+      command(cmdQueue(t))
+      cmdQueue -= t
+    }
+  }
+
+
   def printTree(holder:ActorRefWrapper):Unit = {
     var tn = 0
     if (useFencing) {
@@ -949,8 +1002,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case _ => println("error: file writer close on non writer object")}}
     case EndStep => {readCommand;roundDone = true}
     /**command interpretation from config and cmd script*/
-    case ReadCommand => {readCommand}
-
+    case ReadCommand => readCommand
+    case GuiCommand(s) => readCommand(s)
     case unknown:Any => if (!actorStalled) {print("received unknown message ")
       if (sender() == routerRef) {
         print("from router")

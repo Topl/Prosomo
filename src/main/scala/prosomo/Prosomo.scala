@@ -1,6 +1,6 @@
 package prosomo
 
-import prosomo.primitives.Parameters.{inputSeed, messageSpecs}
+import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
 import prosomo.primitives.FastCryptographicHash
 import prosomo.stakeholder.{Coordinator, Router}
 import java.net.InetSocketAddress
@@ -18,8 +18,10 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 import com.typesafe.config.Config
+import prosomo.cases.GuiCommand
 
 import scala.concurrent.ExecutionContext
+import scala.swing._
 
 class Prosomo(config:Config) extends Runnable with ScorexLogging {
 
@@ -122,6 +124,30 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
     actorSystem.terminate().onComplete { _ =>
       log.info("Exiting from the app...")
       System.exit(0)
+    }
+  }
+  if (useGui) {
+    val window = new Frame {
+      title = "Prosomo 0.7"
+      contents = new FlowPanel {
+        val textField = new TextField {
+          text = ""
+          columns = 20
+          horizontalAlignment = Alignment.Left
+          editable = true
+        }
+        contents += textField
+        contents += new Button("Issue Command") {
+          reactions += {
+            case event.ButtonClicked(_) =>
+              coordinator ! GuiCommand(textField.text)
+          }
+        }
+      }
+
+      pack()
+      centerOnScreen()
+      open()
     }
   }
 }
