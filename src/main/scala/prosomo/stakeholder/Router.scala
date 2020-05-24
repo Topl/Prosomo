@@ -456,6 +456,15 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                       case None => {
                         holders ::= ActorRefWrapper(newPath)
                         pathToPeer += (newPath -> remote.peerInfo.get.peerSpec.agentName)
+                        SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                          case Some(list:List[ActorRefWrapper]) => {
+                            val newList = ActorRefWrapper(newPath)::list
+                            SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                            SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                          }
+                          case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
+                        }
+                        SharedData.refreshPeerList
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
                         toDiffuse = true
@@ -463,10 +472,20 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                       }
                       case Some(actorRef:ActorRefWrapper) => {
                         if (pathToPeer(actorRef.path) != remote.peerInfo.get.peerSpec.agentName) {
+                          if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path))) SharedData.guiPeerInfo -= pathToPeer(actorRef.path)
                           val key = actorRef.path
                           pathToPeer -= key
                           pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
                           toDiffuse = true
+                          SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                            case Some(list:List[ActorRefWrapper]) => {
+                              val newList = actorRef::list
+                              SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                              SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                            }
+                            case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
+                          }
+                          SharedData.refreshPeerList
                           if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                           println("Updated Peer "+newPath.toString)
                         }
@@ -490,9 +509,19 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     /** accepts list of other holders from coordinator */
     case HoldersFromLocal(list:List[ActorRefWrapper]) => {
       for (holder<-list) {
-        if (!holders.contains(holder)) holders ::= holder
+        if (!holders.contains(holder)) {
+          holders ::= holder
+          SharedData.guiPeerInfo.get("Local") match {
+            case Some(list:List[ActorRefWrapper]) => {
+              val newList = holder::list
+              SharedData.guiPeerInfo -= "Local"
+              SharedData.guiPeerInfo += ("Local" -> newList)
+            }
+            case None => SharedData.guiPeerInfo += ("Local" -> List(holder))
+          }
+        }
       }
-
+      SharedData.refreshPeerList
       for (holder<-holders.filterNot(_.remote)) {
         if (!holdersPosition.keySet.contains(holder)) {
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))

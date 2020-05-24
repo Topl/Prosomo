@@ -1,5 +1,9 @@
 package prosomo.primitives
 
+import prosomo.stakeholder.ActorRefWrapper
+
+import scala.swing.{ListView, ScrollPane}
+
 object SharedData extends Types {
   var counter = 0
   var errorFlag = false
@@ -39,5 +43,21 @@ object SharedData extends Types {
   def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<");errorFlag=true}
   def throwError = {println("<---------Error------------<<<<");errorFlag=true}
   def error:Boolean = {errorFlag}
+
+  var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
+  def peerSeq:Seq[String] = {
+    var out:Seq[String] = Seq()
+    for (entry<-guiPeerInfo) {
+      out ++= Seq(entry._1)
+      out ++= entry._2.map("  "+_.actorPath.toString)
+    }
+    out
+  }
+  var peerList = new ListView(peerSeq) {
+    renderer = ListView.Renderer(entry=>entry)
+  }
+  def refreshPeerList = {
+    peerList.peer.setListData(peerSeq.toArray)
+  }
 }
 

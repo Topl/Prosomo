@@ -1,7 +1,7 @@
 package prosomo
 
 import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
-import prosomo.primitives.FastCryptographicHash
+import prosomo.primitives.{FastCryptographicHash, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
 import java.net.InetSocketAddress
 
@@ -129,11 +129,10 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
   if (useGui) {
     val window = new Frame {
       title = "Prosomo 0.7"
-      contents = new FlowPanel {
+      contents = new BoxPanel(Orientation.Vertical) {
         val textField = new TextField {
           text = ""
           columns = 20
-          horizontalAlignment = Alignment.Left
           editable = true
         }
         contents += textField
@@ -143,7 +142,12 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
               coordinator ! GuiCommand(textField.text)
           }
         }
+
+        contents += Swing.VStrut(5)
+        contents += new ScrollPane(SharedData.peerList)
+        border = Swing.EmptyBorder(10, 10, 10, 10)
       }
+
 
       pack()
       centerOnScreen()
