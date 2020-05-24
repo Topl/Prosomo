@@ -37,7 +37,7 @@ trait Forging extends Members {
       val h: Hash = hash(pb,serializer)
       val ledger:Mac = signMac(hash(txs,serializer), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
       val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,blockInfo)
-      val kes_sig: KesSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
+      val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
@@ -102,7 +102,7 @@ trait Forging extends Members {
     val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
     val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash("coordId")),sk_sig,pk_sig)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
-    val sig:KesSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
+    val sig:MalkinSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
     Block(hash(genesisHeader,serializer),Some(genesisHeader),None,Some(genesisEntries))

@@ -132,6 +132,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
 
+  getTimeInfo
   self ! NewDataFile
   self ! Populate
 
@@ -146,7 +147,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     System.currentTimeMillis()+localClockOffset
   }
 
-  def restoreTimeInfo = {
+  def getTimeInfo = {
     def getListOfFiles(dir: String):List[File] = {
       val d = new File(dir)
       if (d.exists && d.isDirectory) {
@@ -185,6 +186,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
       case _ => t0 = System.currentTimeMillis()
     }
+    globalSlot = ((globalTime - t0) / slotT).toInt
   }
 
   def writeTimeInfo = {
@@ -227,7 +229,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }
   }
 
-  def restorOrGenerateGenBlock: Receive = {
+  def restoreOrGenerateGenBlock: Receive = {
     case Register => {
       blocks.restore((0,genBlockKey)) match {
         case Some(b:Block) => {
@@ -291,9 +293,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**sends start command to each stakeholder*/
     case Run => {
       println("Starting")
-      sendAssertDone(holders.filterNot(_.remote),Initialize)
+      sendAssertDone(holders.filterNot(_.remote),Initialize(0))
       println("Run")
-      restoreTimeInfo
       sendAssertDone(holders.filterNot(_.remote),SetClock(t0))
       if (useFencing) sendAssertDone(routerRef,SetClock(t0))
       if (useFencing) routerRef ! Run
@@ -523,7 +524,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(newHolder,HoldersFromLocal(holders))
               sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
               sendAssertDone(newHolder,GenBlock(genBlock))
-              sendAssertDone(newHolder,Initialize)
+              sendAssertDone(newHolder,Initialize(0))
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
               sendAssertDone(routerRef,HoldersFromLocal(holders))
@@ -700,7 +701,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(newHolder,HoldersFromLocal(holders))
                 sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
                 sendAssertDone(newHolder,GenBlock(genBlock))
-                sendAssertDone(newHolder,Initialize)
+                sendAssertDone(newHolder,Initialize(0))
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
                 sendAssertDone(routerRef,HoldersFromLocal(holders))
@@ -935,7 +936,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     run orElse
     populate orElse
     receiveRemoteHolders orElse
-    restorOrGenerateGenBlock orElse
+    restoreOrGenerateGenBlock orElse
     nextSlot orElse
     dataFile orElse {
     /**tells actors to print their inbox */

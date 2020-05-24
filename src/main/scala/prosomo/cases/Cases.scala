@@ -32,7 +32,6 @@ case object RequestPositionData
 case object GetBalance
 case object Refresh
 case object Register
-case object Initialize
 case object BootstrapJob
 
 //signed messages between holders, messages from remote
@@ -65,4 +64,5 @@ case class GetState(s:State)
 case class GetBlockTree(t:Any,h:Any)
 case class GetPositionData(s:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]))
 case class Adversary(s:String)
+case class Initialize(gs:Slot)
 

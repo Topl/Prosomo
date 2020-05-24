@@ -22,7 +22,7 @@ case class Block(identifier:ByteArrayWrapper,
   def certificate:Cert = prosomoHeader._4
   def nonce:Rho = prosomoHeader._5
   def proof:Pi = prosomoHeader._6
-  def signature:KesSignature = prosomoHeader._7
+  def signature:MalkinSignature = prosomoHeader._7
   def kes_key:PublicKey = prosomoHeader._8
   def number:BlockNumber = prosomoHeader._9
   def parentSlot:Slot = prosomoHeader._10

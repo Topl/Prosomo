@@ -1,8 +1,9 @@
 package prosomo.stakeholder
 
+import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
-import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
+import prosomo.primitives.{FastCryptographicHash, Mac, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
@@ -18,16 +19,19 @@ trait Validation extends Members {
   def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
     val kesVer = kes.verify(
-      pk_kes,
+      sig._5,
       hash.data++serializer.getBytes(ledger)
         ++serializer.getBytes(slot)
         ++serializer.getBytes(cert)
         ++rho++pi++serializer.getBytes(bn)
         ++serializer.getBytes(ps),
-      sig,
-      slot
+      (sig._1,sig._2,sig._3),
+      slot-sig._4
     )
-    verifyMac(ledger.dataHash,ledger) && kesVer
+    val malkinPkVer = pk_kes.deep == FastCryptographicHash(Ints.toByteArray(sig._4)++sig._5).deep
+    val out = verifyMac(ledger.dataHash,ledger) && kesVer && malkinPkVer
+    if (!out) println(verifyMac(ledger.dataHash,ledger),kesVer,malkinPkVer)
+    out
   }
 
   def verifyBlock(b:Block): Boolean = {

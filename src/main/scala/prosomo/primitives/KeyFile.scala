@@ -38,9 +38,9 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       iv: Array[Byte]
       ) = sig_info
     val derivedKey = getDerivedKey(password, salt)
-    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "MAC does not match. Try again")
+    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "Error: MAC does not match. Try again")
     val (decrypted, _) = getAESResult(derivedKey, iv, cipherText, encrypt = false)
-    require(pubKeyBytes_sig sameElements sig.getPkFromSk(decrypted), "PublicKey in file is invalid")
+    require(pubKeyBytes_sig sameElements sig.getPkFromSk(decrypted), "Error: PublicKey in file is invalid")
     decrypted
   }
 
@@ -53,9 +53,9 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       iv: Array[Byte]
       ) = vrf_info
     val derivedKey = getDerivedKey(password, salt)
-    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "MAC does not match. Try again")
+    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "Error: MAC does not match. Try again")
     val (decrypted, _) = getAESResult(derivedKey, iv, cipherText, encrypt = false)
-    require(pubKeyBytes_vrf sameElements vrf.getPkFromSk(decrypted), "PublicKey in file is invalid")
+    require(pubKeyBytes_vrf sameElements vrf.getPkFromSk(decrypted), "Error: PublicKey in file is invalid")
     decrypted
   }
 
@@ -70,13 +70,13 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
         ) = kes_info
       val derivedKey = getDerivedKey(password, salt)
       val (decrypted, mac_check) = decryptAES(derivedKey, iv, cipherText)
-      require(mac_check sameElements mac, "MAC does not match. Try again")
+      require(mac_check sameElements mac, "Error: MAC does not match")
       val byteStream = new ByteStream(decrypted,None)
       val numBytes = byteStream.getInt
       val decryptedMK = serializer.fromBytes(
         new ByteStream(byteStream.get(numBytes),DeserializeMalkinKey)
       ) match {case mk:MalkinKey => mk}
-      require(pubKeyBytes_kes sameElements decryptedMK.getPublic(kes), "PublicKey in file is invalid")
+      require(pubKeyBytes_kes sameElements decryptedMK.getPublic(kes), "Error: PublicKey in file is invalid")
       decryptedMK
     }
     kes_sk_MK

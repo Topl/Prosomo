@@ -57,7 +57,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(ratio:Ratio):Array[Byte] = sRatio(ratio)
   def getBytes(slotId: SlotId):Array[Byte] = Bytes.concat(getBytes(slotId._1),getBytes(slotId._2))
   def getBytes(cert:Cert):Array[Byte] = sCert(cert)
-  def getBytes(kesSignature: KesSignature):Array[Byte] = sKesSignature(kesSignature)
+  def getBytes(kesSignature: MalkinSignature):Array[Byte] = sKesSignature(kesSignature)
   def getBytes(state: State):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(mac:Mac):Array[Byte] = sMac(mac)
@@ -567,29 +567,35 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sKesSignature(kesSignature:KesSignature):Array[Byte] = {
+  private def sKesSignature(kesSignature:MalkinSignature):Array[Byte] = {
     val output = Bytes.concat(
       Ints.toByteArray(kesSignature._1.length),
       kesSignature._1,
       Ints.toByteArray(kesSignature._2.length),
       kesSignature._2,
       Ints.toByteArray(kesSignature._3.length),
-      kesSignature._3
+      kesSignature._3,
+      getBytes(kesSignature._4),
+      getBytes(kesSignature._5)
     )
     Ints.toByteArray(output.length) ++ output
   }
 
-  private def dKesSignature(stream: ByteStream): KesSignature = {
+  private def dKesSignature(stream: ByteStream): MalkinSignature = {
     val out1len = stream.getInt
     val out1 = stream.get(out1len)
     val out2len = stream.getInt
     val out2 = stream.get(out2len)
     val out3len = stream.getInt
     val out3 = stream.get(out3len)
+    val out4 = stream.getInt
+    val out5 = stream.get(pk_length)
     val out = (
       out1,
       out2,
-      out3
+      out3,
+      out4,
+      out5
     )
     assert(stream.empty)
     out
@@ -691,7 +697,8 @@ trait SerializationMethods extends SimpleTypes {
       Ints.toByteArray(key.sig.length),
       key.sig,
       key.pki,
-      key.rp
+      key.rp,
+      getBytes(key.offset)
     )
   }
 
@@ -706,8 +713,9 @@ trait SerializationMethods extends SimpleTypes {
     val out3 = stream.get(out3len)
     val out4 = stream.get(pk_length)
     val out5 = stream.get(hash_length)
+    val out6 = stream.getInt
     assert(stream.empty)
-    MalkinKey(out1,out2,out3,out4,out5)
+    MalkinKey(out1,out2,out3,out4,out5,out6)
   }
 
   private def sTree(tree:Tree[Array[Byte]]):Array[Byte] = {

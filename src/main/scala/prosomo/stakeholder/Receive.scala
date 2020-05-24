@@ -254,8 +254,9 @@ trait Receive extends Members {
     }
 
     /**allocation and vars of simulation*/
-    case Initialize => {
-      println("Holder "+holderIndex.toString+" starting...")
+    case Initialize(gs) => {
+      globalSlot = gs
+      println("Holder "+holderIndex.toString+s" starting on global slot ${globalSlot}")
       password = s"password_holder_$holderIndex"
       salt = FastCryptographicHash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
@@ -269,11 +270,11 @@ trait Receive extends Members {
         keyFile = KeyFile.fromSeed(
           password,
           storageDir,
-          serializer: Serializer,
+          serializer,
           sig:Sig,
           vrf:Vrf,
           kes:Kes,
-          globalSlot:Slot,
+          globalSlot,
           seed1,
           seed2,
           seed3
@@ -294,7 +295,6 @@ trait Receive extends Members {
       }
       keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
-      globalSlot = kes.getKeyTimeStep(keys.sk_kes)
       val genesisBlock = blocks.getIfPresent((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {

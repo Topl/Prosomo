@@ -1,4 +1,5 @@
 package prosomo.primitives
+import com.google.common.primitives.Ints
 
 class MalkinKey {
   var L:Tree[Array[Byte]] = Leaf(Array())
@@ -6,9 +7,10 @@ class MalkinKey {
   var sig:Array[Byte] = Array()
   var pki:Array[Byte] = Array()
   var rp:Array[Byte] = Array()
+  var offset:Int = 0
 
   def update(kes:Kes,t:Int) = {
-    val updatedKey = kes.updateKey((L,Si,sig,pki,rp),t)
+    val updatedKey = kes.updateKey((L,Si,sig,pki,rp),t-offset)
     L = updatedKey._1
     Si = updatedKey._2
     sig = updatedKey._3
@@ -17,7 +19,7 @@ class MalkinKey {
   }
 
   def update_fast(kes:Kes,t:Int) = {
-    val updatedKey = kes.updateKeyFast((L,Si,sig,pki,rp),t)
+    val updatedKey = kes.updateKeyFast((L,Si,sig,pki,rp),t-offset)
     L = updatedKey._1
     Si = updatedKey._2
     sig = updatedKey._3
@@ -25,47 +27,41 @@ class MalkinKey {
     rp = updatedKey._5
   }
 
-  def sign(kes:Kes,m:Array[Byte]): (Array[Byte],Array[Byte],Array[Byte]) = {
-    kes.sign((L,Si,sig,pki,rp),m)
+  def sign(kes:Kes,m:Array[Byte]): (Array[Byte],Array[Byte],Array[Byte],Int,Array[Byte]) = {
+    val out = kes.sign((L,Si,sig,pki,rp),m)
+    (out._1,out._2,out._3,offset,kes.publicKey((L,Si,sig,pki,rp)))
   }
 
   def getPublic(kes:Kes):Array[Byte] = {
-    kes.publicKey((L,Si,sig,pki,rp))
+    val pk_kes = kes.publicKey((L,Si,sig,pki,rp))
+    FastCryptographicHash(Ints.toByteArray(offset)++pk_kes)
   }
 
   def time(kes:Kes):Int = {
-    kes.getKeyTimeStep((L,Si,sig,pki,rp))
+    kes.getKeyTimeStep((L,Si,sig,pki,rp)) + offset
   }
 }
 
 object MalkinKey {
   def apply(kes:Kes,seed:Array[Byte],t:Int):MalkinKey = {
     val keyData = kes.generateKey(seed)
-    val updatedKeyData = kes.updateKey(keyData,t)
     val newKey = new MalkinKey
-    newKey.L = updatedKeyData._1
-    newKey.Si = updatedKeyData._2
-    newKey.sig = updatedKeyData._3
-    newKey.pki = updatedKeyData._4
-    newKey.rp = updatedKeyData._5
+    newKey.L = keyData._1
+    newKey.Si = keyData._2
+    newKey.sig = keyData._3
+    newKey.pki = keyData._4
+    newKey.rp = keyData._5
+    newKey.offset = t
     newKey
   }
-  def apply(L:Tree[Array[Byte]],Si:Tree[Array[Byte]],sig:Array[Byte],pki:Array[Byte],rp:Array[Byte]):MalkinKey = {
+  def apply(L:Tree[Array[Byte]],Si:Tree[Array[Byte]],sig:Array[Byte],pki:Array[Byte],rp:Array[Byte],offset:Int):MalkinKey = {
     val newKey = new MalkinKey
     newKey.L = L
     newKey.Si = Si
     newKey.sig = sig
     newKey.pki = pki
     newKey.rp = rp
-    newKey
-  }
-  def apply(mk:MalkinKey):MalkinKey = {
-    val newKey = new MalkinKey
-    newKey.L = mk.L
-    newKey.Si = mk.Si
-    newKey.sig = mk.sig
-    newKey.pki = mk.pki
-    newKey.rp = mk.rp
+    newKey.offset = offset
     newKey
   }
 }

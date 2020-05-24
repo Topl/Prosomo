@@ -26,8 +26,8 @@ class Kes {
   val keyLength = hashBytes
   val logl = 7
 
-  type MalkinKeyBytes = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
-  type MalkinSignature = (Array[Byte],Array[Byte],Array[Byte])
+  type KesKeyBytes = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
+  type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
 
   /**
     * Exponent base two of the argument
@@ -575,7 +575,7 @@ class Kes {
     * @param seed input entropy for key generation
     * @return
     */
-  def generateKey(seed: Array[Byte]): MalkinKeyBytes = {
+  def generateKey(seed: Array[Byte]): KesKeyBytes = {
     val r = PRNG(seed)
     val rp = PRNG(r._2)
     //super-scheme sum composition
@@ -595,7 +595,7 @@ class Kes {
     * @param t time step key is to be updated to
     * @return updated MMM key
     */
-  def updateKey(key: MalkinKeyBytes, t:Int): MalkinKeyBytes = {
+  def updateKey(key: KesKeyBytes, t:Int): KesKeyBytes = {
     val keyTime = getKeyTimeStep(key)
     var L = key._1
     var Si = key._2
@@ -635,7 +635,7 @@ class Kes {
     * @param t_in
     * @return  updated key
     */
-  def updateKeyFast(key: MalkinKeyBytes, t_in:Int): MalkinKeyBytes = {
+  def updateKeyFast(key: KesKeyBytes, t_in:Int): KesKeyBytes = {
     val keyTime = getKeyTimeStep(key)
     var L = key._1
     var Si = key._2
@@ -699,7 +699,7 @@ class Kes {
     * @param key MMM key to be inspected
     * @return Current time step of key
     */
-  def getKeyTimeStep(key: MalkinKeyBytes): Int = {
+  def getKeyTimeStep(key: KesKeyBytes): Int = {
     val L = key._1
     val Si = key._2
     val tl = sumGetKeyTimeStep(L)
@@ -712,7 +712,7 @@ class Kes {
     val Si = key.Si
     val tl = sumGetKeyTimeStep(L)
     val ti = sumGetKeyTimeStep(Si)
-    exp(tl)-1+ti
+    exp(tl)-1+ti+key.offset
   }
 
   /**
@@ -721,7 +721,7 @@ class Kes {
     * @param m message to be signed
     * @return signature of m
     */
-  def sign(key: MalkinKeyBytes, m: Array[Byte]): MalkinSignature = {
+  def sign(key: KesKeyBytes, m: Array[Byte]): KesSignature = {
     val keyTime = BigInt(getKeyTimeStep(key)).toByteArray
     val L = key._1
     val Si = key._2
@@ -741,7 +741,7 @@ class Kes {
     * @param sig signature to be verified
     * @return true if signature is valid false if otherwise
     */
-  def verify(pk: Array[Byte],m: Array[Byte],sig: MalkinSignature,t: Int): Boolean = {
+  def verify(pk: Array[Byte], m: Array[Byte], sig: KesSignature, t: Int): Boolean = {
     val sigi = sig._1
     val sigm = sig._2
     val pki = sig._3
@@ -755,7 +755,7 @@ class Kes {
     * @param key
     * @return
     */
-  def publicKey(key: MalkinKeyBytes):  Array[Byte] = {
+  def publicKey(key: KesKeyBytes):  Array[Byte] = {
     sumGetPublicKey(key._1)
   }
 
