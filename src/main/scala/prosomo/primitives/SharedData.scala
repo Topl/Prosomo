@@ -2,7 +2,15 @@ package prosomo.primitives
 
 import prosomo.stakeholder.ActorRefWrapper
 
-import scala.swing.{ListView, ScrollPane}
+import scala.swing.{ColorChooser, ListView, ScrollPane, TextArea}
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.awt.Color
+
+import com.google.common.base.{Splitter, Strings}
+import com.google.common.collect.Iterables
+
+import scala.swing.Font.Style
 
 object SharedData extends Types {
   var counter = 0
@@ -14,6 +22,11 @@ object SharedData extends Types {
   var t_1:Long = 0
   var timing:Boolean = false
   var diskAccess:Boolean = false
+
+
+  val outText = new ByteArrayOutputStream
+  val printStream = new PrintStream(outText)
+  val oldOut = System.out
 
   def time0 = {
     timing = true
@@ -59,5 +72,22 @@ object SharedData extends Types {
   def refreshPeerList = {
     peerList.peer.setListData(peerSeq.toArray)
   }
+  var outputText = new ColorTextArea {
+    editable = false
+    font = swing.Font("Monospaced",Style.Plain,12)
+    background = Color.black
+    lineWrap = true
+  }
+
+  var outputElem = new ScrollPane(outputText) {
+    verticalScrollBar.value = verticalScrollBar.maximum
+  }
+
+  def refreshOutput = {
+    outputText.appendANSI(outText.toString)
+    outText.reset()
+    if (!outputElem.verticalScrollBar.valueIsAdjusting) outputElem.verticalScrollBar.value = outputElem.verticalScrollBar.maximum
+  }
+
 }
 
