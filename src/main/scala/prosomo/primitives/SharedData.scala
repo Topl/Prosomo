@@ -68,6 +68,8 @@ object SharedData extends Types {
   }
   var peerList = new ListView(peerSeq) {
     renderer = ListView.Renderer(entry=>entry)
+    background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+    foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
   }
   def refreshPeerList = {
     peerList.peer.setListData(peerSeq.toArray)
@@ -75,7 +77,8 @@ object SharedData extends Types {
   var outputText = new ColorTextArea {
     editable = false
     font = swing.Font("Monospaced",Style.Plain,12)
-    background = Color.black
+    background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+    foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
     lineWrap = true
   }
 

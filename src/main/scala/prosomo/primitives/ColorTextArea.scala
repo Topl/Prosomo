@@ -27,7 +27,6 @@ class ColorTextArea extends TextArea {
   var remaining = ""
 
   def append(c: Color, s: String): Unit = {
-    this.foreground = c
     this.append(s)
   }
 
