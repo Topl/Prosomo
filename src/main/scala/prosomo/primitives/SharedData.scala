@@ -63,15 +63,34 @@ object SharedData extends Types {
     var out:Seq[String] = Seq()
     for (entry<-guiPeerInfo) {
       out ++= Seq(entry._1)
-      out ++= entry._2.map("  "+_.actorPath.toString+"  ")
+      out ++= entry._2.map("  "+_.actorPath.toString)
     }
     out
   }
+  val backgroundC = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+  val foregroundC = Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)
   var peerList = Try{
     new ListView(peerSeq) {
-      renderer = ListView.Renderer(entry=>entry)
-      background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-      foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
+      font = swing.Font("Monospaced",Style.Plain,14)
+      renderer = ListView.Renderer(entry=>{
+        val padlen = 30
+        var out = entry.padTo(50,' ').take(50)
+        if (stakingAlpha.isDefinedAt(entry.trim)) {
+          out += f"Epoch Stake ${stakingAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
+        }
+        if (stakingBalance.isDefinedAt(entry.trim)) {
+          out += s"Net ${stakingBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
+        }
+        if (confirmedAlpha.isDefinedAt(entry.trim)) {
+          out += f"Confirmed Stake ${confirmedAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
+        }
+        if (confirmedBalance.isDefinedAt(entry.trim)) {
+          out += s"Net ${confirmedBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
+        }
+        out
+      })
+      background = backgroundC
+      foreground = foregroundC
     }
   }.toOption
 
@@ -81,9 +100,9 @@ object SharedData extends Types {
   var outputText = Try{
     new ColorTextArea {
       editable = false
-      font = swing.Font("Monospaced",Style.Plain,12)
-      background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-      foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
+      font = swing.Font("Monospaced",Style.Plain,14)
+      background = backgroundC
+      foreground = foregroundC
       lineWrap = true
     }
   }.toOption
@@ -100,5 +119,9 @@ object SharedData extends Types {
     if (!outputElem.get.verticalScrollBar.valueIsAdjusting) outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
   }
 
+  var confirmedBalance:Map[String,BigInt] = Map()
+  var stakingBalance:Map[String,BigInt] = Map()
+  var confirmedAlpha:Map[String,Double] = Map()
+  var stakingAlpha:Map[String,Double] = Map()
 }
 

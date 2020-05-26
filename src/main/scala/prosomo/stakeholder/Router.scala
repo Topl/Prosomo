@@ -464,7 +464,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                           }
                           case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
                         }
-                        SharedData.refreshPeerList
+                        Try{SharedData.refreshPeerList}
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
                         toDiffuse = true
@@ -485,7 +485,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                             }
                             case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
                           }
-                          SharedData.refreshPeerList
+                          Try{SharedData.refreshPeerList}
                           if (holders.filterNot(_.remote).nonEmpty) toNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
                           println("Updated Peer "+newPath.toString)
                         }
@@ -521,7 +521,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         }
       }
-      SharedData.refreshPeerList
+      Try{SharedData.refreshPeerList}
       for (holder<-holders.filterNot(_.remote)) {
         if (!holdersPosition.keySet.contains(holder)) {
           holdersPosition += (holder->(rng.nextDouble()*180.0-90.0,rng.nextDouble()*360.0-180.0))

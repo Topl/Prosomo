@@ -134,6 +134,7 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
       System.setOut(SharedData.printStream)
       new Frame {
         title = "Prosomo 0.7"
+        iconImage = toolkit.getImage("Logo.png")
         contents = new BoxPanel(Orientation.Vertical) {
           val commandElem = new BoxPanel(Orientation.Horizontal) {
             val textField = new TextField {

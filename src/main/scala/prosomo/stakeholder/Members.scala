@@ -31,6 +31,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val sessionId:Sid
   val phase:Double
   val chainStorage:ChainStorage
+  val selfWrapper:ActorRefWrapper
 
   var password:String
   var derivedKey:Array[Byte]

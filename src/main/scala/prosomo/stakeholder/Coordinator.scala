@@ -63,7 +63,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(seed))
   val phase:Double = rng.nextDouble
-
+  val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   var keyFile = KeyFile.empty
   var password = ""
   var derivedKey:Array[Byte] = Array()
@@ -204,7 +204,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
     case Populate => {
-      sendAssertDone(routerRef,CoordRef(ActorRefWrapper(self)))
+      sendAssertDone(routerRef,CoordRef(selfWrapper))
       sendAssertDone(routerRef,Register)
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
@@ -283,7 +283,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     println("Sending holders list")
     sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
     println("Sending holders coordinator ref")
-    sendAssertDone(holders.filterNot(_.remote),CoordRef(ActorRefWrapper(self)))
+    sendAssertDone(holders.filterNot(_.remote),CoordRef(selfWrapper))
     println("Send GenBlock")
     sendAssertDone(holders.filterNot(_.remote),GenBlock(genBlock))
     self ! Run
@@ -522,7 +522,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             case None => {
               holders ::= newHolder
               sendAssertDone(newHolder,HoldersFromLocal(holders))
-              sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
+              sendAssertDone(newHolder,CoordRef(selfWrapper))
               sendAssertDone(newHolder,GenBlock(genBlock))
               sendAssertDone(newHolder,Initialize(0))
               sendAssertDone(newHolder,SetClock(t0))
@@ -699,7 +699,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               case None => {
                 holders ::= newHolder
                 sendAssertDone(newHolder,HoldersFromLocal(holders))
-                sendAssertDone(newHolder,CoordRef(ActorRefWrapper(self)))
+                sendAssertDone(newHolder,CoordRef(selfWrapper))
                 sendAssertDone(newHolder,GenBlock(genBlock))
                 sendAssertDone(newHolder,Initialize(0))
                 sendAssertDone(newHolder,SetClock(t0))

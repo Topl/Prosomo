@@ -46,7 +46,7 @@ trait Forging extends Members {
       updateLocalState(localState, (slot,block.id)) match {
         case Some(forgedState:State) => {
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
-          send(ActorRefWrapper(self),gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+          send(selfWrapper,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter

@@ -8,6 +8,8 @@ import prosomo.primitives.Parameters.{f_dynamic, m_f_range}
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
+import scala.util.Try
+
 trait Update extends Members {
   import Parameters.{printFlag,epochLength,useGossipProtocol,numGossipers,dataOutInterval,dataOutFlag,useFencing}
 
@@ -114,7 +116,7 @@ trait Update extends Members {
               gOff = newOff
             }
             if (gossipers.length < numGossipers + gOff && numHello < 1) {
-              send(ActorRefWrapper(self),rng.shuffle(holders.filter(_!=ActorRefWrapper(self))),Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+              send(selfWrapper,rng.shuffle(holders.filter(_!=selfWrapper)),Hello(selfWrapper,signMac(hash(selfWrapper,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
               numHello += 1
             } else if (gossipers.length > numGossipers + gOff) {
               gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)
@@ -131,7 +133,7 @@ trait Update extends Members {
         case 0 => {
           forgeBlock(keys)
           roundBlock = 1
-          routerRef ! Flag(ActorRefWrapper(self),"updateSlot")
+          routerRef ! Flag(selfWrapper,"updateSlot")
         }
         case _ if chainUpdateLock => {
           if (candidateTines.isEmpty) {
@@ -145,7 +147,54 @@ trait Update extends Members {
         }
         case _ =>
       }
-
+      if (holderIndex == SharedData.printingHolder && globalSlot%5 == 0) {
+        for (holder<-holders) {
+          inbox.toList.find(info=>info._2._1==holder) match {
+            case Some(inboxInfo) => Try{
+              val hpk:PublicKeyW = ByteArrayWrapper(inboxInfo._2._2._1++inboxInfo._2._2._2++inboxInfo._2._2._3)
+              val str = holder.actorPath.toString
+              wallet.confirmedState.get(hpk) match {
+                case Some(st) => {
+                  val ha = relativeStake(hpk,wallet.confirmedState).toDoubleString
+                  SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
+                  SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
+                }
+                case None =>
+              }
+              stakingState.get(hpk) match {
+                case Some(st) => {
+                  val ha = relativeStake(hpk,stakingState).toDoubleString
+                  SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
+                  SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
+                }
+                case None =>
+              }
+            }
+            case None =>
+          }
+        }
+        Try{
+          val hpk:PublicKeyW = keys.pkw
+          val str = selfWrapper.actorPath.toString
+          wallet.confirmedState.get(hpk) match {
+            case Some(st) => {
+              val ha = relativeStake(hpk,wallet.confirmedState).toDoubleString
+              SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
+              SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
+            }
+            case None =>
+          }
+          stakingState.get(hpk) match {
+            case Some(st) => {
+              val ha = relativeStake(hpk,stakingState).toDoubleString
+              SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
+              SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
+            }
+            case None =>
+          }
+        }
+        Try{SharedData.refreshPeerList}
+      }
       updating = false
     }
   }

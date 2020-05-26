@@ -39,7 +39,7 @@ trait ChainSelection extends Members {
     }
     for (trans:Transaction <- wallet.getPending(localState)) {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(ActorRefWrapper(self),gossipers, SendTx(trans))
+      send(selfWrapper,gossipers, SendTx(trans))
     }
     walletStorage.store(wallet,serializer)
   }
@@ -91,13 +91,13 @@ trait ChainSelection extends Members {
                       tineMaxDepth
                     }
                     val request:Request = (List(parentId),depth,job._1)
-                    send(ActorRefWrapper(self),ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                    send(selfWrapper,ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
                   } else {
                     if (holderIndex == SharedData.printingHolder && printFlag) println(
                       "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tines.keySet.size
                     )
                     val request:Request = (List(parentId),0,job._1)
-                    send(ActorRefWrapper(self),ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                    send(selfWrapper,ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
                   }
                 }
                 if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}

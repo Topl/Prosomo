@@ -53,6 +53,7 @@ class Stakeholder(
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
   val phase:Double = rng.nextDouble
+  val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   //stakeholder password, set at runtime
   var password = ""
   var derivedKey:Array[Byte] = Array()

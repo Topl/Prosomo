@@ -36,13 +36,13 @@ trait Receive extends Members {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
               memPool += (value.transaction.sid->(value.transaction,0))
-              send(ActorRefWrapper(self),gossipers, SendTx(value.transaction))
+              send(selfWrapper,gossipers, SendTx(value.transaction))
             }
           }
         }
       }
       if (useFencing) {
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -62,7 +62,7 @@ trait Receive extends Members {
                 if (bSlot <= globalSlot) {
                   //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
-                  send(ActorRefWrapper(self),gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+                  send(selfWrapper,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   if (!bootStrapLock) {
                     if (tines.keySet.size < tineMaxTries) {
                       val jobNumber = tineCounter
@@ -84,7 +84,7 @@ trait Receive extends Members {
         while (chainUpdateLock) {
           update
         }
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -130,7 +130,7 @@ trait Receive extends Members {
         while (chainUpdateLock) {
           update
         }
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -145,7 +145,7 @@ trait Receive extends Members {
             val ref = inbox(value.mac.sid)._1
             blocks.getIfPresent(value.id) match {
               case Some(returnedBlock:Block) => {
-                send(ActorRefWrapper(self),ref,ReturnBlocks(List(returnedBlock),signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
+                send(selfWrapper,ref,ReturnBlocks(List(returnedBlock),signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
                 if (holderIndex == SharedData.printingHolder && printFlag) {
                   println("Holder " + holderIndex.toString + " Returned Block")
                 }
@@ -156,7 +156,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -174,7 +174,7 @@ trait Receive extends Members {
                 tineProvider = Try{ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))}.toOption
                 tineProvider match {
                   case Some(ref:ActorRefWrapper) =>
-                    ref ! RequestTineProvider.Info(refToSend,startId,depth,ActorRefWrapper(self),holderIndex,sessionId,keys.sk_sig,keys.pk_sig,value.job)
+                    ref ! RequestTineProvider.Info(refToSend,startId,depth,selfWrapper,holderIndex,sessionId,keys.sk_sig,keys.pk_sig,value.job)
                   case None => println("error: tine provider not initialized")
                 }
               } else {println("error: chain request mac invalid")}
@@ -184,7 +184,7 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -200,13 +200,13 @@ trait Receive extends Members {
             if (!gossipers.contains(value.ref) && inbox.keySet.contains(value.mac.sid)) {
               //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Adding Gossiper")}
               if (inbox(value.mac.sid)._1 == value.ref) gossipers = gossipers ++ List(value.ref)
-              send(ActorRefWrapper(self),value.ref,Hello(ActorRefWrapper(self),signMac(hash(ActorRefWrapper(self),serializer), sessionId, keys.sk_sig, keys.pk_sig)))
+              send(selfWrapper,value.ref,Hello(selfWrapper,signMac(hash(selfWrapper,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
           }
         }
       }
       if (useFencing) {
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
@@ -225,7 +225,7 @@ trait Receive extends Members {
                 walletStorage.store(wallet,serializer)
                 txCounter += 1
                 memPool += (trans.sid->(trans,0))
-                send(ActorRefWrapper(self),gossipers, SendTx(trans))
+                send(selfWrapper,gossipers, SendTx(trans))
               }
               case _ =>
             }
@@ -234,14 +234,14 @@ trait Receive extends Members {
         }
       }
       if (useFencing) {
-        routerRef ! Flag(ActorRefWrapper(self),"passData")
+        routerRef ! Flag(selfWrapper,"passData")
       }
     }
 
     /**sends holder information for populating inbox*/
     case Diffuse => {
-      holders.filterNot(_ == ActorRefWrapper(self)).foreach(
-        _ ! DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
+      holders.filterNot(_ == selfWrapper).foreach(
+        _ ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       )
     }
 
@@ -249,7 +249,7 @@ trait Receive extends Members {
     case value:DiffuseData => {
       if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
         inbox += (value.mac.sid->(value.ref,value.pks))
-        value.ref ! DiffuseData(ActorRefWrapper(self),keys.publicKeys,signMac(hash((ActorRefWrapper(self),keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
+        value.ref ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       }
     }
 
@@ -564,18 +564,18 @@ trait Receive extends Members {
           update
         }
       } else {
-        if (useFencing) {routerRef ! Flag(ActorRefWrapper(self),"updateSlot")}
+        if (useFencing) {routerRef ! Flag(selfWrapper,"updateSlot")}
       }
       sender() ! "done"
     }
 
     case "endStep" => if (useFencing) {
       roundBlock = 0
-      routerRef ! Flag(ActorRefWrapper(self),"endStep")
+      routerRef ! Flag(selfWrapper,"endStep")
     }
 
     case "passData" => if (useFencing) {
-      routerRef ! Flag(ActorRefWrapper(self),"passData")
+      routerRef ! Flag(selfWrapper,"passData")
     }
 
     case value:Adversary => {
