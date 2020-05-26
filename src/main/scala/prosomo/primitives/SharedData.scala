@@ -115,7 +115,7 @@ object SharedData extends Types {
 
   def refreshOutput = if (Parameters.useGui) {
     outputText.get.appendANSI(outText.toString)
-    while (outputText.get.lineCount > 2000) {
+    if (!outputElem.get.verticalScrollBar.valueIsAdjusting) while (outputText.get.lineCount > 2000) {
       outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
     }
     outText.reset()
