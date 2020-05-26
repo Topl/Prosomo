@@ -151,22 +151,25 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
             }
           }
           contents += commandElem
-          val peerListElem = new ScrollPane(SharedData.peerList)
+          val peerListElem = new ScrollPane(SharedData.peerList.get)
           peerListElem.maximumSize = new Dimension(2000,2000)
           peerListElem.preferredSize = new Dimension(800,400)
           peerListElem.minimumSize = new Dimension(100,100)
           contents += peerListElem
-          SharedData.outputElem.maximumSize = new Dimension(2000,2000)
-          SharedData.outputElem.preferredSize = new Dimension(800,400)
-          SharedData.outputElem.minimumSize = new Dimension(100,100)
-          contents += SharedData.outputElem
+          SharedData.outputElem.get.maximumSize = new Dimension(2000,2000)
+          SharedData.outputElem.get.preferredSize = new Dimension(800,400)
+          SharedData.outputElem.get.minimumSize = new Dimension(100,100)
+          contents += SharedData.outputElem.get
           border = Swing.EmptyBorder(10, 10, 10, 10)
         }
         pack()
         centerOnScreen()
         open()
       }
-    }.orElse(Try(System.setOut(SharedData.oldOut)))
+    }.orElse(Try({
+      System.setOut(SharedData.oldOut)
+      prosomo.primitives.Parameters.useGui = false
+    }))
   }
 }
 

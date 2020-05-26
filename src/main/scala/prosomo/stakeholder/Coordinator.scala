@@ -720,7 +720,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def readCommand:Unit = {
-    SharedData.refreshOutput
+    if (useGui) SharedData.refreshOutput
     if (!useFencing) {
       if (!actorStalled) {
         val t1 = globalTime-tp

@@ -76,7 +76,7 @@ object Parameters {
   } else {
     Map()
   }
-  val useGui:Boolean = config.getBoolean("params.useGui")
+  var useGui:Boolean = config.getBoolean("params.useGui")
   val timeScale:Double = config.getDouble("params.timeScale")
   //use network delay parameterization if true
   val useDelayParam:Boolean = config.getBoolean("params.useDelayParam")

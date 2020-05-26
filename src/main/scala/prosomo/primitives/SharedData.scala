@@ -11,6 +11,7 @@ import com.google.common.base.{Splitter, Strings}
 import com.google.common.collect.Iterables
 
 import scala.swing.Font.Style
+import scala.util.Try
 
 object SharedData extends Types {
   var counter = 0
@@ -66,30 +67,37 @@ object SharedData extends Types {
     }
     out
   }
-  var peerList = new ListView(peerSeq) {
-    renderer = ListView.Renderer(entry=>entry)
-    background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-    foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
-  }
-  def refreshPeerList = {
-    peerList.peer.setListData(peerSeq.toArray)
-  }
-  var outputText = new ColorTextArea {
-    editable = false
-    font = swing.Font("Monospaced",Style.Plain,12)
-    background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-    foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
-    lineWrap = true
-  }
+  var peerList = Try{
+    new ListView(peerSeq) {
+      renderer = ListView.Renderer(entry=>entry)
+      background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+      foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
+    }
+  }.toOption
 
-  var outputElem = new ScrollPane(outputText) {
-    verticalScrollBar.value = verticalScrollBar.maximum
+  def refreshPeerList = if (Parameters.useGui) {
+    peerList.get.peer.setListData(peerSeq.toArray)
   }
+  var outputText = Try{
+    new ColorTextArea {
+      editable = false
+      font = swing.Font("Monospaced",Style.Plain,12)
+      background = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+      foreground = Color.getHSBColor(0.43.toFloat,0.6.toFloat,0.7.toFloat)
+      lineWrap = true
+    }
+  }.toOption
 
-  def refreshOutput = {
-    outputText.appendANSI(outText.toString)
+  var outputElem = Try{
+    new ScrollPane(outputText.get) {
+      verticalScrollBar.value = verticalScrollBar.maximum
+    }
+  }.toOption
+
+  def refreshOutput = if (Parameters.useGui) {
+    outputText.get.appendANSI(outText.toString)
     outText.reset()
-    if (!outputElem.verticalScrollBar.valueIsAdjusting) outputElem.verticalScrollBar.value = outputElem.verticalScrollBar.maximum
+    if (!outputElem.get.verticalScrollBar.valueIsAdjusting) outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
   }
 
 }
