@@ -281,7 +281,7 @@ class ProsomoWindow(config:Config) {
         }
       }
       title = "Prosomo 0.7"
-      iconImage = toolkit.getImage("Logo.png")
+      iconImage = toolkit.getImage("src/main/resources/Logo.png")
 
       contents = new BoxPanel(Orientation.Vertical) {
         border = Swing.EmptyBorder(10, 10, 10, 10)
