@@ -189,6 +189,7 @@ object Prosomo extends App {
       instance.get.stopAll()
     }
   }
+  System.exit(0)
 }
 
 class ProsomoWindow(config:Config) {
