@@ -3,6 +3,8 @@ import sbtassembly.MergeStrategy
 
 name := "prosomo"
 
+trapExit := false
+
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.8",
   organization := "co.topl",

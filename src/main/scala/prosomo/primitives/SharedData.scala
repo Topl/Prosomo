@@ -5,7 +5,7 @@ import prosomo.stakeholder.ActorRefWrapper
 import scala.swing.{ColorChooser, ListView, ScrollPane, TextArea}
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import java.awt.Color
+import java.awt.{Color, Dimension}
 
 import com.google.common.base.{Splitter, Strings}
 import com.google.common.collect.Iterables
@@ -67,14 +67,16 @@ object SharedData extends Types {
     }
     out
   }
+
   val backgroundC = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
   val foregroundC = Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)
+
   var peerList = Try{
     new ListView(peerSeq) {
       font = swing.Font("Monospaced",Style.Plain,14)
       renderer = ListView.Renderer(entry=>{
         val padlen = 30
-        var out = entry.padTo(50,' ').take(50)
+        var out = entry.padTo(60,' ').take(60)
         if (stakingAlpha.isDefinedAt(entry.trim)) {
           out += f"Epoch Stake ${stakingAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
         }
@@ -97,6 +99,7 @@ object SharedData extends Types {
   def refreshPeerList = if (Parameters.useGui) {
     peerList.get.peer.setListData(peerSeq.toArray)
   }
+
   var outputText = Try{
     new ColorTextArea {
       editable = false
@@ -110,6 +113,9 @@ object SharedData extends Types {
   var outputElem = Try{
     new ScrollPane(outputText.get) {
       verticalScrollBar.value = verticalScrollBar.maximum
+      maximumSize = new Dimension(2000,2000)
+      preferredSize = new Dimension(800,400)
+      minimumSize = new Dimension(100,100)
     }
   }.toOption
 

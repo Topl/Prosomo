@@ -508,16 +508,17 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def holdersFromLocal: Receive = {
     /** accepts list of other holders from coordinator */
     case HoldersFromLocal(list:List[ActorRefWrapper]) => {
+      val name = s"local_"+Parameters.prosomoNodeUID+" "+Parameters.declaredAddressFromRemote
       for (holder<-list) {
         if (!holders.contains(holder)) {
           holders ::= holder
-          SharedData.guiPeerInfo.get("Local") match {
+          SharedData.guiPeerInfo.get(name) match {
             case Some(list:List[ActorRefWrapper]) => {
               val newList = holder::list
-              SharedData.guiPeerInfo -= "Local"
-              SharedData.guiPeerInfo += ("Local" -> newList)
+              SharedData.guiPeerInfo -= name
+              SharedData.guiPeerInfo += (name -> newList)
             }
-            case None => SharedData.guiPeerInfo += ("Local" -> List(holder))
+            case None => SharedData.guiPeerInfo += (name -> List(holder))
           }
         }
       }

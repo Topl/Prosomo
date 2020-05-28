@@ -71,7 +71,6 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
           issueState = value
         }
         case _ => {
-          println("Wallet error, clearing pending Txs")
           pendingTxsOut = Map()
         }
       }

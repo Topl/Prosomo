@@ -29,7 +29,6 @@ trait Transactions {
     var nls:State = ls
     val validSender = nls.keySet.contains(t.sender)
     val txC_s:Int = nls(t.sender)._3
-    if (t.nonce != txC_s) println(t.nonce,txC_s)
     if (validSender && t.nonce == txC_s) {
       val fee:BigInt = (Ratio(t.delta)*fee_r).round
       val validRecip = nls.keySet.contains(t.receiver)

@@ -2,7 +2,7 @@ package prosomo
 
 import java.awt.Dimension
 
-import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
+import prosomo.primitives.Parameters.{devMode, inputSeed, messageSpecs, useGui}
 import prosomo.primitives.{FastCryptographicHash, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
 import java.net.InetSocketAddress
@@ -19,16 +19,17 @@ import scorex.core.network.peer.PeerManagerRef
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
-import com.typesafe.config.Config
+import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+import com.typesafe.config.{Config, ConfigFactory}
 import prosomo.cases.GuiCommand
 
 import scala.concurrent.ExecutionContext
 import scala.swing._
 import scala.util.Try
 
-class Prosomo(config:Config) extends Runnable with ScorexLogging {
+class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with ScorexLogging {
 
-  import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+  var runApp = true
 
   //settings
   implicit val settings: ScorexSettings = ScorexSettings.fromConfig(config)
@@ -97,6 +98,25 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
   val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
   val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
 
+  window match {
+    case None =>
+    case Some(win) => Try{
+      win.connectButton.get.text = "Connected"
+      win.window.get.reactions += {
+        case event.WindowClosed(_) => {
+          this.stopAll()
+          window.get.runApp = false
+          runApp = false
+          System.setOut(SharedData.oldOut)
+        }
+      }
+      win.cmdButton.get.reactions += {
+        case event.ButtonClicked(_) =>
+          coordinator ! GuiCommand(win.cmdField.get.text)
+      }
+    }
+  }
+
   def run(): Unit = {
     require(settings.network.agentName.length <= Application.ApplicationNameLimit)
 
@@ -112,7 +132,7 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run() {
-        log.error("Unexpected shutdown")
+        //log.error("Unexpected shutdown")
         stopAll()
       }
     })
@@ -126,55 +146,170 @@ class Prosomo(config:Config) extends Runnable with ScorexLogging {
     log.info("Stopping actors (incl. block generator)")
     actorSystem.terminate().onComplete { _ =>
       log.info("Exiting from the app...")
-      System.exit(0)
     }
-  }
-  if (useGui) {
-    val window = Try{
-      System.setOut(SharedData.printStream)
-      new Frame {
-        title = "Prosomo 0.7"
-        iconImage = toolkit.getImage("Logo.png")
-        contents = new BoxPanel(Orientation.Vertical) {
-          val commandElem = new BoxPanel(Orientation.Horizontal) {
-            val textField = new TextField {
-              text = ""
-              columns = 20
-              editable = true
-              maximumSize = new Dimension(2000,50)
-            }
-            contents += textField
-            contents += new Button("Issue Command") {
-              reactions += {
-                case event.ButtonClicked(_) =>
-                  coordinator ! GuiCommand(textField.text)
-              }
-            }
-          }
-          contents += commandElem
-          val peerListElem = new ScrollPane(SharedData.peerList.get)
-          peerListElem.maximumSize = new Dimension(2000,2000)
-          peerListElem.preferredSize = new Dimension(800,400)
-          peerListElem.minimumSize = new Dimension(100,100)
-          contents += peerListElem
-          SharedData.outputElem.get.maximumSize = new Dimension(2000,2000)
-          SharedData.outputElem.get.preferredSize = new Dimension(800,400)
-          SharedData.outputElem.get.minimumSize = new Dimension(100,100)
-          contents += SharedData.outputElem.get
-          border = Swing.EmptyBorder(10, 10, 10, 10)
-        }
-        pack()
-        centerOnScreen()
-        open()
-      }
-    }.orElse(Try({
-      System.setOut(SharedData.oldOut)
-      prosomo.primitives.Parameters.useGui = false
-    }))
+    runApp = false
   }
 }
 
 object Prosomo extends App {
   val input = args
-  new Prosomo(prosomo.primitives.Parameters.config).run()
+  var instance:Option[Prosomo] = None
+  if (useGui) {
+    val newWindow = new ProsomoWindow(prosomo.primitives.Parameters.config)
+    newWindow.window match {
+      case None => {
+        instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
+        Try{
+          instance.get.run()
+          while (instance.get.runApp) {
+            Thread.sleep(100)
+          }
+          instance.get.stopAll()
+        }
+      }
+      case Some(frame) if newWindow.runApp => {
+        instance = Try{new Prosomo(newWindow.windowConfig,Some(newWindow))}.toOption
+        Try{
+          instance.get.run()
+          while (newWindow.runApp) {
+            Thread.sleep(100)
+          }
+          instance.get.stopAll()
+        }
+      }
+      case _ =>
+    }
+  } else {
+    instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
+    Try{
+      instance.get.run()
+      while (instance.get.runApp) {
+        Thread.sleep(100)
+      }
+      instance.get.stopAll()
+    }
+  }
+}
+
+class ProsomoWindow(config:Config) {
+
+  var windowConfig:Config = config
+  var waitToConnect = true
+  var runApp = true
+
+  val cmdField = Try{
+    new TextField {
+      text = ""
+      columns = 20
+      editable = true
+      maximumSize = new Dimension(2000,50)
+    }
+  }.toOption
+
+  val cmdButton = Try{
+    new Button("Issue Command") {}
+  }.toOption
+
+  val commandElem = Try{
+    new BoxPanel(Orientation.Horizontal) {
+      contents += cmdField.get
+      contents += cmdButton.get
+    }
+  }.toOption
+
+  val peerListElem = Try{
+    new ScrollPane(SharedData.peerList.get) {
+      maximumSize = new Dimension(2000,2000)
+      preferredSize = new Dimension(800,400)
+      minimumSize = new Dimension(100,100)
+    }
+  }.toOption
+
+  val connectField = Try{
+    new TextField {
+      text = "35.192.11.126:9084"
+      columns = 20
+      editable = true
+      maximumSize = new Dimension(2000,50)
+    }
+  }.toOption
+
+  val upnpCheck = Try{
+    new CheckBox() {
+      text = "UPNP"
+    }
+  }.toOption
+
+  val connectButton = Try{
+    new Button("Connect") {
+      reactions += {
+        case event.ButtonClicked(_) =>
+          val useUpnp = if (upnpCheck.get.selected) {"yes"} else {"no"}
+          val knownPeer = "\""+connectField.get.text+"\""
+          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer]}}}"
+          windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
+          upnpCheck.get.enabled = false
+          waitToConnect = false
+      }
+    }
+  }.toOption
+
+  val connectElem = Try{
+    new BoxPanel(Orientation.Horizontal) {
+      contents += connectField.get
+      contents += upnpCheck.get
+      contents += connectButton.get
+    }
+  }
+
+  val window:Option[Frame] = Try{
+    new Frame {
+      /*
+      GUI additions:
+        - network stats, number of peers, active stake
+        - basic wallet stats, transaction issue dialog box
+        - tine qualities, block time
+        - secure key creation
+       */
+      reactions += {
+        case event.WindowClosing(_) => {
+          waitToConnect = false
+          runApp = false
+          System.setOut(SharedData.oldOut)
+          prosomo.primitives.Parameters.useGui = false
+        }
+      }
+      title = "Prosomo 0.7"
+      iconImage = toolkit.getImage("Logo.png")
+
+      contents = new BoxPanel(Orientation.Vertical) {
+        border = Swing.EmptyBorder(10, 10, 10, 10)
+        if (devMode) contents += commandElem.get
+        contents += connectElem.get
+        contents += peerListElem.get
+        contents += SharedData.outputElem.get
+      }
+      pack()
+      centerOnScreen()
+      open()
+    }
+  }.toOption
+
+  window match {
+    case None => Try{
+      prosomo.primitives.Parameters.useGui = false
+    }
+    case Some(frame) => Try{
+      while (waitToConnect) {
+        Thread.sleep(100)
+      }
+      if (runApp) {
+        connectButton.get.enabled = false
+        connectButton.get.text = "Connecting..."
+        connectField.get.editable = false
+        SharedData.outputText.get.text = "Loading..."
+        System.setOut(SharedData.printStream)
+      }
+    }
+  }
 }

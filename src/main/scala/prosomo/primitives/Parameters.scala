@@ -1,6 +1,7 @@
 package prosomo.primitives
 
-import java.io.File
+import java.io.{BufferedReader, File, InputStreamReader}
+import java.net.URL
 
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
@@ -15,34 +16,61 @@ import scala.util.Try
 
 object Parameters {
 
+  val prosomoNodeUID:String = java.util.UUID.randomUUID.toString
   //tag for identifying ledger entries
   val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
+  val declaredAddressFromRemote = {
+    val whatismyip = new URL("http://checkip.amazonaws.com")
+    val in:BufferedReader = new BufferedReader(new InputStreamReader(
+      whatismyip.openStream()))
+    in.readLine()
+  }
 
   def getConfig:Config = {
-    import Prosomo.input
-    if (input.length > 0) {
-      val baseConfig = ConfigFactory.load
-      var localConfig = baseConfig
-      input.foreach(str =>
-        Try{
-          val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
-          localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
-        }.toOption match {
-          case None => {
-            Try{
-              localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
-            }.toOption match {
-              case None => println("Error: input not parsed")
-              case _ =>
-            }
+    val baseConfig = ConfigFactory.load
+    var localConfig = baseConfig
+    Prosomo.input.foreach(str =>
+      Try{
+        val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
+        localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
+      }.toOption match {
+        case None => {
+          Try{
+            localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+          }.toOption match {
+            case None => println("Error: input not parsed")
+            case _ =>
           }
+        }
+        case _ =>
+      }
+    )
+
+    Try{localConfig.getString("scorex.network.declaredAddress")}.toOption match {
+      case Some(adr) if adr != "" =>
+      case _ => {
+        val str = "input{scorex{network{declaredAddress=\""+declaredAddressFromRemote+":9084\"}}}"
+        Try{
+          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None => println("Error: input not parsed")
           case _ =>
         }
-      )
-      localConfig
-    } else {
-      ConfigFactory.load
+      }
     }
+    Try{localConfig.getString("scorex.network.agentName")}.toOption match {
+      case Some(adr) if adr != "" =>
+      case _ => {
+        val str = "input{scorex{network{agentName=\"prosomo_"+prosomoNodeUID+"\"}}}"
+        Try{
+          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None => println("Error: input not parsed")
+          case _ =>
+        }
+      }
+    }
+    localConfig
   }
 
   lazy val config:Config = getConfig
@@ -76,6 +104,7 @@ object Parameters {
   } else {
     Map()
   }
+  val devMode:Boolean = config.getBoolean("params.devMode")
   var useGui:Boolean = config.getBoolean("params.useGui")
   val timeScale:Double = config.getDouble("params.timeScale")
   //use network delay parameterization if true
