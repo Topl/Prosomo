@@ -9,6 +9,7 @@ import java.awt.{Color, Dimension}
 
 import com.google.common.base.{Splitter, Strings}
 import com.google.common.collect.Iterables
+import javax.swing.SwingUtilities
 import prosomo.ProsomoWindow
 
 import scala.swing.Font.Style
@@ -71,17 +72,21 @@ object SharedData extends Types {
   }
 
   def refreshPeerList = if (Parameters.useGui) {
-    prosomoWindow.get.peerList.get.peer.setListData(peerSeq.toArray)
+    SwingUtilities.invokeAndWait(()=>prosomoWindow.get.peerList.get.peer.setListData(peerSeq.toArray))
   }
 
 
   def refreshOutput = if (Parameters.useGui) {
-    prosomoWindow.get.outputText.get.appendANSI(outText.toString)
-    if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting) while (prosomoWindow.get.outputText.get.lineCount > 2000) {
-      prosomoWindow.get.outputText.get.text = prosomoWindow.get.outputText.get.text.drop(prosomoWindow.get.outputText.get.text.indexOf('\n')+1)
-    }
-    outText.reset()
-    if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting) prosomoWindow.get.outputElem.get.verticalScrollBar.value = prosomoWindow.get.outputElem.get.verticalScrollBar.maximum
+    SwingUtilities.invokeAndWait(()=>{
+      prosomoWindow.get.outputText.get.appendANSI(outText.toString)
+      if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting) while (prosomoWindow.get.outputText.get.lineCount > 2000) {
+        prosomoWindow.get.outputText.get.text = prosomoWindow.get.outputText.get.text.drop(prosomoWindow.get.outputText.get.text.indexOf('\n')+1)
+      }
+      outText.reset()
+      if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting)
+        prosomoWindow.get.outputElem.get.verticalScrollBar.value = prosomoWindow.get.outputElem.get.verticalScrollBar.maximum
+    })
+
   }
 
   var confirmedBalance:Map[String,BigInt] = Map()
