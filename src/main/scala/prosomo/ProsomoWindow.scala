@@ -1,13 +1,17 @@
 package prosomo
 
 import java.awt.{Color, Dimension}
+
 import prosomo.primitives.Parameters.devMode
 import prosomo.primitives.{ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, SwingUtilities}
+
 import scala.swing.Font.Style
 import scala.swing._
 import scala.util.Try
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits._
 
 class ProsomoWindow(config:Config) {
   var windowConfig:Config = config
@@ -161,18 +165,21 @@ class ProsomoWindow(config:Config) {
   }.toOption
 
   def refreshOutput = {
-    val toAdd = SharedData.outText.toString
-    SharedData.outText.reset()
-    SwingUtilities.invokeAndWait(()=>{
+    val backgroundOperation: Future[Unit] = Future {
+      val toAdd = SharedData.outText.toString
+      SharedData.outText.reset()
       outputText.get.appendANSI(toAdd)
-      if (!outputElem.get.verticalScrollBar.valueIsAdjusting) while (outputText.get.lineCount > 2000) {
-        outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
+    }
+    backgroundOperation onComplete { _ =>
+      Swing.onEDT {
+        if (!outputElem.get.verticalScrollBar.valueIsAdjusting) {
+          while (outputText.get.lineCount > 2000) {
+            outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
+          }
+          outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
+        }
       }
-    })
-    SwingUtilities.invokeAndWait(()=>{
-      if (!outputElem.get.verticalScrollBar.valueIsAdjusting)
-        outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
-    })
+    }
   }
 
   val window:Option[Frame] = Try{
