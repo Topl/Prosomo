@@ -9,6 +9,7 @@ import java.awt.{Color, Dimension}
 
 import com.google.common.base.{Splitter, Strings}
 import com.google.common.collect.Iterables
+import prosomo.ProsomoWindow
 
 import scala.swing.Font.Style
 import scala.util.Try
@@ -24,6 +25,7 @@ object SharedData extends Types {
   var timing:Boolean = false
   var diskAccess:Boolean = false
 
+  var prosomoWindow:Option[ProsomoWindow] = None
 
   val outText = new ByteArrayOutputStream
   val printStream = new PrintStream(outText)
@@ -68,64 +70,18 @@ object SharedData extends Types {
     out
   }
 
-  val backgroundC = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-  val foregroundC = Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)
-
-  var peerList = Try{
-    new ListView(peerSeq) {
-      font = swing.Font("Monospaced",Style.Plain,14)
-      renderer = ListView.Renderer(entry=>{
-        val padlen = 30
-        var out = entry.padTo(60,' ').take(60)
-        if (stakingAlpha.isDefinedAt(entry.trim)) {
-          out += f"Epoch Stake ${stakingAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
-        }
-        if (stakingBalance.isDefinedAt(entry.trim)) {
-          out += s"Net ${stakingBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
-        }
-        if (confirmedAlpha.isDefinedAt(entry.trim)) {
-          out += f"Confirmed Stake ${confirmedAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
-        }
-        if (confirmedBalance.isDefinedAt(entry.trim)) {
-          out += s"Net ${confirmedBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
-        }
-        out
-      })
-      background = backgroundC
-      foreground = foregroundC
-    }
-  }.toOption
-
   def refreshPeerList = if (Parameters.useGui) {
-    peerList.get.peer.setListData(peerSeq.toArray)
+    prosomoWindow.get.peerList.get.peer.setListData(peerSeq.toArray)
   }
 
-  var outputText = Try{
-    new ColorTextArea {
-      editable = false
-      font = swing.Font("Monospaced",Style.Plain,14)
-      background = backgroundC
-      foreground = foregroundC
-      lineWrap = true
-    }
-  }.toOption
-
-  var outputElem = Try{
-    new ScrollPane(outputText.get) {
-      verticalScrollBar.value = verticalScrollBar.maximum
-      maximumSize = new Dimension(2000,2000)
-      preferredSize = new Dimension(800,400)
-      minimumSize = new Dimension(100,100)
-    }
-  }.toOption
 
   def refreshOutput = if (Parameters.useGui) {
-    outputText.get.appendANSI(outText.toString)
-    if (!outputElem.get.verticalScrollBar.valueIsAdjusting) while (outputText.get.lineCount > 2000) {
-      outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
+    prosomoWindow.get.outputText.get.appendANSI(outText.toString)
+    if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting) while (prosomoWindow.get.outputText.get.lineCount > 2000) {
+      prosomoWindow.get.outputText.get.text = prosomoWindow.get.outputText.get.text.drop(prosomoWindow.get.outputText.get.text.indexOf('\n')+1)
     }
     outText.reset()
-    if (!outputElem.get.verticalScrollBar.valueIsAdjusting) outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
+    if (!prosomoWindow.get.outputElem.get.verticalScrollBar.valueIsAdjusting) prosomoWindow.get.outputElem.get.verticalScrollBar.value = prosomoWindow.get.outputElem.get.verticalScrollBar.maximum
   }
 
   var confirmedBalance:Map[String,BigInt] = Map()

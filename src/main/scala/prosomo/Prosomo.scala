@@ -1,9 +1,9 @@
 package prosomo
 
-import java.awt.Dimension
+import java.awt.{Color, Dimension}
 
 import prosomo.primitives.Parameters.{devMode, inputSeed, messageSpecs, useGui}
-import prosomo.primitives.{FastCryptographicHash, SharedData}
+import prosomo.primitives.{ColorTextArea, FastCryptographicHash, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
 import java.net.InetSocketAddress
 
@@ -21,9 +21,11 @@ import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import com.typesafe.config.{Config, ConfigFactory}
+import javax.swing.BorderFactory
 import prosomo.cases.GuiCommand
 
 import scala.concurrent.ExecutionContext
+import scala.swing.Font.Style
 import scala.swing._
 import scala.util.Try
 
@@ -156,6 +158,7 @@ object Prosomo extends App {
   var instance:Option[Prosomo] = None
   if (useGui) {
     val newWindow = new ProsomoWindow(prosomo.primitives.Parameters.config)
+    SharedData.prosomoWindow = Some(newWindow)
     newWindow.window match {
       case None => {
         instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
@@ -218,17 +221,57 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
+  val backgroundC = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
+  val foregroundC = Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)
+
+  var peerList = Try{
+    new ListView(SharedData.peerSeq) {
+      font = swing.Font("Monospaced",Style.Plain,14)
+      renderer = ListView.Renderer(entry=>{
+        val padlen = 30
+        var out = entry.padTo(60,' ').take(60)
+        if (SharedData.stakingAlpha.isDefinedAt(entry.trim)) {
+          out += f"Epoch Stake ${SharedData.stakingAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
+        }
+        if (SharedData.stakingBalance.isDefinedAt(entry.trim)) {
+          out += s"Net ${SharedData.stakingBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
+        }
+        if (SharedData.confirmedAlpha.isDefinedAt(entry.trim)) {
+          out += f"Confirmed Stake ${SharedData.confirmedAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
+        }
+        if (SharedData.confirmedBalance.isDefinedAt(entry.trim)) {
+          out += s"Net ${SharedData.confirmedBalance(entry.trim)}".padTo(padlen,' ').take(padlen)
+        }
+        out
+      })
+      background = backgroundC
+      foreground = foregroundC
+    }
+  }.toOption
+
   val peerListElem = Try{
-    new ScrollPane(SharedData.peerList.get) {
+    new ScrollPane(peerList.get) {
       maximumSize = new Dimension(2000,2000)
       preferredSize = new Dimension(800,400)
       minimumSize = new Dimension(100,100)
     }
   }.toOption
 
-  val connectField = Try{
+  val knownAddressField = Try{
     new TextField {
       text = "35.192.11.126:9084"
+      columns = 20
+      editable = true
+      maximumSize = new Dimension(2000,50)
+    }
+  }.toOption
+
+  val declaredAddressField = Try{
+    new TextField {
+      text = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
+        case Some(adr) if adr != "" => adr
+        case None => ""
+      }
       columns = 20
       editable = true
       maximumSize = new Dimension(2000,50)
@@ -246,8 +289,13 @@ class ProsomoWindow(config:Config) {
       reactions += {
         case event.ButtonClicked(_) =>
           val useUpnp = if (upnpCheck.get.selected) {"yes"} else {"no"}
-          val knownPeer = "\""+connectField.get.text+"\""
-          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer]}}}"
+          val knownPeer = "\""+knownAddressField.get.text+"\""
+          val declaredAddress = if (upnpCheck.get.selected) {
+            "\"\""
+          } else {
+            "\""+declaredAddressField.get.text+"\""
+          }
+          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer],declaredAddress=$declaredAddress}}}"
           windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
           upnpCheck.get.enabled = false
           waitToConnect = false
@@ -257,11 +305,33 @@ class ProsomoWindow(config:Config) {
 
   val connectElem = Try{
     new BoxPanel(Orientation.Horizontal) {
-      contents += connectField.get
+      contents += new TextField(" Bootstrap address: ") {editable=false;border=BorderFactory.createEmptyBorder()}
+      contents += knownAddressField.get
+      contents += new TextField("  Declared address: ") {editable=false;border=BorderFactory.createEmptyBorder()}
+      contents += declaredAddressField.get
       contents += upnpCheck.get
       contents += connectButton.get
     }
   }
+
+  val outputText = Try{
+    new ColorTextArea {
+      editable = false
+      font = swing.Font("Monospaced",Style.Plain,14)
+      background = backgroundC
+      foreground = foregroundC
+      lineWrap = true
+    }
+  }.toOption
+
+  val outputElem = Try{
+    new ScrollPane(outputText.get) {
+      verticalScrollBar.value = verticalScrollBar.maximum
+      maximumSize = new Dimension(2000,2000)
+      preferredSize = new Dimension(800,400)
+      minimumSize = new Dimension(100,100)
+    }
+  }.toOption
 
   val window:Option[Frame] = Try{
     new Frame {
@@ -288,7 +358,7 @@ class ProsomoWindow(config:Config) {
         if (devMode) contents += commandElem.get
         contents += connectElem.get
         contents += peerListElem.get
-        contents += SharedData.outputElem.get
+        contents += outputElem.get
       }
       pack()
       centerOnScreen()
@@ -307,8 +377,9 @@ class ProsomoWindow(config:Config) {
       if (runApp) {
         connectButton.get.enabled = false
         connectButton.get.text = "Connecting..."
-        connectField.get.editable = false
-        SharedData.outputText.get.text = "Loading..."
+        knownAddressField.get.editable = false
+        declaredAddressField.get.editable = false
+        outputText.get.text = "Loading..."
         System.setOut(SharedData.printStream)
       }
     }
