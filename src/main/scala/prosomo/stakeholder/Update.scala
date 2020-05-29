@@ -193,7 +193,6 @@ trait Update extends Members {
             case None =>
           }
         }
-        Try{SharedData.refreshPeerList}
       }
       updating = false
     }
