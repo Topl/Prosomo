@@ -604,16 +604,17 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def registerNC: Receive = {
     case InvalidateHolders(peerName) => {
       var holdersOut:List[ActorRefWrapper] = List()
-      for (holder <- holders) Try{
-        if (pathToPeer(holder.actorPath) != peerName) {
-          holdersOut ::= holder
-        } else {
+      for (holder <- holders.filter(_.remote)) Try{
+        println(pathToPeer(holder.actorPath),holder.actorPath)
+        if (pathToPeer(holder.actorPath) == peerName) {
           pathToPeer -= holder.actorPath
+        } else {
+          holdersOut ::= holder
         }
       }
       if (useGui) Try{SharedData.guiPeerInfo -= peerName}
       println("Peer removed: "+peerName)
-      holders = holdersOut
+      holders = holdersOut ++ holders.filterNot(_.remote)
       coordinatorRef ! HoldersFromRemote(holders)
     }
     case Register => {
