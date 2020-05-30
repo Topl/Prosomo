@@ -466,12 +466,13 @@ trait Receive extends Members {
     /**prints inbox */
     case Inbox => {
       var i = 0
-      println("Holder "+holderIndex.toString+":"+Base58.encode(sessionId.data))
+      println("Holder "+holderIndex.toString+" sid:"+Base58.encode(sessionId.data)+", Inbox:")
       for (entry <- inbox) {
         println(i.toString+" "+Base58.encode(entry._1.data))
         i+=1
       }
-      println("")
+      println("Known holders:")
+      holders.foreach(r=>println(r.actorPath.toString))
       sender() ! "done"
     }
 

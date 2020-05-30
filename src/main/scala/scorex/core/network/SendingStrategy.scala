@@ -35,7 +35,15 @@ case class SendToPeer(chosenPeer: ConnectedPeer) extends SendingStrategy {
 }
 
 case class SendToPeerByName(chosenPeer: String) extends SendingStrategy {
-  override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = peers.filter(p => p.peerInfo.get.peerSpec.agentName == chosenPeer )
+  override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
+    val out = peers.filter(p => p.peerInfo.get.peerSpec.agentName == chosenPeer )
+    if (out.isEmpty) {
+      println("Error: no peer found by name "+chosenPeer)
+      println("All peers:")
+      peers.foreach(p=>println("_"+p.peerInfo.get.peerSpec.agentName+"_","_"+chosenPeer+"_",p.peerInfo.get.peerSpec.agentName == chosenPeer))
+    }
+    out
+  }
 }
 
 case class SendToPeers(chosenPeers: Seq[ConnectedPeer]) extends SendingStrategy {

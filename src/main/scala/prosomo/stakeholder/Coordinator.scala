@@ -993,7 +993,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     nextSlot orElse
     dataFile orElse {
     /**tells actors to print their inbox */
-    case Inbox => sendAssertDone(holders,Inbox)
+    case Inbox => sendAssertDone(holders.filterNot(_.remote),Inbox)
     /**passes fileWriter to actor who requests it with WriteFile*/
     case WriteFile => {sender() ! WriteFile(fileWriter)}
     /**closes the writer object to make sure data is written from buffer*/
