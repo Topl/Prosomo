@@ -473,6 +473,8 @@ trait Receive extends Members {
       }
       println("Known holders:")
       holders.foreach(r=>println(r.actorPath.toString))
+      println("Gossipers:")
+      gossipers.foreach(r=>println(r.actorPath.toString))
       sender() ! "done"
     }
 
