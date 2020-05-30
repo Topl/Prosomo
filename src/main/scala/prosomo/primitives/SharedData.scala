@@ -66,5 +66,6 @@ object SharedData extends Types {
   var stakingBalance:Map[String,BigInt] = Map()
   var confirmedAlpha:Map[String,Double] = Map()
   var stakingAlpha:Map[String,Double] = Map()
+  var walletInfo:(Int,Int,BigInt,BigInt) = (0,0,0,0)
 }
 

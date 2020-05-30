@@ -1,12 +1,10 @@
 package prosomo
 
 import java.awt.{Color, Dimension}
-
 import prosomo.primitives.Parameters.devMode
 import prosomo.primitives.{ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, SwingUtilities}
-
 import scala.swing.Font.Style
 import scala.swing._
 import scala.util.Try
@@ -75,10 +73,6 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
-  def refreshPeerList = {
-    SwingUtilities.invokeAndWait(()=>peerList.get.peer.setListData(peerSeq.toArray))
-  }
-
   val peerListElem = Try{
     new ScrollPane(peerList.get) {
       maximumSize = new Dimension(2000,2000)
@@ -92,7 +86,8 @@ class ProsomoWindow(config:Config) {
       text = "35.192.11.126:9084"
       columns = 20
       editable = true
-      maximumSize = new Dimension(2000,50)
+      maximumSize = new Dimension(150,50)
+      minimumSize = new Dimension(150,50)
     }
   }.toOption
 
@@ -100,11 +95,12 @@ class ProsomoWindow(config:Config) {
     new TextField {
       text = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
         case Some(adr) if adr != "" => adr
-        case None => ""
+        case None => prosomo.primitives.Parameters.declaredAddressFromRemote+":9084"
       }
       columns = 20
       editable = true
-      maximumSize = new Dimension(2000,50)
+      maximumSize = new Dimension(150,50)
+      minimumSize = new Dimension(150,50)
     }
   }.toOption
 
@@ -114,19 +110,43 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
+  upnpCheck.get.reactions += {
+    case event.ButtonClicked(_) => if (upnpCheck.get.selected) {declaredAddressField.get.enabled = false} else {declaredAddressField.get.enabled = true}
+  }
+
   val connectButton = Try{
     new Button("Connect") {
       reactions += {
         case event.ButtonClicked(_) =>
           val useUpnp = if (upnpCheck.get.selected) {"yes"} else {"no"}
           val knownPeer = "\""+knownAddressField.get.text+"\""
-          val declaredAddress = if (upnpCheck.get.selected) {
-            "\"\""
-          } else {
-            "\""+declaredAddressField.get.text+"\""
-          }
-          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer],declaredAddress=$declaredAddress}}}"
+          val declaredAddress = "\""+declaredAddressField.get.text+"\""
+          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer]}}}"
           windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
+          if (!upnpCheck.get.selected) Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
+            case Some(adr) if adr != "" =>
+            case _ => {
+              val str = s"input{scorex{network{declaredAddress=$declaredAddress}}}"
+              Try{
+                windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
+              }.toOption match {
+                case None => println("Error: input not parsed")
+                case _ =>
+              }
+            }
+          }
+          Try{windowConfig.getString("scorex.network.agentName")}.toOption match {
+            case Some(adr) if adr != "" =>
+            case _ => {
+              val str = "input{scorex{network{agentName=\"prosomo_"+prosomo.primitives.Parameters.prosomoNodeUID+"\"}}}"
+              Try{
+                windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
+              }.toOption match {
+                case None => println("Error: input not parsed")
+                case _ =>
+              }
+            }
+          }
           upnpCheck.get.enabled = false
           waitToConnect = false
       }
@@ -135,15 +155,95 @@ class ProsomoWindow(config:Config) {
 
   val connectElem = Try{
     new BoxPanel(Orientation.Horizontal) {
-      contents += new TextField(" Bootstrap address: ") {editable=false;border=BorderFactory.createEmptyBorder()}
-      contents += knownAddressField.get
-      contents += new TextField("  Declared address: ") {editable=false;border=BorderFactory.createEmptyBorder()}
-      contents += declaredAddressField.get
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += new TextField("Bootstrap address: ") {
+          editable=false
+          maximumSize = new Dimension(122,50)
+          minimumSize = new Dimension(122,50)
+          border=BorderFactory.createEmptyBorder()
+        }
+        contents += knownAddressField.get
+        contents += new TextField("  Declared address: ") {
+          editable=false
+          maximumSize = new Dimension(125,50)
+          minimumSize = new Dimension(125,50)
+          border=BorderFactory.createEmptyBorder()
+        }
+        contents += declaredAddressField.get
+        maximumSize = new Dimension(2000,50)
+        border=BorderFactory.createEmptyBorder()
+      }
       contents += upnpCheck.get
       contents += connectButton.get
       maximumSize = new Dimension(2000,50)
+      border=BorderFactory.createEmptyBorder()
     }
-  }
+  }.toOption
+
+  val issueTxButton = Try{
+    new Button ("Issue Transaction") {
+      enabled = false
+    }
+  }.toOption
+
+  val recipientField = Try{
+    new TextField {
+      text = ""
+      columns = 20
+      editable = true
+      maximumSize = new Dimension(150,50)
+      minimumSize = new Dimension(150,50)
+    }
+  }.toOption
+
+  val issueTxWindow:Option[Frame] = Try{
+    new Frame {
+      reactions += {
+        case event.WindowClosing(_) => {
+
+        }
+      }
+      title = "Issue Transaction"
+      iconImage = toolkit.getImage("src/main/resources/Logo.png")
+      contents = new BoxPanel(Orientation.Vertical) {
+        border = Swing.EmptyBorder(10, 10, 10, 10)
+        contents += recipientField.get
+      }
+      maximumSize = new Dimension(400,200)
+      minimumSize = new Dimension(400,200)
+      pack()
+      centerOnScreen()
+    }
+  }.toOption
+
+  val pendingTxField = Try{
+    new TextField {
+      editable=false
+      border=BorderFactory.createEmptyBorder()
+      text = {
+        val (ptxs,ttxs,cb,pb) = SharedData.walletInfo
+        s"Pending Txs: $ptxs" + s"   Confirmed Txs: $ttxs" + s"   Balance: $cb" + s"   Pending: $pb"
+      }
+      enabled = false
+    }
+  }.toOption
+
+  val walletStats = Try{
+    new BoxPanel(Orientation.Horizontal) {
+      contents += pendingTxField.get
+      maximumSize = new Dimension(2000,50)
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
+
+  val walletElem = Try{
+    new BoxPanel(Orientation.Horizontal) {
+      contents += walletStats.get
+      contents += issueTxButton.get
+      maximumSize = new Dimension(2000,50)
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
 
   val outputText = Try{
     new ColorTextArea {
@@ -182,6 +282,19 @@ class ProsomoWindow(config:Config) {
     }
   }
 
+  def refreshPeerList = {
+    SwingUtilities.invokeAndWait(()=>peerList.get.peer.setListData(peerSeq.toArray))
+  }
+
+  def refreshWallet = {
+    if (pendingTxField.get.enabled) {
+      val (ptxs,ttxs,cb,pb) = SharedData.walletInfo
+      Swing.onEDT{
+        pendingTxField.get.text = s"Pending Txs: $ptxs" + s"   Confirmed Txs: $ttxs" + s"   Balance: $cb" + s"   Pending: $pb"
+      }
+    }
+  }
+
   val window:Option[Frame] = Try{
     new Frame {
       /*
@@ -206,6 +319,7 @@ class ProsomoWindow(config:Config) {
         border = Swing.EmptyBorder(10, 10, 10, 10)
         if (devMode) contents += commandElem.get
         contents += connectElem.get
+        contents += walletElem.get
         contents += peerListElem.get
         contents += outputElem.get
       }

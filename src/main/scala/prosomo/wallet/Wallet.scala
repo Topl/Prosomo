@@ -36,14 +36,18 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
     }
   }
 
-  def getBalance:BigInt = {
+  def getConfirmedBalance:BigInt = {
     availableBalance = confirmedState(pkw)._1
     availableBalance
   }
 
-  def getTotalBalance:BigInt = {
+  def getPendingBalance:BigInt = {
     totalBalance = issueState(pkw)._1
     totalBalance
+  }
+
+  def getNumPending:Int = {
+    pendingTxsOut.keySet.size
   }
 
   def getTxCounter:Int = {

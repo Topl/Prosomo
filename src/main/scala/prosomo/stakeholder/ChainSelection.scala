@@ -17,6 +17,9 @@ trait ChainSelection extends Members {
     val bn:Int = getBlockHeader(id).get._9
     if (bn == 0) {
       wallet.update(history.get(id).get._1)
+      if (holderIndex == SharedData.printingHolder) {
+        SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+      }
     } else {
       breakable{
         while (true) {
@@ -26,6 +29,9 @@ trait ChainSelection extends Members {
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
                 wallet.update(history.get(id).get._1)
+                if (holderIndex == SharedData.printingHolder) {
+                  SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+                }
                 break
               }
             }

@@ -45,31 +45,6 @@ object Parameters {
         case _ =>
       }
     )
-
-    Try{localConfig.getString("scorex.network.declaredAddress")}.toOption match {
-      case Some(adr) if adr != "" =>
-      case _ => {
-        val str = "input{scorex{network{declaredAddress=\""+declaredAddressFromRemote+":9084\"}}}"
-        Try{
-          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
-        }.toOption match {
-          case None => println("Error: input not parsed")
-          case _ =>
-        }
-      }
-    }
-    Try{localConfig.getString("scorex.network.agentName")}.toOption match {
-      case Some(adr) if adr != "" =>
-      case _ => {
-        val str = "input{scorex{network{agentName=\"prosomo_"+prosomoNodeUID+"\"}}}"
-        Try{
-          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
-        }.toOption match {
-          case None => println("Error: input not parsed")
-          case _ =>
-        }
-      }
-    }
     localConfig
   }
 

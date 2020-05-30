@@ -356,6 +356,15 @@ trait Receive extends Members {
 
     /**starts the timer that repeats the update command*/
     case Run => {
+      if (holderIndex == SharedData.printingHolder && useGui) Try{
+        val win = SharedData.prosomoWindow.get
+        win.pendingTxField.get.enabled = true
+        win.issueTxButton.get.enabled = true
+        win.issueTxButton.get.reactions += {
+          case scala.swing.event.ButtonClicked(_) =>
+            win.issueTxWindow.get.open()
+        }
+      }
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
@@ -466,8 +475,8 @@ trait Receive extends Members {
     }
 
     case GetBalance => {
-      val netAvailable = wallet.getBalance
-      val netTotal = wallet.getTotalBalance
+      val netAvailable = wallet.getConfirmedBalance
+      val netTotal = wallet.getPendingBalance
       println(s"Holder $holderIndex available balance: $netAvailable , total balance: $netTotal")
     }
 

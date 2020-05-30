@@ -93,7 +93,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   log.info("Using seed: "+inputSeed)
 
   val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
-  val coordinator:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
+  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
 
   window match {
     case None =>
@@ -109,7 +109,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
       }
       win.cmdButton.get.reactions += {
         case event.ButtonClicked(_) =>
-          coordinator ! GuiCommand(win.cmdField.get.text)
+          coordinatorRef ! GuiCommand(win.cmdField.get.text)
       }
     }
   }
@@ -173,7 +173,7 @@ object Prosomo extends App {
           while (newWindow.runApp) {
             newWindow.refreshOutput
             i+=1
-            if (i%100==0) {i=0;newWindow.refreshPeerList}
+            if (i%100==0) {i=0;newWindow.refreshPeerList;newWindow.refreshWallet}
             Thread.sleep(10)
           }
           instance.get.stopAll()
