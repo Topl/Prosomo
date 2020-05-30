@@ -16,7 +16,7 @@ import scala.util.Try
 
 object Parameters {
 
-  val prosomoNodeUID:String = java.util.UUID.randomUUID.toString
+  val prosomoNodeUID:String = java.util.UUID.randomUUID.toString.filterNot("-".toSet)
   //tag for identifying ledger entries
   val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
   val declaredAddressFromRemote = {
