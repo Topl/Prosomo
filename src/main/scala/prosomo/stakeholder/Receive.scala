@@ -243,6 +243,7 @@ trait Receive extends Members {
       holders.filterNot(_ == selfWrapper).foreach(
         _ ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       )
+      context.system.scheduler.scheduleOnce(10*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
     }
 
     /**validates diffused string from other holders and stores in inbox */
