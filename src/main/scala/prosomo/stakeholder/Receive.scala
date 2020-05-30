@@ -402,6 +402,7 @@ trait Receive extends Members {
       holders = list
       if (useGossipProtocol) {
         gossipers = List()
+        numHello = 0
       } else {
         gossipers = gossipSet(holderId,holders)
       }
