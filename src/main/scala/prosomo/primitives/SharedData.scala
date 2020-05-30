@@ -11,6 +11,7 @@ import com.google.common.base.{Splitter, Strings}
 import com.google.common.collect.Iterables
 import javax.swing.SwingUtilities
 import prosomo.ProsomoWindow
+import scorex.core.settings.ScorexSettings
 
 import scala.swing.Font.Style
 import scala.util.Try
@@ -60,6 +61,8 @@ object SharedData extends Types {
   def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<")}
   def throwError = {println("<---------Error------------<<<<")}
   def error:Boolean = {errorFlag}
+
+  var scorexSettings:Option[ScorexSettings] = None
 
   var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
   var confirmedBalance:Map[String,BigInt] = Map()

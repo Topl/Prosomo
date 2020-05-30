@@ -30,6 +30,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
 
   //settings
   implicit val settings: ScorexSettings = ScorexSettings.fromConfig(config)
+  SharedData.scorexSettings = Some(settings)
 
   //api
   val apiRoutes: Seq[ApiRoute] = Seq()
