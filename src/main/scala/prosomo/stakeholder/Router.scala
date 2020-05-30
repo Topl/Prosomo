@@ -588,7 +588,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ActorPath):Unit = {
     Try{spec.toBytes(c)}.toOption match {
       case Some(bytes:Array[Byte]) =>
-        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(pathToPeer(r)))
+        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(pathToPeer(r),self))
       case None =>
     }
   }
@@ -602,6 +602,20 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   private def registerNC: Receive = {
+    case InvalidateHolders(peerName) => {
+      var holdersOut:List[ActorRefWrapper] = List()
+      for (holder <- holders) Try{
+        if (pathToPeer(holder.actorPath) != peerName) {
+          holdersOut ::= holder
+        } else {
+          pathToPeer -= holder.actorPath
+        }
+      }
+      if (useGui) Try{SharedData.guiPeerInfo -= peerName}
+      println("Peer removed: "+peerName)
+      holders = holdersOut
+      coordinatorRef ! HoldersFromRemote(holders)
+    }
     case Register => {
       networkController ! RegisterMessageSpecs(messageSpecs, self)
       sender() ! "done"
