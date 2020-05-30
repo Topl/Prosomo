@@ -506,7 +506,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def holdersFromLocal: Receive = {
     /** accepts list of other holders from coordinator */
     case HoldersFromLocal(list:List[ActorRefWrapper]) => {
-      val name = s"local_"+Parameters.prosomoNodeUID+" "+Parameters.declaredAddressFromRemote
+      val name = "Local "+Parameters.declaredAddressFromRemote
       for (holder<-list) {
         if (!holders.contains(holder)) {
           holders ::= holder
