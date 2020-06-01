@@ -20,7 +20,7 @@ trait Staking extends Members {
     var out = Ratio(0)
     val base = m_f_root * a
     for (n <- 1 to o_n) {
-      out = out - ( base.pow(n) / factorial_cache(n) )
+      out = out - ( base.pow(n) * Ratio(BigInt(1),factorial_cache(n)) )
     }
     out
   }
@@ -35,7 +35,7 @@ trait Staking extends Members {
     var out = Ratio(0)
     val base = m_f * a
     for (n <- 1 to o_n) {
-      out = out - ( base.pow(n) / factorial_cache(n) )
+      out = out - ( base.pow(n) * Ratio(BigInt(1),factorial_cache(n)) )
     }
     out
   }
@@ -75,11 +75,11 @@ trait Staking extends Members {
     thresholdCache.get.get((a,index))
   }
 
-  var factorial_cache:Array[Int] = (0 to o_n).toArray.map(i=>factorial(i))
+  val factorial_cache:Array[BigInt] = (0 to o_n).toArray.map(i=>factorial(i))
 
-  def factorial(n: Int): Int = n match {
-    case 0 => 1
-    case _ => n * factorial(n-1)
+  def factorial(n: Int): BigInt = n match {
+    case 0 => BigInt(1)
+    case _ => BigInt(n) * factorial(n-1)
   }
 
   /**

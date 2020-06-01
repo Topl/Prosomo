@@ -106,7 +106,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def phi(a:Ratio,m_f:Ratio):Ratio
   def threshold_cached(a:Ratio, s_interval:Slot):Ratio
   def threshold(a:Ratio, s_interval:Slot):Ratio
-  def factorial(n: Int):Int
+  def factorial(n: Int):BigInt
   def compare(y: Array[Byte],t: Ratio):Boolean
   def relativeStake(holderKey:PublicKeyW,ls:State):Ratio
   def uuid:String
