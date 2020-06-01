@@ -131,6 +131,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
           win.confirmSendToNetworkWindow.get.close()
           win.txWin.get.issueTxWindow.get.close()
           win.txWin = None
+          win.issueTxButton.get.enabled = true
         }
       }
     }

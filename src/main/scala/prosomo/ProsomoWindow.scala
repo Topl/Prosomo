@@ -6,7 +6,7 @@ import java.awt.{Color, Dimension}
 import prosomo.primitives.Parameters.devMode
 import prosomo.primitives.{ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
-import javax.swing.{BorderFactory, JTextArea, JTextField, SwingUtilities}
+import javax.swing.{BorderFactory, SwingUtilities}
 import scorex.util.encode.Base58
 
 import scala.swing.Font.Style
@@ -194,6 +194,7 @@ class ProsomoWindow(config:Config) {
       enabled = false
       reactions += {
         case scala.swing.event.ButtonClicked(_) => {
+          enabled = false
           txWin match {
             case None =>
             case Some(win) => txWin = None
@@ -243,7 +244,9 @@ class ProsomoWindow(config:Config) {
         add(sendTxButton.get,BorderPanel.Position.East)
         add(new Button ("Cancel") {
           reactions += {
-            case scala.swing.event.ButtonClicked(_) => close()
+            case scala.swing.event.ButtonClicked(_) => {
+              close()
+            }
           }
           //maximumSize = new Dimension(150,50)
           //minimumSize = new Dimension(150,50)
@@ -310,13 +313,6 @@ class ProsomoWindow(config:Config) {
 
     recipDropList.get.peer.addActionListener(this)
 
-    override def actionPerformed(e: ActionEvent): Unit = {
-      e.getSource match {
-        case value if value == recipDropList.get.peer =>  recipField.get.text = listkeys(recipDropList.get.selection.item)
-        case _ =>
-      }
-    }
-
     val issueTxWindow:Option[Frame] = Try{
       new Frame {
         val recipElem = Try{
@@ -373,8 +369,20 @@ class ProsomoWindow(config:Config) {
         minimumSize = new Dimension(1200,200)
         pack()
         centerOnScreen()
+        override def closeOperation() = {
+          issueTxButton.get.enabled = true
+        }
       }
     }.toOption
+
+    override def actionPerformed(e: ActionEvent): Unit = {
+      e.getSource match {
+        case value if value == recipDropList.get.peer =>  recipField.get.text = listkeys(recipDropList.get.selection.item)
+        case _ =>
+      }
+    }
+
+
   }
 
   val pendingTxField = Try{
