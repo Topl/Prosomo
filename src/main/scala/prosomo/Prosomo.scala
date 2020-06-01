@@ -7,7 +7,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
-import prosomo.cases.GuiCommand
+import io.iohk.iodb.ByteArrayWrapper
+import prosomo.cases.{GuiCommand, IssueTxToAddress}
 import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
 import prosomo.primitives.{FastCryptographicHash, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
@@ -20,6 +21,8 @@ import scorex.core.network.peer.PeerManagerRef
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
+import scorex.util.encode.Base58
+
 import scala.concurrent.ExecutionContext
 import scala.swing._
 import scala.util.Try
@@ -111,6 +114,24 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
       win.cmdButton.get.reactions += {
         case event.ButtonClicked(_) =>
           coordinatorRef ! GuiCommand(win.cmdField.get.text)
+      }
+      win.sendTxButton.get.reactions += {
+        case scala.swing.event.ButtonClicked(_) => {
+          SharedData.selfWrapper match {
+            case Some(actorRefWrapper) =>
+              Base58.decode(win.txWin.get.recipField.get.text).toOption match {
+                case Some(pk) => Try{BigInt(win.txWin.get.deltaField.get.text)}.toOption match {
+                  case Some(delta) => actorRefWrapper ! IssueTxToAddress(ByteArrayWrapper(pk),delta)
+                  case None =>
+                }
+                case None =>
+              }
+            case None =>
+          }
+          win.confirmSendToNetworkWindow.get.close()
+          win.txWin.get.issueTxWindow.get.close()
+          win.txWin = None
+        }
       }
     }
   }

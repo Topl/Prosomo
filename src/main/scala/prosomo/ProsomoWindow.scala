@@ -1,15 +1,17 @@
 package prosomo
 
+import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.{Color, Dimension}
+
 import prosomo.primitives.Parameters.devMode
 import prosomo.primitives.{ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
-import javax.swing.{BorderFactory, SwingUtilities}
+import javax.swing.{BorderFactory, JTextArea, JTextField, SwingUtilities}
+import scorex.util.encode.Base58
+
 import scala.swing.Font.Style
 import scala.swing._
 import scala.util.Try
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits._
 
 class ProsomoWindow(config:Config) {
   var windowConfig:Config = config
@@ -95,7 +97,12 @@ class ProsomoWindow(config:Config) {
     new TextField {
       text = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
         case Some(adr) if adr != "" => adr
-        case None => prosomo.primitives.Parameters.declaredAddressFromRemote+":9084"
+        case None => {
+          prosomo.primitives.Parameters.declaredAddressFromRemote match {
+            case Some(str) =>str+":9084"
+            case None => ""
+          }
+        }
       }
       columns = 20
       editable = true
@@ -180,41 +187,195 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
+  var txWin:Option[IssueTxWindow] = None
+
   val issueTxButton = Try{
     new Button ("Issue Transaction") {
       enabled = false
-    }
-  }.toOption
-
-  val recipientField = Try{
-    new TextField {
-      text = ""
-      columns = 20
-      editable = true
-      maximumSize = new Dimension(150,50)
-      minimumSize = new Dimension(150,50)
-    }
-  }.toOption
-
-  val issueTxWindow:Option[Frame] = Try{
-    new Frame {
       reactions += {
-        case event.WindowClosing(_) => {
-
+        case scala.swing.event.ButtonClicked(_) => {
+          txWin match {
+            case None =>
+            case Some(win) => txWin = None
+          }
+          txWin = Try{
+            new IssueTxWindow(SharedData.issueTxInfo match {
+              case Some(info) => Base58.encode(info._1.data)
+              case None => ""
+            },SharedData.issueTxInfo.get._2.toSeq.map {
+              info =>
+                val pks = info._2._2
+                val pkw: String = Base58.encode(pks._1 ++ pks._2 ++ pks._3)
+                info._2._1.actorPath.toString() + " " + pkw
+            })
+          }.toOption
+          txWin.get.issueTxWindow.get.reactions += {
+            case event.WindowClosing(_) => {
+              txWin = None
+            }
+          }
+          txWin.get.issueTxWindow.get.open()
         }
       }
-      title = "Issue Transaction"
-      iconImage = toolkit.getImage("src/main/resources/Logo.png")
-      contents = new BoxPanel(Orientation.Vertical) {
-        border = Swing.EmptyBorder(10, 10, 10, 10)
-        contents += recipientField.get
+    }
+  }.toOption
+
+  val sendToNetworkButton = Try{
+    new Button ("Send To Network") {
+      reactions += {
+        case scala.swing.event.ButtonClicked(_) =>
+          confirmSendToNetworkWindow.get.open()
       }
-      maximumSize = new Dimension(400,200)
-      minimumSize = new Dimension(400,200)
+    }
+  }
+
+  val sendTxButton = Try {
+    new Button ("Send") {
+    }
+  }.toOption
+
+  val confirmSendToNetworkWindow = Try {
+    new Frame {
+      title = "Confirm"
+      iconImage = toolkit.getImage("src/main/resources/Logo.png")
+      contents = new BorderPanel {
+        border = Swing.EmptyBorder(10, 10, 10, 10)
+        add(sendTxButton.get,BorderPanel.Position.East)
+        add(new Button ("Cancel") {
+          reactions += {
+            case scala.swing.event.ButtonClicked(_) => close()
+          }
+          //maximumSize = new Dimension(150,50)
+          //minimumSize = new Dimension(150,50)
+        },BorderPanel.Position.West)
+        //maximumSize = new Dimension(300,100)
+        //minimumSize = new Dimension(300,100)
+      }
+      maximumSize = new Dimension(240,50)
+      minimumSize = new Dimension(240,50)
       pack()
       centerOnScreen()
     }
-  }.toOption
+  }
+
+  class IssueTxWindow(sender:String,inbox:Seq[String]) extends ActionListener {
+
+    val fieldWidth = 600
+    val fieldHight = 30
+    val dummyKey = ' '.toString * 100
+    val adr = inbox.map(str=>str.split(" ")(0))
+    val listkeys = {
+      var out:Map[String,String] = Map(dummyKey->"")
+      inbox.foreach(str=>out += (str.split(" ")(0)->str.split(" ")(1)))
+      out
+    }
+
+    val deltaField = Try{
+      new TextField {
+        columns = 92
+        editable = true
+        minimumSize = new Dimension(fieldWidth,fieldHight)
+        maximumSize = new Dimension(fieldWidth,fieldHight)
+        horizontalAlignment = Alignment.Right
+      }
+    }.toOption
+
+    val txDeltaElem = Try{
+      new BoxPanel(Orientation.Horizontal) {
+        contents += new TextField("  Amount To Send: ") {
+          editable = false
+          border = BorderFactory.createEmptyBorder()
+        }
+        contents += deltaField.get
+      }
+    }.toOption
+
+
+    val recipField = Try{
+      new TextField {
+        columns = 92
+        editable = true
+        minimumSize = new Dimension(fieldWidth,fieldHight)
+        maximumSize = new Dimension(fieldWidth,fieldHight)
+        horizontalAlignment = Alignment.Right
+      }
+    }.toOption
+
+    val recipDropList = Try{
+      new ComboBox[String](Seq(dummyKey)++adr) {
+        minimumSize = new Dimension(fieldWidth,fieldHight)
+        maximumSize = new Dimension(fieldWidth,fieldHight)
+      }
+    }.toOption
+
+    recipDropList.get.peer.addActionListener(this)
+
+    override def actionPerformed(e: ActionEvent): Unit = {
+      e.getSource match {
+        case value if value == recipDropList.get.peer =>  recipField.get.text = listkeys(recipDropList.get.selection.item)
+        case _ =>
+      }
+    }
+
+    val issueTxWindow:Option[Frame] = Try{
+      new Frame {
+        val recipElem = Try{
+          new BoxPanel(Orientation.Horizontal) {
+            contents += new TextField("  Recipient Public Address: ") {
+              editable = false
+              border = BorderFactory.createEmptyBorder()
+            }
+            contents += recipField.get
+          }
+        }.toOption
+
+        val senderField = Try{
+          new TextField {
+            text = sender
+            columns = 92
+            editable = false
+            minimumSize = new Dimension(fieldWidth,fieldHight)
+            maximumSize = new Dimension(fieldWidth,fieldHight)
+            horizontalAlignment = Alignment.Right
+          }
+        }.toOption
+
+        val senderElem = Try{
+          new BoxPanel(Orientation.Horizontal) {
+            contents += new TextField("  Sender Public Address: ") {
+              editable=false
+              border=BorderFactory.createEmptyBorder()
+            }
+            contents += senderField.get
+          }
+        }.toOption
+
+        title = "Issue Transaction"
+        iconImage = toolkit.getImage("src/main/resources/Logo.png")
+        contents = new BoxPanel(Orientation.Vertical) {
+          border = Swing.EmptyBorder(10, 10, 10, 10)
+          contents += senderElem.get
+          contents += {
+            new BoxPanel(Orientation.Horizontal) {
+              contents += new TextField("  Choose Public Address: ") {
+                editable = false
+                border = BorderFactory.createEmptyBorder()
+              }
+              contents += recipDropList.get
+            }
+          }
+          contents += recipElem.get
+          contents += txDeltaElem.get
+          contents += sendToNetworkButton.get
+        }
+
+        maximumSize = new Dimension(1200,200)
+        minimumSize = new Dimension(1200,200)
+        pack()
+        centerOnScreen()
+      }
+    }.toOption
+  }
 
   val pendingTxField = Try{
     new TextField {
@@ -265,19 +426,14 @@ class ProsomoWindow(config:Config) {
   }.toOption
 
   def refreshOutput = {
-    val backgroundOperation: Future[Unit] = Future {
-      val toAdd = SharedData.outText.toString
-      SharedData.outText.reset()
-      outputText.get.appendANSI(toAdd)
-    }
-    backgroundOperation onComplete { _ =>
-      Swing.onEDT {
-        if (!outputElem.get.verticalScrollBar.valueIsAdjusting) {
-          while (outputText.get.lineCount > 2000) {
-            outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
-          }
-          outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
+    Swing.onEDT {
+      if (!outputElem.get.verticalScrollBar.valueIsAdjusting) {
+        outputText.get.appendANSI(SharedData.outText.toString)
+        SharedData.outText.reset()
+        while (outputText.get.lineCount > 2000) {
+          outputText.get.text = outputText.get.text.drop(outputText.get.text.indexOf('\n')+1)
         }
+        outputElem.get.verticalScrollBar.value = outputElem.get.verticalScrollBar.maximum
       }
     }
   }

@@ -19,6 +19,8 @@ trait ChainSelection extends Members {
       wallet.update(history.get(id).get._1)
       if (holderIndex == SharedData.printingHolder) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+        SharedData.issueTxInfo = Some((keys.pkw,inbox))
+        SharedData.selfWrapper = Some(selfWrapper)
       }
     } else {
       breakable{
@@ -31,6 +33,8 @@ trait ChainSelection extends Members {
                 wallet.update(history.get(id).get._1)
                 if (holderIndex == SharedData.printingHolder) {
                   SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+                  SharedData.issueTxInfo = Some((keys.pkw,inbox))
+                  SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
               }

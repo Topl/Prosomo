@@ -4,7 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, Hello, WriteFile}
 import prosomo.components.Tine
-import prosomo.primitives.Parameters.{f_dynamic, m_f_range}
+import prosomo.primitives.Parameters.useGui
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
@@ -147,7 +147,11 @@ trait Update extends Members {
         }
         case _ =>
       }
-      if (holderIndex == SharedData.printingHolder && globalSlot%5 == 0) {
+
+      if (holderIndex == SharedData.printingHolder && useGui) {
+        SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+        SharedData.issueTxInfo = Some((keys.pkw,inbox))
+        SharedData.selfWrapper = Some(selfWrapper)
         for (holder<-holders) {
           inbox.toList.find(info=>info._2._1==holder) match {
             case Some(inboxInfo) => Try{

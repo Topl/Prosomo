@@ -58,8 +58,8 @@ object SharedData extends Types {
     diskAccess = true
   }
 
-  def throwError(id:Int) = {println(s"Holder $id <---------Error------------<<<<")}
-  def throwError = {println("<---------Error------------<<<<")}
+  def throwError(id:Int) = {println(s"Holder $id ---------Error----------")}
+  def throwError = {println("---------Error----------")}
   def error:Boolean = {errorFlag}
 
   var scorexSettings:Option[ScorexSettings] = None
@@ -70,5 +70,7 @@ object SharedData extends Types {
   var confirmedAlpha:Map[String,Double] = Map()
   var stakingAlpha:Map[String,Double] = Map()
   var walletInfo:(Int,Int,BigInt,BigInt) = (0,0,0,0)
+  var issueTxInfo:Option[(PublicKeyW,Map[Sid,(ActorRefWrapper,PublicKeys)])] = None
+  var selfWrapper:Option[ActorRefWrapper] = None
 }
 

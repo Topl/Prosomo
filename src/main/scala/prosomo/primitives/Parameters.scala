@@ -19,12 +19,12 @@ object Parameters {
   val prosomoNodeUID:String = java.util.UUID.randomUUID.toString.filterNot("-".toSet)
   //tag for identifying ledger entries
   val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
-  val declaredAddressFromRemote = {
+  val declaredAddressFromRemote = Try{
     val whatismyip = new URL("http://checkip.amazonaws.com")
     val in:BufferedReader = new BufferedReader(new InputStreamReader(
       whatismyip.openStream()))
     in.readLine()
-  }
+  }.toOption
 
   def getConfig:Config = {
     val baseConfig = ConfigFactory.load
