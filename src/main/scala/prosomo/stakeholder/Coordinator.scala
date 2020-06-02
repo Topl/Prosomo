@@ -56,7 +56,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
-  override val fch = new Fch
+  val fch = new Fch
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
