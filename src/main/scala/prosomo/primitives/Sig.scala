@@ -1,10 +1,14 @@
 package prosomo.primitives
 
 import java.security.SecureRandom
-
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.{Ed25519KeyGenerationParameters, Ed25519PrivateKeyParameters, Ed25519PublicKeyParameters}
 import org.bouncycastle.math.ec.rfc8032.Ed25519
+
+/**
+  * Ledger signing routine using Ed25519
+  * this is the only functionality needed for issuing transactions
+  */
 
 class Sig {
 

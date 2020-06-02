@@ -22,6 +22,15 @@ import prosomo.components.Serializer
 import scala.util.{Failure, Success, Try}
 import prosomo.primitives.Types.Slot
 
+/**
+  * Key container and file loader, updates keys with secure erasure on disk and encrypts/decrypts local keys
+  * @param sig_info encryption info
+  * @param vrf_info encryption info
+  * @param kes_info encryption info
+  * @param fileName this key configuration on disk
+  * @param oldFileName previous key configuration on disk as backup
+  */
+
 case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Array[Byte]),
                    vrf_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Array[Byte]),
                    kes_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Array[Byte]),
@@ -172,7 +181,6 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     }
     (map0++map1++map2++map3).asJson
   }
-
 }
 
 object KeyFile {

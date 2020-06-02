@@ -1,20 +1,16 @@
 package prosomo.primitives
 
 import prosomo.stakeholder.ActorRefWrapper
-
-import scala.swing.{ColorChooser, ListView, ScrollPane, TextArea}
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import java.awt.{Color, Dimension}
-
-import com.google.common.base.{Splitter, Strings}
-import com.google.common.collect.Iterables
-import javax.swing.SwingUtilities
 import prosomo.ProsomoWindow
 import scorex.core.settings.ScorexSettings
 
-import scala.swing.Font.Style
-import scala.util.Try
+/*
+  Singlton object for quick sharing of references and data between actors with no message passing
+  Used for GUI information, the printing stakeholder writes to members that the GUI reads
+  Includes timing tools and aux information for debugging
+ */
 
 object SharedData extends Types {
   var counter = 0

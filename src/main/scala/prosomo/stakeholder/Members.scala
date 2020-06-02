@@ -4,10 +4,8 @@ import akka.actor.{Actor, ActorPath, Cancellable, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Serializer, Tine, Transaction}
+import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
-import prosomo.wallet._
-
 import scala.math.BigInt
 import scala.util.Random
 
@@ -20,7 +18,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   val storageDir:String
   val localChain:Tine
   val blocks:BlockStorage
-//  val chainHistory:SlotHistoryStorage
   val walletStorage:WalletStorage
   val vrf:Vrf
   val kes:Kes

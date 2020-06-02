@@ -1,5 +1,9 @@
 package prosomo.primitives;
 
+/*
+ arc-length distance calculator
+ */
+
 class DistanceCalculator
 {
     public static double distance(double lat1, double lon1, double lat2, double lon2, String unit) {

@@ -2,8 +2,11 @@ package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Transaction
-
 import scala.math.BigInt
+
+/*
+  Shared types referenced project wide
+ */
 
 trait SimpleTypes {
   val pk_length = 32

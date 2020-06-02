@@ -2,11 +2,10 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Cancellable, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf, Fch}
+import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Serializer, Tine}
+import prosomo.components.{Serializer, Tine, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
-import prosomo.wallet.Wallet
 
 import scala.math.BigInt
 import scala.util.Random

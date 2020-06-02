@@ -5,10 +5,12 @@ import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
 import prosomo.primitives.Mac
-
 import scala.math.BigInt
 
-// case objects and classes for pattern matching messages between actors
+/*
+  Case objects and classes for pattern matching messages between actors
+ */
+
 case object Diffuse
 case object Inbox
 case object CloseDataFile

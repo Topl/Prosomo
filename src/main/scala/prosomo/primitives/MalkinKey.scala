@@ -1,6 +1,11 @@
 package prosomo.primitives
 import com.google.common.primitives.Ints
 
+/**
+  * MalkinKey is a private key of the MMM construction with a specified time step offset
+  * the offset is constrained by the public key and signatures include the offset
+  */
+
 class MalkinKey {
   var L:Tree[Array[Byte]] = Leaf(Array())
   var Si:Tree[Array[Byte]] = Leaf(Array())

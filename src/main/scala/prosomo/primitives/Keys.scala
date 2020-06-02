@@ -1,8 +1,11 @@
 package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
-
 import scala.util.Try
+
+/*
+  Sig, Vrf, and Kes keys all in one place
+ */
 
 class Keys extends Types {
   var sk_vrf:PrivateKey = Array()

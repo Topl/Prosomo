@@ -2,9 +2,12 @@ package prosomo.history
 
 import prosomo.primitives.{ByteStream, Fch, LDBStore, Ratio, SimpleTypes}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Serializer
-import prosomo.wallet.Wallet
+import prosomo.components
+import prosomo.components.{Serializer, Wallet}
 
+/*
+  Wallet is saved to disk on reorg
+ */
 
 class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
@@ -19,7 +22,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
   def restore(serializer: Serializer,pkw:ByteArrayWrapper,fee_r:Ratio):Wallet = if (storageFlag) {
     def newWallet:Wallet = {
       println("New wallet")
-      val out = Wallet(pkw,fee_r)
+      val out = components.Wallet(pkw,fee_r)
       store(out,serializer)
       out
     }
@@ -38,7 +41,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
     }
   } else {
     println("New wallet")
-    Wallet(pkw,fee_r)
+    components.Wallet(pkw,fee_r)
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString

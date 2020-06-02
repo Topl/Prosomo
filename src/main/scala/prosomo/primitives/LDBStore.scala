@@ -6,6 +6,12 @@ import org.iq80.leveldb._
 import org.iq80.leveldb.impl.Iq80DBFactory._
 import io.iohk.iodb.ByteArrayWrapper
 
+/**
+  * Disk storage database using LevelDB
+  * this is the primary disk storage interface used for consensus
+  * @param dir database directory
+  */
+
 case class LDBStore(dir:String) {
 
   private val lock:ReentrantReadWriteLock = new ReentrantReadWriteLock()

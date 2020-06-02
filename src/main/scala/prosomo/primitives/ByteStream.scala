@@ -2,6 +2,10 @@ package prosomo.primitives
 
 import com.google.common.primitives.{Ints, Longs}
 
+/*
+  Simple byte array handler for serialization
+ */
+
 class ByteStream(var data:Array[Byte],co:Any) {
   def get(n:Int):Array[Byte] = {
     if (n>data.length) println("Error: ByteStream reached early end of stream")

@@ -4,6 +4,11 @@ import scala.swing.TextArea
 import java.awt.Color
 import scala.util.control.Breaks.{break, breakable}
 
+/*
+  parser to remove color text codes from jtextarea
+  uses code from https://stackoverflow.com/questions/6899282/ansi-colors-in-java-swing-text-fields
+ */
+
 class ColorTextArea extends TextArea {
 
   val D_Black: Color = Color.getHSBColor(0.000f, 0.000f, 0.000f)

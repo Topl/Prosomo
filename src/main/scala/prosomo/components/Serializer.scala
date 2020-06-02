@@ -2,7 +2,15 @@ package prosomo.components
 
 import prosomo.primitives._
 
+/*
+   Serializer class for actors
+ */
+
 class Serializer extends SimpleTypes with SerializationMethods
+
+/*
+  Deserialize pattern matching
+ */
 
 object Serializer {
   case object DeserializeBlock

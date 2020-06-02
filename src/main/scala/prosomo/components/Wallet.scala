@@ -1,8 +1,7 @@
-package prosomo.wallet
+package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Ratio, Sig, Types}
-import prosomo.components.{Serializer, Transaction}
 import prosomo.stakeholder.Transactions
 
 import scala.collection.immutable.ListMap

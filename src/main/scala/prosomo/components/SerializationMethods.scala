@@ -4,8 +4,9 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.components
 import prosomo.primitives._
-import prosomo.wallet.Wallet
+
 import scala.math.BigInt
 
 trait SerializationMethods extends SimpleTypes {
@@ -20,34 +21,9 @@ trait SerializationMethods extends SimpleTypes {
     SendTxType
   }
 
-
-  /**
-    * Byte serialization
-    * @param value any object to be serialized
-    * @return byte array
-    */
-  private def serialize(value: Any): Array[Byte] = {
-    val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-    val oos = new ObjectOutputStream(stream)
-    oos.writeObject(value)
-    oos.close()
-    stream.toByteArray
-  }
-
-
-  //not to be used for serialization and deserialization, only use for router to calculate message length
-  def getAnyBytes(input:Any):Array[Byte] = {
-    input match {
-      case block:Block => sBlock(block)
-      case mac:Mac => sMac(mac)
-      case transaction: Transaction => sTransaction(transaction)
-      case ratio: Ratio => sRatio(ratio)
-      case blockHeader: BlockHeader@unchecked => sBlockHeader(blockHeader)
-      case _ => serialize(input)
-    }
-  }
-
-  //byte serializers for all types and classes
+  /*
+     byte serializers for all types and classes
+   */
   def getBytes(bytes:Array[Byte]):Array[Byte] = bytes
   def getBytes(int:BigInt):Array[Byte] = sBigInt(int)
   def getBytes(int:Int):Array[Byte] = Ints.toByteArray(int)
@@ -874,7 +850,7 @@ trait SerializationMethods extends SimpleTypes {
     val out2len = stream.getInt
     val out2Bytes = new ByteStream(stream.get(out2len),stream.caseObject)
     val out2:Ratio = dRatio(out2Bytes)
-    val out = Wallet(out1,out2)
+    val out = components.Wallet(out1,out2)
     val out3len = stream.getInt
     val b1 = new ByteStream(stream.get(out3len),stream.caseObject)
     out.pendingTxsOut = dTxMap(b1)
@@ -900,5 +876,26 @@ trait SerializationMethods extends SimpleTypes {
     out.confirmedState = dState(b7)
     assert(stream.empty)
     out
+  }
+
+  /*
+  Do not use for consensus, only for estimate of msg size in local delay model
+ */
+  def getAnyBytes(input:Any):Array[Byte] = {
+    def serialize(value: Any): Array[Byte] = {
+      val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(stream)
+      oos.writeObject(value)
+      oos.close()
+      stream.toByteArray
+    }
+    input match {
+      case block:Block => sBlock(block)
+      case mac:Mac => sMac(mac)
+      case transaction: Transaction => sTransaction(transaction)
+      case ratio: Ratio => sRatio(ratio)
+      case blockHeader: BlockHeader@unchecked => sBlockHeader(blockHeader)
+      case _ => serialize(input)
+    }
   }
 }
