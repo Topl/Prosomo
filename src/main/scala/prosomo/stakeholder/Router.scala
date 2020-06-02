@@ -4,10 +4,11 @@ import akka.actor.{Actor, ActorPath, Props, Timers}
 import akka.util.Timeout
 import prosomo.cases._
 import prosomo.components.Serializer
-import prosomo.primitives.{Distance, Parameters, SharedData, Types}
+import prosomo.primitives.{Distance, Fch, Parameters, SharedData, Types}
 import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.util.encode.Base58
+
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -15,9 +16,9 @@ import scala.math.BigInt
 import scala.util.{Failure, Random, Success, Try}
 import scorex.core.network._
 import scorex.core.network.ConnectedPeer
-import scorex.core.network.message.{MessageSpec,Message}
+import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
-import scorex.core.network.NetworkController.ReceivableMessages.{SendToNetwork,RegisterMessageSpecs}
+import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
 
 
 class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
@@ -27,6 +28,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   val serializer:Serializer = new Serializer
   var holders:List[ActorRefWrapper] = List()
   val rng = new Random(BigInt(seed).toLong)
+  val fch = new Fch
   var holdersPosition:Map[ActorRefWrapper,(Double,Double)] = Map()
   var distanceMap:Map[(ActorRefWrapper,ActorRefWrapper),Long] = Map()
   var holderMessages:Map[Slot,Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]]] = Map()

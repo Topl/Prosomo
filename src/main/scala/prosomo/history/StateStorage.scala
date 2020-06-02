@@ -3,7 +3,7 @@ package prosomo.history
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalNotification}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, LDBStore, SharedData, Types}
+import prosomo.primitives.{ByteStream, Fch, LDBStore, SharedData, Types}
 import scorex.util.encode.Base58
 
 import scala.util.Try
@@ -13,7 +13,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.primitives.Parameters.{cacheSize,one_third_epoch}
   val dbCacheSize = 4
   type DB = LDBStore
-
+  val fch:Fch = new Fch
 
   private val stateStoreCache:LoadingCache[BigInt,DB] = CacheBuilder.newBuilder()
     .maximumSize(dbCacheSize)

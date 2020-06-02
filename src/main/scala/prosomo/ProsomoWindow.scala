@@ -231,8 +231,7 @@ class ProsomoWindow(config:Config) {
   }
 
   val sendTxButton = Try {
-    new Button ("Send") {
-    }
+    new Button ("Send")
   }.toOption
 
   val confirmSendToNetworkWindow = Try {
@@ -292,7 +291,6 @@ class ProsomoWindow(config:Config) {
         contents += deltaField.get
       }
     }.toOption
-
 
     val recipField = Try{
       new TextField {
@@ -381,8 +379,25 @@ class ProsomoWindow(config:Config) {
         case _ =>
       }
     }
+  }
 
+  var keyWin:Option[KeyManagerWindow] = None
 
+  class KeyManagerWindow() extends ActionListener {
+
+    val window = Try{
+
+      new Frame {
+        maximumSize = new Dimension(1200,500)
+        minimumSize = new Dimension(1200,500)
+      }
+    }
+
+    override def actionPerformed(e: ActionEvent): Unit = {
+      e.getSource match {
+        case _ =>
+      }
+    }
   }
 
   val pendingTxField = Try{

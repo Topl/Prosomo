@@ -176,7 +176,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
 }
 
 object KeyFile {
-
+  val fch = new Fch
   def getDerivedKey(password: String, salt: Array[Byte]): Array[Byte] = {
     SCrypt.generate(password.getBytes(StandardCharsets.UTF_8), salt, scala.math.pow(2, 14).toInt, 8, 1, 32)
   }
@@ -249,14 +249,14 @@ object KeyFile {
              vrf:Vrf,
              kes:Kes,
              slot:Slot,
-             seed1:Array[Byte]=FastCryptographicHash(uuid),
-             seed2:Array[Byte]=FastCryptographicHash(uuid),
-             seed3:Array[Byte]=FastCryptographicHash(uuid)
+             seed1:Array[Byte]=fch.hash(uuid),
+             seed2:Array[Byte]=fch.hash(uuid),
+             seed3:Array[Byte]=fch.hash(uuid)
   ):KeyFile = {
     val newKeys = Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,slot)
     val sig_info = {
-      val salt = FastCryptographicHash(uuid)
-      val ivData = FastCryptographicHash(uuid).slice(0, 16)
+      val salt = fch.hash(uuid)
+      val ivData = fch.hash(uuid).slice(0, 16)
       val derivedKey = getDerivedKey(password, salt)
       val (cipherText, mac) = getAESResult(derivedKey, ivData, newKeys.get.sk_sig, encrypt = true)
       (
@@ -268,8 +268,8 @@ object KeyFile {
       )
     }
     val vrf_info = {
-      val salt = FastCryptographicHash(uuid)
-      val ivData = FastCryptographicHash(uuid).slice(0, 16)
+      val salt = fch.hash(uuid)
+      val ivData = fch.hash(uuid).slice(0, 16)
       val derivedKey = getDerivedKey(password, salt)
       val (cipherText, mac) = getAESResult(derivedKey, ivData, newKeys.get.sk_vrf, encrypt = true)
       (
@@ -282,8 +282,8 @@ object KeyFile {
     }
     val kes_info = {
 
-      val salt = FastCryptographicHash(uuid)
-      val ivData = FastCryptographicHash(uuid).slice(0, 16)
+      val salt = fch.hash(uuid)
+      val ivData = fch.hash(uuid).slice(0, 16)
       val derivedKey = getDerivedKey(password, salt)
       val keyBytes:Array[Byte] = serializer.getBytes(newKeys.get.sk_kes)
       val (cipherText, mac) = encryptAES(derivedKey, ivData, keyBytes)
@@ -314,13 +314,13 @@ object KeyFile {
               password:String,
               defaultKeyDir: String,
               serializer: Serializer,
-              salt:Array[Byte] = FastCryptographicHash(uuid),
+              salt:Array[Byte] = fch.hash(uuid),
               derivedKey:Array[Byte] = Array()
             ):KeyFile = {
     val sig_info = keyFile.sig_info
     val vrf_info = keyFile.vrf_info
     val kes_info = {
-      val ivData = FastCryptographicHash(uuid).slice(0, 16)
+      val ivData = fch.hash(uuid).slice(0, 16)
       val (cipherText, mac) = if (derivedKey.isEmpty) {
         encryptAES(getDerivedKey(password, salt), ivData, serializer.getBytes(malkinKey))
       } else {

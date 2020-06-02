@@ -6,6 +6,8 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Transaction}
 
 trait Types extends SimpleTypes {
+  val fch:Fch
+
   /**
     * main hash routine used in prosomo
     * @param input any bytes
@@ -22,7 +24,7 @@ trait Types extends SimpleTypes {
 
   def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer): Hash = {
     ByteArrayWrapper(
-      FastCryptographicHash(
+      fch.hash(
         Bytes.concat(
           serializer.getBytes(input._1.path.toString),
           input._2._1,
@@ -35,7 +37,7 @@ trait Types extends SimpleTypes {
 
   def hashGenEntry(input:(Array[Byte], ByteArrayWrapper, BigInt),serializer: Serializer): Hash = {
     ByteArrayWrapper(
-      FastCryptographicHash(
+      fch.hash(
         Bytes.concat(
           input._1,
           input._2.data,
@@ -46,15 +48,15 @@ trait Types extends SimpleTypes {
   }
 
   def hash(input:BlockHeader,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
+    ByteArrayWrapper(fch.hash(serializer.getBytes(input)))
   }
 
   def hash(input:Transaction,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
+    ByteArrayWrapper(fch.hash(serializer.getBytes(input)))
   }
 
   def hash(input:(List[SlotId],Int,Int),serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(
+    ByteArrayWrapper(fch.hash(
       Bytes.concat(
         Bytes.concat(input._1.map(serializer.getBytes):_*),
           serializer.getBytes(input._2),
@@ -65,13 +67,13 @@ trait Types extends SimpleTypes {
   }
 
   def hashGen(input:GenesisSet,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(
+    ByteArrayWrapper(fch.hash(
       Bytes.concat(input.map(serializer.getBytes):_*)
     ))
   }
 
   def hash(input:TransactionSet,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(
+    ByteArrayWrapper(fch.hash(
       Bytes.concat(input.map(serializer.getBytes):_*)
     ))
   }
@@ -80,9 +82,11 @@ trait Types extends SimpleTypes {
 
 
   def hash(input:String,serializer: Serializer): Hash = {
-    ByteArrayWrapper(FastCryptographicHash(serializer.getBytes(input)))
+    ByteArrayWrapper(fch.hash(serializer.getBytes(input)))
   }
 
 }
 
-object Types extends SimpleTypes
+object Types extends SimpleTypes {
+  val fch = new Fch
+}

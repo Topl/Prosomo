@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
-import prosomo.primitives.{FastCryptographicHash, Mac, Parameters, Ratio, SharedData}
+import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
@@ -28,7 +28,7 @@ trait Validation extends Members {
       (sig._1,sig._2,sig._3),
       slot-sig._4
     )
-    val malkinPkVer = pk_kes.deep == FastCryptographicHash(Ints.toByteArray(sig._4)++sig._5).deep
+    val malkinPkVer = pk_kes.deep == fch.hash(Ints.toByteArray(sig._4)++sig._5).deep
     val out = verifyMac(ledger.dataHash,ledger) && kesVer && malkinPkVer
     if (!out) println(verifyMac(ledger.dataHash,ledger),kesVer,malkinPkVer)
     out

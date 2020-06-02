@@ -26,7 +26,7 @@ object SharedData extends Types {
   var t_1:Long = 0
   var timing:Boolean = false
   var diskAccess:Boolean = false
-
+  val fch:Fch = new Fch
   var prosomoWindow:Option[ProsomoWindow] = None
 
   val outText = new ByteArrayOutputStream

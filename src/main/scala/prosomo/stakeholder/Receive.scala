@@ -4,17 +4,16 @@ import java.io.BufferedWriter
 
 import akka.actor.Cancellable
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import prosomo.primitives.{FastCryptographicHash, Kes, KeyFile, Parameters, Ratio, SharedData, Sig, Vrf}
+import prosomo.primitives.{ Kes, KeyFile, Parameters, Ratio, SharedData, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
 import prosomo.cases._
-import prosomo.components.{Block, Serializer, Tine, Transaction}
+import prosomo.components.{Block, Tine, Transaction}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
 import scala.util.Random
-import scala.util.control.Breaks.{break, breakable}
 import scala.util.{Failure, Success, Try}
 
 trait Receive extends Members {
@@ -278,15 +277,15 @@ trait Receive extends Members {
       globalSlot = gs
       println("Holder "+holderIndex.toString+s" starting on global slot ${globalSlot}")
       password = s"password_holder_$holderIndex"
-      salt = FastCryptographicHash(uuid)
+      salt = fch.hash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
       def generateNewKeys:Unit = {
         println("Generating new keyfile...")
         val rngSeed:Random = new Random
         rngSeed.setSeed(BigInt(seed).toLong)
-        val seed1 = FastCryptographicHash(rngSeed.nextString(32))
-        val seed2 = FastCryptographicHash(rngSeed.nextString(32))
-        val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+        val seed1 = fch.hash(rngSeed.nextString(32))
+        val seed2 = fch.hash(rngSeed.nextString(32))
+        val seed3 = fch.hash(rngSeed.nextString(32))
         keyFile = KeyFile.fromSeed(
           password,
           storageDir,
@@ -509,13 +508,13 @@ trait Receive extends Members {
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
-          case Some(b:BlockHeader) => chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
+          case Some(b:BlockHeader) => chainBytes ++= fch.hash(serializer.getBytes(b))
           case _ =>
         }
       }
       println("Public Key: "+Base58.encode(keys.pk_sig++keys.pk_vrf++keys.pk_kes))
       println("Path: "+self.path)
-      println("Chain hash: " + Base58.encode(FastCryptographicHash(chainBytes))+"\n")
+      println("Chain hash: " + Base58.encode(fch.hash(chainBytes))+"\n")
       if (SharedData.error){
         for (id <- localChain.ordered) {
           if (id._1 > -1) println("H:" + holderIndex.toString + "S:" + id._1.toString + "ID:" + Base58.encode(id._2.data))
@@ -533,7 +532,7 @@ trait Receive extends Members {
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
           case Some(b:BlockHeader) => {
-            chainBytes ++= FastCryptographicHash(serializer.getBytes(b))
+            chainBytes ++= fch.hash(serializer.getBytes(b))
           }
           case _ =>
         }
@@ -562,7 +561,7 @@ trait Receive extends Members {
       val txCountState = math.max(localState(keys.pkw)._3-1,0)
       println(s"Tx Counts in state and chain: $txCountState, $txCountChain")
       println(s"Transactions on chain: $holderTxCount/$txCount Duplicates: $duplicatesFound")
-      println("Chain hash: " + Base58.encode(FastCryptographicHash(chainBytes))+"\n")
+      println("Chain hash: " + Base58.encode(fch.hash(chainBytes))+"\n")
       sender() ! "done"
     }
 

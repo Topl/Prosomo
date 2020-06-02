@@ -5,7 +5,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
-import prosomo.primitives.FastCryptographicHash
 import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
@@ -58,10 +57,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
+  override val fch = new Fch
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val rng:Random = new Random(BigInt(seed).toLong)
   val holderId:ActorPath = self.path
-  val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(seed))
+  val sessionId:Sid = ByteArrayWrapper(fch.hash(seed))
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   var keyFile = KeyFile.empty
@@ -107,11 +107,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
 
-  val genBlockKey = ByteArrayWrapper(FastCryptographicHash("GENESIS"))
+  val genBlockKey = ByteArrayWrapper(fch.hash("GENESIS"))
 
   val coordId:String = Base58.encode(inputSeed)
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
-  val eta0:Eta = FastCryptographicHash(Base58.encode(inputSeed)+"ETA")
+  val eta0:Eta = fch.hash(Base58.encode(inputSeed)+"ETA")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
   val sk_kes:MalkinKey = MalkinKey(kes,seed,0)
@@ -199,7 +199,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def startHolder(i:Int) =
-    ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+    ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
 
   def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
@@ -247,23 +247,23 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def pkFromIndex(index:Int):PublicKeyW = {
     val holderIndex:String = index.toString
-    val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
+    val holderSeed:Array[Byte] = fch.hash(Base58.encode(inputSeed)+holderIndex)
     val rngSeed:Random = new Random
     rngSeed.setSeed(BigInt(holderSeed).toLong)
-    val seed1 = FastCryptographicHash(rngSeed.nextString(32))
-    val seed2 = FastCryptographicHash(rngSeed.nextString(32))
-    val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed1 = fch.hash(rngSeed.nextString(32))
+    val seed2 = fch.hash(rngSeed.nextString(32))
+    val seed3 = fch.hash(rngSeed.nextString(32))
     Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
   }
 
   def pkFromIndex(holder:ActorRefWrapper):PublicKeyW = {
     val holderIndex:String = holder.actorPath.name.drop("Holder_".length)
-    val holderSeed:Array[Byte] = FastCryptographicHash(Base58.encode(inputSeed)+holderIndex)
+    val holderSeed:Array[Byte] = fch.hash(Base58.encode(inputSeed)+holderIndex)
     val rngSeed:Random = new Random
     rngSeed.setSeed(BigInt(holderSeed).toLong)
-    val seed1 = FastCryptographicHash(rngSeed.nextString(32))
-    val seed2 = FastCryptographicHash(rngSeed.nextString(32))
-    val seed3 = FastCryptographicHash(rngSeed.nextString(32))
+    val seed1 = fch.hash(rngSeed.nextString(32))
+    val seed2 = fch.hash(rngSeed.nextString(32))
+    val seed3 = fch.hash(rngSeed.nextString(32))
     Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
   }
 
@@ -517,7 +517,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         case "new_holder" => {
           println("Bootstrapping new holder...")
           val i = holders.length
-          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+          val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
           holders.find(newHolder.path == _.path) match {
             case None => {
               holders ::= newHolder
@@ -694,7 +694,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             val data = value.drop(arg11.length)
             println("Bootstrapping new holder...")
             val i = data.toInt
-            val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(FastCryptographicHash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
+            val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
             holders.find(newHolder.path == _.path) match {
               case None => {
                 holders ::= newHolder

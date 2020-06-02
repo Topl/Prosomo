@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Cancellable, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{FastCryptographicHash, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
+import prosomo.primitives.{Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf, Fch}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
@@ -46,12 +46,13 @@ class Stakeholder(
   val vrf = new Vrf
   val kes = new Kes
   val sig = new Sig
+  override val fch = new Fch
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = new Wallet(keys.pkw,fee_r)
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val holderId:ActorPath = self.path
-  val sessionId:Sid = ByteArrayWrapper(FastCryptographicHash(holderId.toString))
+  val sessionId:Sid = ByteArrayWrapper(fch.hash(holderId.toString))
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   //stakeholder password, set at runtime

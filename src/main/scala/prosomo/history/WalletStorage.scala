@@ -1,16 +1,15 @@
 package prosomo.history
 
-import prosomo.primitives.FastCryptographicHash
+import prosomo.primitives.{ByteStream, Fch, LDBStore, Ratio, SimpleTypes}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, LDBStore, Ratio, SimpleTypes}
 import prosomo.wallet.Wallet
 
 
 class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
   import prosomo.primitives.Parameters.storageFlag
-
+  val fch = new Fch
   var walletStore:LDBStore = LDBStore(s"$dir/wallet")
 
   def refresh:Unit = {
@@ -24,7 +23,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
       store(out,serializer)
       out
     }
-    walletStore.get(ByteArrayWrapper(FastCryptographicHash(pkw.data))) match {
+    walletStore.get(ByteArrayWrapper(fch.hash(pkw.data))) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream = new ByteStream(bytes.data,DeserializeWallet)
         serializer.fromBytes(byteStream) match {
@@ -46,7 +45,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
 
   def store(wallet:Wallet,serializer: Serializer):Unit  = if (storageFlag) {
     val wBytes = serializer.getBytes(wallet)
-    val key = ByteArrayWrapper(FastCryptographicHash(wallet.pkw.data))
+    val key = ByteArrayWrapper(fch.hash(wallet.pkw.data))
     walletStore.update(Seq(),Seq(key -> ByteArrayWrapper(wBytes)))
   }
 

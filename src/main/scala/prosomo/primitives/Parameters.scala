@@ -15,10 +15,11 @@ import scala.math.BigInt
 import scala.util.Try
 
 object Parameters {
-
+  val fch = new Fch
+  val localChainId = ByteArrayWrapper(fch.hash("LOCAL_CHAIN"))
   val prosomoNodeUID:String = java.util.UUID.randomUUID.toString.filterNot("-".toSet)
   //tag for identifying ledger entries
-  val genesisBytes = ByteArrayWrapper(FastCryptographicHash("GENESIS".getBytes))
+  val genesisBytes = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
   val declaredAddressFromRemote = Try{
     val whatismyip = new URL("http://checkip.amazonaws.com")
     val in:BufferedReader = new BufferedReader(new InputStreamReader(

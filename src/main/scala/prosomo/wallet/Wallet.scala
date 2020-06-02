@@ -1,7 +1,7 @@
 package prosomo.wallet
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Ratio, Sig, Types}
+import prosomo.primitives.{Fch, Ratio, Sig, Types}
 import prosomo.components.{Serializer, Transaction}
 import prosomo.stakeholder.Transactions
 
@@ -19,7 +19,7 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   var netStake0:BigInt = 1
   var issueState:State = Map()
   var confirmedState:State = Map()
-
+  val fch:Fch = new Fch
   def addTx(transaction: Transaction) = {
     if (transaction.sender == pkw) {
       if (!pendingTxsOut.keySet.contains(transaction.sid)) {

@@ -4,8 +4,9 @@ import akka.actor.{Actor, PoisonPill, Props, Timers}
 import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks}
 import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
-import prosomo.primitives.{FastCryptographicHash, Mac, SharedData, Sig, Types}
+import prosomo.primitives.{Fch, Mac, SharedData, Sig, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
+
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random
@@ -15,6 +16,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   val sig:Sig = new Sig
   val rng:Random = new Random
   val serializer:Serializer = new Serializer
+  override val fch = new Fch
   rng.setSeed(0L)
 
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any) = {
@@ -25,7 +27,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
         routerRef ! MessageFromLocalToLocal(sender, ref, command)
       }
     } else if (useFencing) {
-      routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,ref,command)
+      routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,ref,command)
     } else {
       ref ! command
     }
@@ -68,6 +70,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
 }
 
 object RequestTineProvider extends Types {
+  val fch = new Fch
   case class Info(
     ref:ActorRefWrapper,
     startId:SlotId,

@@ -8,6 +8,7 @@ class MalkinKey {
   var pki:Array[Byte] = Array()
   var rp:Array[Byte] = Array()
   var offset:Int = 0
+  val fch = new Fch
 
   def update(kes:Kes,t:Int) = {
     val updatedKey = kes.updateKey((L,Si,sig,pki,rp),t-offset)
@@ -34,7 +35,7 @@ class MalkinKey {
 
   def getPublic(kes:Kes):Array[Byte] = {
     val pk_kes = kes.publicKey((L,Si,sig,pki,rp))
-    FastCryptographicHash(Ints.toByteArray(offset)++pk_kes)
+    fch.hash(Ints.toByteArray(offset)++pk_kes)
   }
 
   def time(kes:Kes):Int = {

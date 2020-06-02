@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorPath, Cancellable, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
+import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Serializer, Tine, Transaction}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.wallet._
@@ -25,6 +25,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val vrf:Vrf
   val kes:Kes
   val sig:Sig
+  val fch:Fch
   val history:StateStorage
   val rng:Random
   val holderId:ActorPath

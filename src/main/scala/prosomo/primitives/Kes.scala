@@ -25,6 +25,7 @@ class Kes {
   val hashBytes = 32
   val keyLength = hashBytes
   val logl = 7
+  val fch = new Fch
 
   type KesKeyBytes = (Tree[Array[Byte]],Tree[Array[Byte]],Array[Byte],Array[Byte],Array[Byte])
   type KesSignature = (Array[Byte],Array[Byte],Array[Byte])
@@ -47,8 +48,8 @@ class Kes {
     */
 
   private def PRNG(k: Array[Byte]): (Array[Byte],Array[Byte]) = {
-    val r1 = FastCryptographicHash(k)
-    val r2 = FastCryptographicHash(r1++k)
+    val r1 = fch.hash(k)
+    val r2 = fch.hash(r1++k)
     (r1,r2)
   }
 
@@ -58,7 +59,7 @@ class Kes {
     * @return byte array sk||pk
     */
   private def sKeypairFast(seed: Array[Byte]): Array[Byte] = {
-    val sk = FastCryptographicHash(seed)
+    val sk = fch.hash(seed)
     var pk = Array.fill(32){0x00.toByte}
     Ed25519.generatePublicKey(sk,0,pk,0)
     sk++pk
@@ -70,7 +71,7 @@ class Kes {
     * @return byte array pk
     */
   private def sPublic(seed: Array[Byte]): Array[Byte] = {
-    val sk = FastCryptographicHash(seed)
+    val sk = fch.hash(seed)
     var pk = Array.fill(32){0x00.toByte}
     Ed25519.generatePublicKey(sk,0,pk,0)
     pk
@@ -82,7 +83,7 @@ class Kes {
     * @return byte array sk
     */
   private def sPrivate(seed: Array[Byte]): Array[Byte] = {
-    FastCryptographicHash(seed)
+    fch.hash(seed)
   }
 
   /**
@@ -118,10 +119,10 @@ class Kes {
       case n: Node[Array[Byte]] => {
         val pk0 = n.v.slice(seedBytes, seedBytes + pkBytes)
         val pk1 = n.v.slice(seedBytes + pkBytes, seedBytes + 2 * pkBytes)
-        FastCryptographicHash(pk0 ++ pk1)
+        fch.hash(pk0 ++ pk1)
       }
       case l: Leaf[Array[Byte]] => {
-        FastCryptographicHash(FastCryptographicHash(l.v.slice(seedBytes, seedBytes + pkBytes))++FastCryptographicHash(l.v.slice(seedBytes, seedBytes + pkBytes)))
+        fch.hash(fch.hash(l.v.slice(seedBytes, seedBytes + pkBytes))++fch.hash(l.v.slice(seedBytes, seedBytes + pkBytes)))
       }
       case _ => Array()
     }
@@ -210,14 +211,14 @@ class Kes {
               sk1 = rightVal.slice(seedBytes, seedBytes + skBytes)
               pk1 = rightVal.slice(seedBytes + skBytes, seedBytes + skBytes + pkBytes)
               assert(n.v.deep == r1.deep)
-              Node(n.v ++ FastCryptographicHash(pk0) ++ FastCryptographicHash(pk1), Leaf(sk0 ++ pk0), Leaf(sk1 ++ pk1))
+              Node(n.v ++ fch.hash(pk0) ++ fch.hash(pk1), Leaf(sk0 ++ pk0), Leaf(sk1 ++ pk1))
             } else {
               pk00 = leftVal.slice(seedBytes, seedBytes + pkBytes)
               pk01 = leftVal.slice(seedBytes + pkBytes, seedBytes + 2 * pkBytes)
               pk10 = rightVal.slice(seedBytes, seedBytes + pkBytes)
               pk11 = rightVal.slice(seedBytes + pkBytes, seedBytes + 2 * pkBytes)
-              pk0 = FastCryptographicHash(pk00 ++ pk01)
-              pk1 = FastCryptographicHash(pk10 ++ pk11)
+              pk0 = fch.hash(pk00 ++ pk01)
+              pk1 = fch.hash(pk10 ++ pk11)
               Node(n.v ++ pk0 ++ pk1, left, right)
             }
           }
@@ -282,11 +283,11 @@ class Kes {
             case nn: Node[Array[Byte]] => {
               pk00 = nn.v.slice(seedBytes,seedBytes+pkBytes)
               pk01 = nn.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes)
-              pk0 = FastCryptographicHash(pk00++pk01)
+              pk0 = fch.hash(pk00++pk01)
               loop(nn) && (pk0.deep == n.v.slice(seedBytes,seedBytes+pkBytes).deep)
             }
             case ll: Leaf[Array[Byte]] => {
-              FastCryptographicHash(ll.v.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes,seedBytes+pkBytes).deep
+              fch.hash(ll.v.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes,seedBytes+pkBytes).deep
             }
             case _ => true
           }
@@ -294,17 +295,17 @@ class Kes {
             case nn: Node[Array[Byte]] => {
               pk10 = nn.v.slice(seedBytes,seedBytes+pkBytes)
               pk11 = nn.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes)
-              pk1 = FastCryptographicHash(pk10++pk11)
+              pk1 = fch.hash(pk10++pk11)
               loop(nn) && (pk1.deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
             }
             case ll: Leaf[Array[Byte]] => {
-              FastCryptographicHash(ll.v.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep
+              fch.hash(ll.v.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep
             }
             case _ => true
           }
           left && right
         }
-        case l: Leaf[Array[Byte]] => FastCryptographicHash(FastCryptographicHash(l.v.slice(skBytes,skBytes+pkBytes))++FastCryptographicHash(l.v.slice(skBytes,skBytes+pkBytes))).deep == pk.deep
+        case l: Leaf[Array[Byte]] => fch.hash(fch.hash(l.v.slice(skBytes,skBytes+pkBytes))++fch.hash(l.v.slice(skBytes,skBytes+pkBytes))).deep == pk.deep
         case _ => false
       }
     }
@@ -364,7 +365,7 @@ class Kes {
           val cutBranch = isRightBranch(left)
           if (rightIsEmpty && leftIsLeaf) {
             val keyPair = sKeypairFast(n.v.slice(0,seedBytes))
-            assert(FastCryptographicHash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
+            assert(fch.hash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
             Node(n.v,Empty,Leaf(keyPair))
           } else if (cutBranch) {
             Node(n.v,Empty,sumGenerateKey(n.v.slice(0,seedBytes),n.height-1))
@@ -432,7 +433,7 @@ class Kes {
             if (step>=e) {
               if (rightIsEmpty && leftIsLeaf) {
                 val keyPair = sKeypairFast(n.v.slice(0,seedBytes))
-                assert(FastCryptographicHash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
+                assert(fch.hash(keyPair.slice(skBytes,skBytes+pkBytes)).deep == n.v.slice(seedBytes+pkBytes,seedBytes+2*pkBytes).deep)
                 Node(n.v,Empty,Leaf(keyPair))
               } else if (leftIsEmpty && rightIsNode) {
                 Node(n.v, Empty, constructKey(nextStep,right))
@@ -501,7 +502,7 @@ class Kes {
           left++right++n.v.slice(seedBytes,seedBytes+2*pkBytes)
         }
         case l: Leaf[Array[Byte]] => {
-          sSign(m++stepBytes,l.v.slice(0,skBytes))++l.v.slice(skBytes,skBytes+pkBytes)++stepBytes++FastCryptographicHash(l.v.slice(skBytes,skBytes+pkBytes))++FastCryptographicHash(l.v.slice(skBytes,skBytes+pkBytes))
+          sSign(m++stepBytes,l.v.slice(0,skBytes))++l.v.slice(skBytes,skBytes+pkBytes)++stepBytes++fch.hash(l.v.slice(skBytes,skBytes+pkBytes))++fch.hash(l.v.slice(skBytes,skBytes+pkBytes))
         }
         case _ => {
           Array()
@@ -524,9 +525,9 @@ class Kes {
     val step = BigInt(stepBytes)
     var pkLogic = true
     if (step % 2 == 0) {
-      pkLogic &= FastCryptographicHash(sig.slice(sigBytes,sigBytes+pkBytes)).deep == pkSeq.slice(0,pkBytes).deep
+      pkLogic &= fch.hash(sig.slice(sigBytes,sigBytes+pkBytes)).deep == pkSeq.slice(0,pkBytes).deep
     } else {
-      pkLogic &= FastCryptographicHash(sig.slice(sigBytes,sigBytes+pkBytes)).deep == pkSeq.slice(pkBytes,2*pkBytes).deep
+      pkLogic &= fch.hash(sig.slice(sigBytes,sigBytes+pkBytes)).deep == pkSeq.slice(pkBytes,2*pkBytes).deep
     }
     for (i <- 0 to pkSeq.length/pkBytes-4 by 2) {
       val pk0:Array[Byte] = pkSeq.slice((i+2)*pkBytes,(i+3)*pkBytes)
@@ -536,12 +537,12 @@ class Kes {
       val pk10:Array[Byte] = pkSeq.slice(i*pkBytes,(i+1)*pkBytes)
       val pk11:Array[Byte] = pkSeq.slice((i+1)*pkBytes,(i+2)*pkBytes)
       if((step.toInt/exp(i/2+1)) % 2 == 0) {
-        pkLogic &= pk0.deep == FastCryptographicHash(pk00++pk01).deep
+        pkLogic &= pk0.deep == fch.hash(pk00++pk01).deep
       } else {
-        pkLogic &= pk1.deep == FastCryptographicHash(pk10++pk11).deep
+        pkLogic &= pk1.deep == fch.hash(pk10++pk11).deep
       }
     }
-    pkLogic &= pk.deep == FastCryptographicHash(pkSeq.slice(pkSeq.length-2*pkBytes,pkSeq.length)).deep
+    pkLogic &= pk.deep == fch.hash(pkSeq.slice(pkSeq.length-2*pkBytes,pkSeq.length)).deep
     sVerify(m++stepBytes,sig.slice(0,sigBytes),sig.slice(sigBytes,sigBytes+pkBytes)) && pkLogic
   }
 

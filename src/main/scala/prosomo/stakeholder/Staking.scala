@@ -1,9 +1,8 @@
 package prosomo.stakeholder
 
-import prosomo.primitives.FastCryptographicHash
 import prosomo.components.Tine
 import prosomo.primitives.{Ratio, SharedData}
-import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 
 import scala.math.BigInt
 
@@ -147,7 +146,7 @@ trait Staking extends Members {
         v = v++prev_two_thirds_epoch.getNonce(id._1)
       }
       val next = subChain(c,0,ep*epochLength-epochLength)
-      FastCryptographicHash(eta_from_genesis(next,ep-1)++serializer.getBytes(ep)++v)
+      fch.hash(eta_from_genesis(next,ep-1)++serializer.getBytes(ep)++v)
     }
   }
 
@@ -174,7 +173,7 @@ trait Staking extends Members {
       for(id <- prev_two_thirds_epoch.ordered) {
         v = v++prev_two_thirds_epoch.getNonce(id._1)
       }
-      val eta_ep = FastCryptographicHash(eta_prev++serializer.getBytes(ep)++v)
+      val eta_ep = fch.hash(eta_prev++serializer.getBytes(ep)++v)
       eta_ep
     }
   }

@@ -10,7 +10,7 @@ import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress}
 import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
-import prosomo.primitives.{FastCryptographicHash, SharedData}
+import prosomo.primitives.{Fch, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import scorex.core.app.{Application, ScorexContext}
@@ -28,7 +28,7 @@ import scala.swing._
 import scala.util.Try
 
 class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with ScorexLogging {
-
+  val fch = new Fch
   var runApp = true
 
   //settings
@@ -96,8 +96,8 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   log.debug(s"Starting application with settings \n$settings")
   log.info("Using seed: "+inputSeed)
 
-  val routerRef:ActorRef = actorSystem.actorOf(Router.props(FastCryptographicHash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
-  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(FastCryptographicHash(inputSeed),Seq(routerRef)), "Coordinator")
+  val routerRef:ActorRef = actorSystem.actorOf(Router.props(fch.hash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
+  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(fch.hash(inputSeed),Seq(routerRef)), "Coordinator")
 
   window match {
     case None =>

@@ -1,13 +1,12 @@
 package prosomo.history
 
-import prosomo.primitives.FastCryptographicHash
+import prosomo.primitives.{ByteStream, Fch, LDBStore, Types}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, LDBStore, Types}
 
 class SlotHistoryStorage(dir:String) extends Types {
   import prosomo.components.Serializer._
-
+  override val fch = new Fch
   val storageFlag = false
   val skipUpdate = true
 
@@ -15,7 +14,7 @@ class SlotHistoryStorage(dir:String) extends Types {
 
   private var blockReorgStore:LDBStore = LDBStore(s"$dir/history/reorg")
 
-  def uuid = ByteArrayWrapper(FastCryptographicHash(java.util.UUID.randomUUID.toString))
+  def uuid = ByteArrayWrapper(fch.hash(java.util.UUID.randomUUID.toString))
 
   def update(slotId:SlotId,serializer: Serializer):Unit = if (storageFlag) {
     val blockSlotHash = hash(slotId._1,serializer)

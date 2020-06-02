@@ -2,7 +2,6 @@ package prosomo.stakeholder
 
 import akka.actor.ActorPath
 import akka.util.Timeout
-import prosomo.primitives.FastCryptographicHash
 import prosomo.cases._
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Mac, Parameters}
@@ -64,7 +63,7 @@ trait Messages extends Members {
         routerRef ! MessageFromLocalToLocal(sender, ref, command)
       }
     } else if (useFencing) {
-      routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,ref,command)
+      routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,ref,command)
     } else {
       ref ! command
     }
@@ -84,7 +83,7 @@ trait Messages extends Members {
           routerRef ! MessageFromLocalToLocal(sender, holder, command)
         }
       } else if (useFencing) {
-        routerRef ! MessageFromLocalToLocalId(BigInt(FastCryptographicHash(rng.nextString(64))),sender,holder,command)
+        routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,holder,command)
       } else {
         holder ! command
       }

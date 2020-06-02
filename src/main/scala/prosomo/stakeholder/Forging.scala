@@ -1,6 +1,5 @@
 package prosomo.stakeholder
 
-import prosomo.primitives.FastCryptographicHash
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
@@ -89,7 +88,7 @@ trait Forging extends Members {
         }
       }
       val pkw = holderKeys(index)
-      (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(FastCryptographicHash(coordId)),sk_sig,pk_sig))
+      (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(fch.hash(coordId)),sk_sig,pk_sig))
     }
     val bn:Int = 0
     val ps:Slot = -1
@@ -100,7 +99,7 @@ trait Forging extends Members {
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
     val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
-    val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(FastCryptographicHash("coordId")),sk_sig,pk_sig)
+    val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(fch.hash("coordId")),sk_sig,pk_sig)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:MalkinSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
