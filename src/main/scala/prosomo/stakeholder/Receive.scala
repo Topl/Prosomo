@@ -16,20 +16,30 @@ import scala.math.BigInt
 import scala.util.Random
 import scala.util.{Failure, Success, Try}
 
+/**
+  * The receive statement of Stakeholder,
+  * Contains cases of all messages Stakeholder will encounter from local and remote interfaces
+  * Message authentication occurs for Block passing and TinePool messages
+  */
+
 trait Receive extends Members {
   import Parameters._
   def receive: Receive = {
 
     /**************************************************** Network Messages *********************************************************/
 
-    /**updates time, the kes key, and resets variables
-      * main runtime loop */
+    /** Updates time, the kes key, and resets variables
+      * Primary runtime loop for consensus
+      **/
     case Update => {
       update
       context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
     }
 
-    /**adds confirmed transactions to buffer and sends new ones to gossipers*/
+    /**
+      * Primary transaction passing method, each Tx signature is validated and the Tx is statefully checked
+      * Newly encountered Txs are sent to gossipers
+      **/
     case value:SendTx => {
       if (!actorStalled) {
         if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
@@ -46,7 +56,10 @@ trait Receive extends Members {
       }
     }
 
-    /**block passing, new blocks delivered are added to list of tines and then sent to gossipers*/
+    /**
+      * Block passing for newly forged blocks only,
+      * If block is not found in database it is added to the TinePool as a new open tine and then sent to gossipers
+      **/
     case value:SendBlock => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
@@ -64,13 +77,13 @@ trait Receive extends Members {
                   val newId = (bSlot, bHash)
                   send(selfWrapper,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   if (!bootStrapLock) {
-                    if (tines.keySet.size < tineMaxTries) {
+                    if (tinePool.keySet.size < tineMaxTries) {
                       val jobNumber = tineCounter
-                      tines += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
-                      buildTine((jobNumber,tines(jobNumber)))
+                      tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
+                      buildTine((jobNumber,tinePool(jobNumber)))
                       tineCounter += 1
                     } else {
-                      tines.foreach(job => buildTine(job))
+                      tinePool.foreach(job => buildTine(job))
                     }
                   }
                 }
@@ -90,10 +103,12 @@ trait Receive extends Members {
 
     case BootstrapJob => {
       println(s"Holder $holderIndex Bootstrapping...")
-      buildTine((bootStrapJob,tines(bootStrapJob)))
+      buildTine((bootStrapJob,tinePool(bootStrapJob)))
     }
 
-    /**block passing, returned blocks are added to block database*/
+    /**
+      * Block passing, returned blocks are added to block database
+      **/
     case value:ReturnBlocks => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
@@ -107,7 +122,7 @@ trait Receive extends Members {
                   }
                   blocks.add(block)
                 } else {println("error: invalid returned block")}
-                if (tines.keySet.contains(value.job)) {
+                if (tinePool.keySet.contains(value.job)) {
                   if (bootStrapLock) {
                     if (value.job == bootStrapJob) {
                       bootStrapMessage match {
@@ -117,7 +132,7 @@ trait Receive extends Members {
                       bootStrapMessage = context.system.scheduler.scheduleOnce(5*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
                     }
                   } else {
-                    buildTine((value.job,tines(value.job)))
+                    buildTine((value.job,tinePool(value.job)))
                   }
                 }
               }
@@ -134,7 +149,9 @@ trait Receive extends Members {
       }
     }
 
-    /**block passing, parent ids that are not found are requested*/
+    /**
+      * Block passing, parent ids that are not found are requested
+      **/
     case value:RequestBlock => {
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
@@ -160,7 +177,10 @@ trait Receive extends Members {
       }
     }
 
-    /**block passing, parent ids are requested with increasing depth of chain up to a finite number of attempts*/
+    /**
+      * Block passing, parent ids are requested with increasing depth of chain up to a finite number of attempts
+      * Spins up a provider to search database for blocks
+      **/
     case value:RequestTine => {
       if (!actorStalled) {
         tineProvider match {
@@ -192,13 +212,14 @@ trait Receive extends Members {
       tineProvider = None
     }
 
-    /**gossip protocol greeting message for populating inbox*/
+    /**
+      * Gossip protocol greeting message for populating inbox
+      **/
     case value:Hello => {
       if (!actorStalled) {
         if (gossipers.length < numGossipers + gOff) {
           if (verifyMac(hash(value.ref,serializer),value.mac)) {
             if (!gossipers.contains(value.ref) && inbox.keySet.contains(value.mac.sid)) {
-              //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Adding Gossiper")}
               if (inbox(value.mac.sid)._1 == value.ref) gossipers = gossipers ++ List(value.ref)
               send(selfWrapper,value.ref,Hello(selfWrapper,signMac(hash(selfWrapper,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
             }
@@ -210,7 +231,18 @@ trait Receive extends Members {
       }
     }
 
-    /************************************************** From Coordinator *******************************************************/
+    /**
+      * Validates diffused keys from other holders and stores in inbox
+      **/
+    case value:DiffuseData => {
+      if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
+        inbox += (value.mac.sid->(value.ref,value.pks))
+        value.ref ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
+      }
+    }
+
+
+    /************************************************** From Local *******************************************************/
 
     /**issue a transaction generated by the coordinator and send it to the list of gossipers*/
     case value:IssueTx => {
@@ -254,22 +286,12 @@ trait Receive extends Members {
       }
     }
 
-
-
     /**sends holder information for populating inbox*/
     case Diffuse => {
       holders.filterNot(_ == selfWrapper).foreach(
         _ ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       )
       context.system.scheduler.scheduleOnce(10*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
-    }
-
-    /**validates diffused string from other holders and stores in inbox */
-    case value:DiffuseData => {
-      if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
-        inbox += (value.mac.sid->(value.ref,value.pks))
-        value.ref ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
-      }
     }
 
     /**allocation and vars of simulation*/
@@ -318,7 +340,6 @@ trait Receive extends Members {
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {
           localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
-          //chainHistory.update((0,genBlockHash),serializer)
           updateLocalState(localState, (0,genBlockHash)) match {
             case Some(value:State) => localState = value
             case _ => {
@@ -456,7 +477,7 @@ trait Receive extends Members {
       sender() ! "done"
     }
 
-    /************************************************** Tests ***********************************************************/
+    /************************************* Research and Testing ******************************************/
 
     case RequestGossipers => {
       sender() ! GetGossipers(gossipers)

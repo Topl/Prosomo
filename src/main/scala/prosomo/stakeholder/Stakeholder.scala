@@ -11,8 +11,11 @@ import scala.math.BigInt
 import scala.util.Random
 
 /**
-  * Stakeholder actor that executes the staking protocol and communicates with other stakeholders,
-  * sends the coordinator the public key upon instantiation and gets the genesis block from coordinator
+  * Stakeholder actor that executes the staking procedure and participates in consensus
+  * Each stakeholder actor represents a distinct node view with different modifiers in their pools and databases
+  * @param inputSeed input entropy
+  * @param holderIndex and integer index for identifying executing actors in thread locks
+  * @param inputRef network controller refs and router ref
   */
 
 class Stakeholder(
@@ -39,7 +42,6 @@ class Stakeholder(
   val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
   val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
-  //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -81,11 +83,11 @@ class Stakeholder(
   //slot time as determined from coordinator clock
   var globalSlot = 0
   //all tines that are pending built from new blocks that are received
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
+  var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
   //counter for identifying tines
   var tineCounter = 0
   //completed tines waiting to be selected with maxvalid-bg
-  var candidateTines:Array[(Tine,Slot,Int)] = Array()
+  var tinePoolWithPrefix:Array[(Tine,Slot,Int)] = Array()
   //placeholder for genesis block
   var genBlockHeader: BlockHeader = _
   //placeholder for genesis block ID

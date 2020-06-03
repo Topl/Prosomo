@@ -2,16 +2,19 @@ package prosomo
 
 import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.{Color, Dimension}
-
 import prosomo.primitives.Parameters.devMode
 import prosomo.primitives.{ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, SwingUtilities}
 import scorex.util.encode.Base58
-
 import scala.swing.Font.Style
 import scala.swing._
 import scala.util.Try
+
+/**
+  * A class for the user interface, will fail gracefully if any component is not able to load
+  * @param config base config to be modified by window elements
+  */
 
 class ProsomoWindow(config:Config) {
   var windowConfig:Config = config

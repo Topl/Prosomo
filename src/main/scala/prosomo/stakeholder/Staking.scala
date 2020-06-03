@@ -3,8 +3,11 @@ package prosomo.stakeholder
 import prosomo.components.Tine
 import prosomo.primitives.{Ratio, SharedData}
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-
 import scala.math.BigInt
+
+/**
+  * Mathematical methods required for the Staking Procedure described in Ouroboros Genesis
+  */
 
 trait Staking extends Members {
 

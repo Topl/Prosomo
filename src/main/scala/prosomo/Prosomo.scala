@@ -1,7 +1,6 @@
 package prosomo
 
 import java.net.InetSocketAddress
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
@@ -22,10 +21,18 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 import scorex.util.encode.Base58
-
 import scala.concurrent.ExecutionContext
 import scala.swing._
 import scala.util.Try
+
+/**
+  * The Prosomo simulation runtime
+  * The App instantiates this class with a given configuration with user defined inputs
+  * The actor system in this class is interfaced with the GUI element so buttons can trigger messages to be passed
+  * Coordinator is the only actor ref that should receive messages from GUI reaction events
+  * @param config config to start the node
+  * @param window optional GUI element
+  */
 
 class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with ScorexLogging {
   val fch = new Fch
@@ -66,6 +73,10 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     )
   }
 
+  /**
+    * Note AMS June 2020: This time NTP time provider is not used in consensus and is to be only used for logging and network information,
+    * a separate NTP functionality with additional security properties and resilience is to be developed for tracking the global slot in Ouroboros Genesis
+    */
   val timeProvider = new NetworkTimeProvider(settings.ntp)
 
   //an address to send to peers
@@ -172,10 +183,14 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
 }
 
 object Prosomo extends App {
+  /**
+    * input args will be either HOCON *.conf files in execution directory or HOCON formatted strings that add to base config
+    */
   val input = args
   var instance:Option[Prosomo] = None
   if (useGui) {
     val newWindow = new ProsomoWindow(prosomo.primitives.Parameters.config)
+    //shared reference to window so stakeholder can enable buttons when started
     SharedData.prosomoWindow = Some(newWindow)
     newWindow.window match {
       case None => {
@@ -214,5 +229,6 @@ object Prosomo extends App {
       instance.get.stopAll()
     }
   }
+  Thread.sleep(1000)
   System.exit(0)
 }

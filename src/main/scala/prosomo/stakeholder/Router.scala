@@ -8,18 +8,23 @@ import prosomo.primitives.{Distance, Fch, Parameters, SharedData, Types}
 import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.util.encode.Base58
-
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.math.BigInt
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Random, Success, Try}
 import scorex.core.network._
 import scorex.core.network.ConnectedPeer
 import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
 
+/**
+  * Primary interface between Stakeholder system and network controller,
+  * All messages from local and remote are processed here
+  * @param seed entropy for randomness
+  * @param inputRef network controller refs
+  */
 
 class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   with Types
@@ -590,7 +595,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   private def toNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ActorPath):Unit = {
     Try{spec.toBytes(c)}.toOption match {
       case Some(bytes:Array[Byte]) =>
-        networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(pathToPeer(r),self))
+        pathToPeer.get(r) match {
+          case Some(peerName) => networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(peerName,self))
+          case None =>
+        }
       case None =>
     }
   }

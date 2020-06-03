@@ -3,7 +3,6 @@ package prosomo.stakeholder
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-
 import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
 import io.circe.Json
 import io.circe.syntax._
@@ -14,19 +13,19 @@ import prosomo.components.{Wallet, _}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
 import scorex.util.encode.Base58
-
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
 import scala.util.{Random, Try}
 import java.io.IOException
-
 import com.google.common.cache.LoadingCache
 
 
 /**
   * Coordinator actor that initializes the genesis block and instantiates the staking party,
-  * sends messages to participants to execute a round
+  * Sends messages to participants to execute a round,
+  * Acts as local interface for GUI, the global clock, and any global functionality, e.g. the genesis block,
+  * Has consensus members for reasearch oriented tests and commands
   */
 
 class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
@@ -82,9 +81,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
   var blocksForged = 0
   var globalSlot = 0
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
+  var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
   var tineCounter = 0
-  var candidateTines:Array[(Tine,Slot,Int)] = Array()
+  var tinePoolWithPrefix:Array[(Tine,Slot,Int)] = Array()
   var genBlockHeader: BlockHeader = _
   var genBlockHash: Hash = ByteArrayWrapper(Array())
   var roundBlock: Int = 0
@@ -732,43 +731,47 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       globalSlot = t
       SharedData.diskAccess = false
     }
-    if (new File("command/cmd").exists) {
-      println("-----------------------------------------------------------")
-      val f = new File("command/cmd")
-      val cmd: String = ("cat" #< f).!!
-      f.delete
-      val cmdList = cmd.split("\n")
-      for (line<-cmdList) {
-        val com = line.trim.split(" ")
-        com(0) match {
-          case s:String => {
-            if (com.length == 2){
-              Try{com(1).toInt}.toOption match {
-                case Some(i:Int) => {
-                  if (cmdQueue.keySet.contains(i)) {
-                    val nl = s::cmdQueue(i)
-                    cmdQueue -= i
-                    cmdQueue += (i->nl)
-                  } else {
-                    cmdQueue += (i->List(s))
+
+    if (devMode) {
+      if (new File("command/cmd").exists) {
+        println("-----------------------------------------------------------")
+        val f = new File("command/cmd")
+        val cmd: String = ("cat" #< f).!!
+        f.delete
+        val cmdList = cmd.split("\n")
+        for (line<-cmdList) {
+          val com = line.trim.split(" ")
+          com(0) match {
+            case s:String => {
+              if (com.length == 2){
+                Try{com(1).toInt}.toOption match {
+                  case Some(i:Int) => {
+                    if (cmdQueue.keySet.contains(i)) {
+                      val nl = s::cmdQueue(i)
+                      cmdQueue -= i
+                      cmdQueue += (i->nl)
+                    } else {
+                      cmdQueue += (i->List(s))
+                    }
                   }
+                  case None =>
                 }
-                case None =>
-              }
-            } else {
-              if (cmdQueue.keySet.contains(t)){
-                val nl = s::cmdQueue(t)
-                cmdQueue -= t
-                cmdQueue += (t->nl)
               } else {
-                cmdQueue += (t->List(s))
+                if (cmdQueue.keySet.contains(t)){
+                  val nl = s::cmdQueue(t)
+                  cmdQueue -= t
+                  cmdQueue += (t->nl)
+                } else {
+                  cmdQueue += (t->List(s))
+                }
               }
             }
+            case _ =>
           }
-          case _ =>
         }
       }
     }
+
     if (cmdQueue.keySet.contains(t)) {
       command(cmdQueue(t))
       cmdQueue -= t

@@ -9,6 +9,15 @@ import prosomo.primitives.{Parameters, Ratio, SharedData}
 import scala.util.Try
 import scala.util.control.Breaks.{break, breakable}
 
+/**
+  * Primary consensus routines,
+  * Implements the Maxvalid-BG chain selection rule specified in Ouroboros Genesis
+  * TinePool functionality is executed in these methods,
+  * When a common ancestor is not found for a block a request is made for the block id and sent to the network
+  * Stateful validation and ledger accumulation is executed here, Txs are filed into MemPool from every block encountered
+  */
+
+
 trait ChainSelection extends Members {
   import Parameters._
 
@@ -84,16 +93,16 @@ trait ChainSelection extends Members {
               case None => {
                 if (counter>2*tineMaxTries) {
                   if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Old Tine")
-                  tines -= job._1
+                  tinePool -= job._1
                 } else {
-                  tines -= job._1
+                  tinePool -= job._1
                   val tineLength = getActiveSlots(tine)
-                  tines += (job._1 -> (tine,counter,tineLength,totalTries+1,ref))
+                  tinePool += (job._1 -> (tine,counter,tineLength,totalTries+1,ref))
                   if (totalTries > tineMaxTries || tineLength>tineMaxDepth) {
                     bootStrapLock = true
                     bootStrapJob = job._1
                     if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tines.keySet.size
+                      "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
                     )
                     val depth:Int = if (tineLength < tineMaxDepth) {
                       tineLength
@@ -104,7 +113,7 @@ trait ChainSelection extends Members {
                     send(selfWrapper,ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
                   } else {
                     if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tines.keySet.size
+                      "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
                     )
                     val request:Request = (List(parentId),0,job._1)
                     send(selfWrapper,ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
@@ -124,8 +133,8 @@ trait ChainSelection extends Members {
     }
 
     if (foundAncestor) {
-      candidateTines = Array((tine,prefix,job._1)) ++ candidateTines
-      tines -= job._1
+      tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
+      tinePool -= job._1
     }
   }
 
@@ -166,9 +175,9 @@ trait ChainSelection extends Members {
 
   /**main chain selection routine, maxvalid-bg*/
   def maxValidBG = Try{
-    val prefix:Slot = candidateTines.last._2
-    val tine:Tine = Tine(candidateTines.last._1)
-    val job:Int = candidateTines.last._3
+    val prefix:Slot = tinePoolWithPrefix.last._2
+    val tine:Tine = Tine(tinePoolWithPrefix.last._1)
+    val job:Int = tinePoolWithPrefix.last._3
     val tineMaxSlot = tine.last._1
     val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
     val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
@@ -194,7 +203,7 @@ trait ChainSelection extends Members {
         chainStorage.store(localChain,localChainId,serializer)
       } else {
         println("Error: invalid best chain")
-        candidateTines = candidateTines.dropRight(1)
+        tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
         SharedData.throwError(holderIndex)
       }
     } else {
@@ -271,9 +280,9 @@ trait ChainSelection extends Members {
       assert(currentEpoch == epoch)
       updateWallet
       trimMemPool
-      candidateTines = candidateTines.dropRight(1)
+      tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
       var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
-      for (entry <- candidateTines) {
+      for (entry <- tinePoolWithPrefix) {
         updateTine(entry._1) match {
           case Some((newTine:Tine,prefix:Slot)) => {
             if (prefix > 0 && !newTine.isEmpty) {
@@ -283,7 +292,7 @@ trait ChainSelection extends Members {
           case None =>
         }
       }
-      candidateTines = newCandidateTines
+      tinePoolWithPrefix = newCandidateTines
     }
 
     def dropTine:Unit = {
@@ -298,7 +307,7 @@ trait ChainSelection extends Members {
           }
         }
       }
-      candidateTines = candidateTines.dropRight(1)
+      tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
 
 

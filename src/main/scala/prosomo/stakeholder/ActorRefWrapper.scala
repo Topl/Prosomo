@@ -5,7 +5,11 @@ import akka.util.Timeout
 import prosomo.cases.MessageFromLocalToRemote
 import scala.concurrent.Future
 
-//wrapper class for akka ActorRef, remote and local actors handled accordingly
+/**
+  * Wrapper class for akka ActorRef, remote and local actors handled accordingly
+  * Router ref is the interface with network controller for sending messages to remote
+  * A handy way of treating actor paths from remote and local on the same footing
+  */
 
 case class ActorRefWrapper(
                             inputRouterRef:akka.actor.ActorRef,

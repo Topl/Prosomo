@@ -7,8 +7,11 @@ import prosomo.components.Tine
 import prosomo.primitives.Parameters.useGui
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
-
 import scala.util.Try
+
+/**
+  * All methods required to update the Node View of Stakeholder to the latest global slot provided by Coordinator
+  */
 
 trait Update extends Members {
   import Parameters.{printFlag,epochLength,useGossipProtocol,numGossipers,dataOutInterval,dataOutFlag,useFencing}
@@ -17,9 +20,7 @@ trait Update extends Members {
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta) = {
     val ep = slot / epochLength
     if (ep > epochIn) {
-      //println(s"Holder $holderIndex old eta "+Base58.encode(eta))
       val newEta = eta_from_tine(chain, ep, lastEta)
-      //println(s"Holder $holderIndex eta now "+Base58.encode(newEta))
       (epochIn+1,newEta)
     } else {
       (epochIn,lastEta)
@@ -50,18 +51,13 @@ trait Update extends Members {
   }
 
   def update:Unit = timeFlag{
-
     if (SharedData.error) actorStalled = true
-
     if (!actorStalled && !updating) {
-
       updating = true
-      
       if (SharedData.killFlag) {
         timers.cancelAll
         updating = false
       }
-
       while (globalSlot > localSlot) {
         localSlot += 1
         if (dataOutFlag && localSlot % dataOutInterval == 0) {
@@ -124,11 +120,9 @@ trait Update extends Members {
           }
         }
       }
-
-      if (!useFencing) while (candidateTines.nonEmpty && updating) {
+      if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
         maxValidBG
       }
-
       if (useFencing) roundBlock match {
         case 0 => {
           forgeBlock(keys)
@@ -136,7 +130,7 @@ trait Update extends Members {
           routerRef ! Flag(selfWrapper,"updateSlot")
         }
         case _ if chainUpdateLock => {
-          if (candidateTines.isEmpty) {
+          if (tinePoolWithPrefix.isEmpty) {
             chainUpdateLock = false
           } else {
             if (holderIndex == SharedData.printingHolder && printFlag) {
@@ -147,7 +141,6 @@ trait Update extends Members {
         }
         case _ =>
       }
-
       if (holderIndex == SharedData.printingHolder && useGui) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))

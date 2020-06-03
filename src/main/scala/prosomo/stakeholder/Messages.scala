@@ -5,9 +5,13 @@ import akka.util.Timeout
 import prosomo.cases._
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Mac, Parameters}
-
 import scala.concurrent.Await
 import scala.math.BigInt
+
+/**
+  * Local Akka message passing routines using ActorRefWrapper,
+  * Provides some utilities for coordinator to collect info about state from Stakeholders
+  */
 
 trait Messages extends Members {
   import Parameters._
@@ -183,39 +187,4 @@ trait Messages extends Members {
       case value:GetPositionData => value.s
     }
   }
-
-  /**
-    * Sends commands one by one to list of stakeholders
-    * @param holders actor list
-    * @param command object to be sent
-    * @param input map of holder data
-    * @return map of holder data
-    */
-  def collectKeys(holders:List[ActorRefWrapper], command: Any, input: Map[String,String]): Map[String,String] = {
-    var list:Map[String,String] = input
-    for (holder <- holders){
-      implicit val timeout:Timeout = Timeout(waitTime)
-      val future = holder ? command
-      Await.result(future, timeout.duration) match {
-        case str:String => {
-          if (verifyStamp(str)) list = list++Map(s"${holder.path.toString}" -> str)
-        }
-        case _ => println("error")
-      }
-    }
-    list
-  }
-
-  /**
-    * Verify diffused strings with public key included in the string
-    * @param value string to be checked
-    * @return true if signature is valid, false otherwise
-    */
-  def verifyStamp(value: String): Boolean = {
-    val values: Array[String] = value.split(";")
-    val m = values(0) + ";" + values(1) + ";" + values(2) + ";" + values(3)
-    sig.verify(hex2bytes(values(4)), serializer.getBytes(m), hex2bytes(values(0)))
-  }
-
-
 }

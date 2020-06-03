@@ -2,6 +2,10 @@ package prosomo.stakeholder
 
 import prosomo.primitives.Types
 
+/**
+  * Some useful and not so useful methods
+  */
+
 trait Utilities extends Members with Types {
 
   import prosomo.primitives.Parameters._

@@ -6,9 +6,14 @@ import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
 import prosomo.primitives.{Keys, Mac, MalkinKey, Ratio, SharedData}
 import scorex.util.encode.Base58
-
 import scala.math.BigInt
 import scala.util.Try
+
+/**
+  * Forging routines for the genesis block and all other blocks,
+  * Implements the Staking Procedure described in Ouroboros Genesis,
+  * Newly forged blocks are immediately broadcast to network and placed first in line in the TinePool
+  */
 
 trait Forging extends Members {
 
@@ -50,7 +55,7 @@ trait Forging extends Members {
           blocksForged += 1
           val jobNumber = tineCounter
           tineCounter += 1
-          candidateTines = candidateTines ++ Array((Tine((slot,block.id),rho),slot-1,jobNumber))
+          tinePoolWithPrefix = tinePoolWithPrefix ++ Array((Tine((slot,block.id),rho),slot-1,jobNumber))
         }
         case _ => {
           SharedData.throwError(holderIndex)

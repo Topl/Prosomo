@@ -3,8 +3,11 @@ package prosomo.stakeholder
 import prosomo.components.{Serializer, Transaction}
 import prosomo.primitives.Types.{PublicKeyW, State}
 import prosomo.primitives.{Ratio, Sig}
-
 import scala.math.BigInt
+
+/**
+  * Tx methods required by the wallet and the Stakeholder actors
+  **/
 
 trait Transactions {
 

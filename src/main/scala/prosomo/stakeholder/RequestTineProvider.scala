@@ -6,10 +6,15 @@ import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Fch, Mac, SharedData, Sig, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
-
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random
+
+/**
+  * Provider for remote TinePool syncing, used only for bootstrapping peers
+  * @param blockStorage block database to be checked, should be thread safe with read/write locks
+  * @param routerRef actor ref to send network messages to
+  */
 
 class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper) extends Actor with Timers with Types {
   import RequestTineProvider.Info

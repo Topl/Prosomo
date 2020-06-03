@@ -5,9 +5,12 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
 import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
-
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
+
+/**
+  * All verification methods required to participate in consensus
+  */
 
 trait Validation extends Members {
   import Parameters._
@@ -18,20 +21,14 @@ trait Validation extends Members {
     */
   def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
-    val kesVer = kes.verify(
-      sig._5,
-      hash.data++serializer.getBytes(ledger)
+    kes.verify(sig._5, hash.data++serializer.getBytes(ledger)
         ++serializer.getBytes(slot)
         ++serializer.getBytes(cert)
         ++rho++pi++serializer.getBytes(bn)
         ++serializer.getBytes(ps),
-      (sig._1,sig._2,sig._3),
-      slot-sig._4
-    )
-    val malkinPkVer = pk_kes.deep == fch.hash(Ints.toByteArray(sig._4)++sig._5).deep
-    val out = verifyMac(ledger.dataHash,ledger) && kesVer && malkinPkVer
-    if (!out) println(verifyMac(ledger.dataHash,ledger),kesVer,malkinPkVer)
-    out
+      (sig._1,sig._2,sig._3), slot-sig._4) &&
+      pk_kes.deep == fch.hash(Ints.toByteArray(sig._4)++sig._5).deep &&
+      verifyMac(ledger.dataHash,ledger)
   }
 
   def verifyBlock(b:Block): Boolean = {
@@ -74,9 +71,7 @@ trait Validation extends Members {
         case _ => {println("Error: tx set match in block verify");false}
       }
     }
-    val out = headerVer && b.id == hash(header,serializer) && ledgerVer
-    if (!out) println(headerVer, b.id == hash(header,serializer) , ledgerVer)
-    out
+    headerVer && b.id == hash(header,serializer) && ledgerVer
   }
 
   /**

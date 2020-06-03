@@ -9,6 +9,11 @@ import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import scala.math.BigInt
 import scala.util.Random
 
+/**
+  * The root trait for actors that will participate in consensus
+  * All members required to execute Ouroboros routines and maintain state, mempool, tinepool, and wallet
+  */
+
 trait Members extends SimpleTypes with Actor with Timers {
 
   implicit val routerRef:ActorRefWrapper
@@ -49,9 +54,9 @@ trait Members extends SimpleTypes with Actor with Timers {
   var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)]
   var blocksForged:Int
   var globalSlot:Slot
-  var tines:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)]
+  var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)]
+  var tinePoolWithPrefix:Array[(Tine,Slot,Int)]
   var tineCounter:Int
-  var candidateTines:Array[(Tine,Slot,Int)]
   var genBlockHeader:BlockHeader
   var genBlockHash:Hash
   var roundBlock:Int
@@ -128,7 +133,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getStakingState(holder:ActorRefWrapper):State
   def getBlockTree(holder:ActorRefWrapper):Unit
   def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])
-  def collectKeys(holders:List[ActorRefWrapper], command: Any, input: Map[String,String]): Map[String,String]
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
   def verifyChain(c:Tine, gh:Hash):Boolean
@@ -139,7 +143,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def trimMemPool:Unit
   def collectLedger(c:Tine):Unit
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet
-  def verifyStamp(value: String):Boolean
   def timeFlag[R](block: => R):R
   def time[R](block: => R):R
 

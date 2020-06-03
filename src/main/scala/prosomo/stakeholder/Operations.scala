@@ -1,8 +1,11 @@
 package prosomo.stakeholder
 
 import prosomo.components.Tine
-
 import scala.util.Try
+
+/**
+  * Some utilities for checking database and tine operations during chain selection
+  */
 
 trait Operations extends Members {
 
