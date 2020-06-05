@@ -797,7 +797,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
     }
 
-    if (!actorStalled && transactionFlag && !useFencing && t>1 && transactionCounter < txMax && !SharedData.errorFlag) {
+    if (!actorStalled && transactionFlag && !useFencing && t>1 && !SharedData.errorFlag) {
       issueRandTx
     }
 
