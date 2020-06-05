@@ -1,20 +1,24 @@
 package prosomo
 
 import java.awt.event.{ActionEvent, ActionListener}
-import java.awt.{CardLayout, Color, Dimension}
+import java.awt.{Color, Dimension}
 
 import prosomo.primitives.Parameters.{devMode, fch}
-import prosomo.primitives.{Bip39, ColorTextArea, SharedData}
+import prosomo.primitives.{Bip39, ColorTextArea, Kes, KeyFile, SharedData, Sig, Vrf}
 import com.typesafe.config.{Config, ConfigFactory}
-import javax.swing.{BorderFactory, SwingUtilities}
+import javax.swing.{BorderFactory, JOptionPane, SwingUtilities}
 import scorex.util.encode.Base58
 
 import scala.swing.Font.Style
 import scala.swing._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import java.io.File
 
-import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased, KeyTyped}
+import akka.actor.ActorRef
+import prosomo.cases.{GetTime, NewHolderFromUI}
+import prosomo.components.Serializer
+
+import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased}
 
 /**
   * A class for the user interface, will fail gracefully if any component is not able to load
@@ -41,6 +45,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
   var waitToConnect = true
   var runApp = true
   val listener = this
+
+  var coordRef:ActorRef = _
 
   def uuid: String = java.util.UUID.randomUUID.toString
 
@@ -187,9 +193,21 @@ class ProsomoWindow(config:Config) extends ActionListener {
             }
           }
           Try{windowConfig.getString("scorex.network.agentName")}.toOption match {
-            case Some(adr) if adr != "" =>
+            case Some(adr) if adr != "" && adr != "prosomo" =>
             case _ => {
-              val str = "input{scorex{network{agentName=\"prosomo_"+prosomo.primitives.Parameters.prosomoNodeUID+"\"}}}"
+              val str = "input{scorex{network{agentName=\""+agentNameField.get.text+"\"}}}"
+              Try{
+                windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
+              }.toOption match {
+                case None => println("Error: input not parsed")
+                case _ =>
+              }
+            }
+          }
+          Try{windowConfig.getString("scorex.network.nodeName")}.toOption match {
+            case Some(adr) if adr != "" && adr != "prosomo" =>
+            case _ => {
+              val str = "input{scorex{network{nodeName=\""+nameField.get.text+"\"}}}"
               Try{
                 windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
               }.toOption match {
@@ -504,7 +522,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
           file.mkdirs()
           keysFileChooser.get.selectedFile = file
           keysFileChooser.get.peer.rescanCurrentDirectory()
-          keyFileDir = keysFileChooser.get.selectedFile.getAbsolutePath
           keyWin match {
             case None =>
             case Some(win) => keyWin = None
@@ -533,14 +550,16 @@ class ProsomoWindow(config:Config) extends ActionListener {
 
   var keyWin:Option[KeyManagerWindow] = None
 
-  class KeyManagerWindow(newKey:Boolean) extends ActionListener {
+  class KeyManagerWindow(val newKey:Boolean) extends ActionListener {
 
     var windowEntropy1 = fch.hash(uuid)
     var windowEntropy2 = fch.hash(uuid)
     var windowEntropy3 = fch.hash(uuid)
 
+    var windowKeyFile = KeyFile.empty
+
     val passwordHelp = Try {
-      new TextField("  Enter Password: ") {
+      new TextField(if(newKey){"  Enter a new password, 6 characters or longer: "}else{"  Enter Password: "}) {
         editable = false
         border = BorderFactory.createEmptyBorder()
       }
@@ -595,11 +614,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
     val readyButton = Try{
       new Button (if(newKey){"Generate"}else{"Load"}) {
         if (newKey) enabled = false
-        reactions += {
-          case scala.swing.event.ButtonClicked(_) => {
-            listener.actionPerformed(new ActionEvent(this,4,"4"))
-          }
-        }
       }
     }.toOption
 
@@ -628,6 +642,12 @@ class ProsomoWindow(config:Config) extends ActionListener {
                     windowEntropy2 = fch.hash(uuid)
                     windowEntropy3 = fch.hash(uuid)
                     bip39Field.get.editable = false
+                    JOptionPane.showMessageDialog(
+                      this.peer,
+                      "A new mnemonic phrase has been generated for you.\nWrite it down, it will not be shown again.\nYou may use it to recover your account in the future.",
+                      "New Phrase",
+                      JOptionPane.INFORMATION_MESSAGE
+                    )
                 }
               }
             }
@@ -647,6 +667,54 @@ class ProsomoWindow(config:Config) extends ActionListener {
         if (newKey) {
           minimumSize = new Dimension(800,200)
         }
+        readyButton.get.reactions += {
+          case scala.swing.event.ButtonClicked(_) =>
+            keyFileDir = keysFileChooser.get.selectedFile.getAbsolutePath
+            if (newKey) {
+            if (bip39.phraseCheckSum(bip39Field.get.text) && hex2bytes(bip39.phraseToHex(bip39Field.get.text)).length == 32) {
+              Try {
+                val keyFile:KeyFile = KeyFile.fromSeed(
+                  passwordField.get.peer.getPassword.mkString,keyFileDir,
+                  new Serializer,
+                  new Sig,
+                  new Vrf,
+                  new Kes,
+                  SharedData.globalSlot,
+                  hex2bytes(bip39.phraseToHex(bip39Field.get.text)),
+                  windowEntropy2,
+                  windowEntropy3
+                )
+                val keys = keyFile.getKeys(passwordField.get.peer.getPassword.mkString, new Serializer, new Sig, new Vrf, new Kes)
+                keyFile
+              }.toOption match {
+                case None =>
+                  JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE)
+                case Some(kf) =>
+                  windowKeyFile = kf
+                  listener.actionPerformed(new ActionEvent(this,4,"4"))
+              }
+            } else {
+              JOptionPane.showMessageDialog(
+                this.peer,
+                "Invalid BIP39 mnemonic phrase.\nMust be have at least 24 words for 256 bits of entropy total.",
+                "Invalid Phrase",
+                JOptionPane.WARNING_MESSAGE
+              )
+            }
+          } else {
+            Try {
+              val keyFile:KeyFile = KeyFile.restore(keyFileDir).get
+              val keys = keyFile.getKeys(passwordField.get.peer.getPassword.mkString, new Serializer, new Sig, new Vrf, new Kes)
+              keyFile
+            }.toOption match {
+              case None =>
+                JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE)
+              case Some(kf) =>
+                windowKeyFile = kf
+                listener.actionPerformed(new ActionEvent(this,4,"4"))
+            }
+          }
+        }
         pack()
         centerOnScreen()
       }
@@ -658,7 +726,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
       }
     }
   }
-
 
   val keysFileElem = Try {
     new BoxPanel(Orientation.Vertical) {
@@ -924,17 +991,25 @@ class ProsomoWindow(config:Config) extends ActionListener {
         keyWin.get.window.get.close()
         activePane.get.pages(3).enabled = false
         activePane.get.peer.setSelectedIndex(0)
+        coordRef ! NewHolderFromUI(keyWin.get.windowKeyFile,dataLocation,keyWin.get.passwordField.get.peer.getPassword.mkString,agentNameField.get.text,keyFileDir)
         keyWin = None
-      case "5" => {
+      case "5" =>
         val pw1 = keyWin.get.passwordField.get.peer.getPassword.mkString
         val pw2 = keyWin.get.confirmPasswordField.get.peer.getPassword.mkString
-        if (pw1 == pw2 && pw1.length>=6) {
-          keyWin.get.readyButton.get.enabled = true
+        if (keyWin.get.newKey) {
+          if (pw1 == pw2 && pw1.length>=6) {
+            keyWin.get.readyButton.get.enabled = true
+          } else {
+            keyWin.get.readyButton.get.enabled = false
+          }
         } else {
-          keyWin.get.readyButton.get.enabled = false
+          if (pw1.length>=6) {
+            keyWin.get.readyButton.get.enabled = true
+          } else {
+            keyWin.get.readyButton.get.enabled = false
+          }
         }
-      }
+      case _ =>
     }
-
   }
 }

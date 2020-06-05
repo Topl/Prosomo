@@ -104,7 +104,7 @@ trait Update extends Members {
           if (!useFencing) {
             forgeBlock(keys)
           }
-          keyFile = KeyFile.update(keyFile,keys.sk_kes,password,storageDir,serializer,salt,derivedKey)
+          keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
           if (useGossipProtocol) {
             val newOff = (numGossipers*math.sin(2.0*math.Pi*(globalSlot.toDouble/100.0+phase))/2.0).toInt
             if (newOff != gOff) {

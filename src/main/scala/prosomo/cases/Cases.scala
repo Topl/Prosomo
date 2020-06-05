@@ -4,7 +4,8 @@ import akka.actor.ActorPath
 import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
-import prosomo.primitives.Mac
+import prosomo.primitives.{KeyFile, Mac}
+
 import scala.math.BigInt
 
 /*
@@ -46,6 +47,7 @@ case class SendBlock(block:Block,mac:Mac)
 case class SendTx(transaction:Transaction)
 
 //messages between coordinator/router and holders
+case class NewHolderFromUI(kf:KeyFile,dir:String,pswd:String,name:String,kdir:String)
 case class MessageFromLocalToRemote(s:ActorRefWrapper,r:ActorPath,c:Any)
 case class MessageFromLocalToLocal(s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
 case class MessageFromLocalToLocalId(uid:BigInt,s:ActorRefWrapper,r:ActorRefWrapper,c:Any)

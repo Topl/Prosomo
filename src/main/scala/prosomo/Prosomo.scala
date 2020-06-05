@@ -115,8 +115,8 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     case Some(win) => Try{
       window.get.activePane.get.pages(1).enabled = true
       window.get.activePane.get.pages(2).enabled = true
-      win.connectButton.get.text = "Connected"
-      win.window.get.reactions += {
+      window.get.connectButton.get.text = "Connected"
+      window.get.window.get.reactions += {
         case event.WindowClosed(_) => {
           this.stopAll()
           window.get.runApp = false
@@ -124,16 +124,16 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
           System.setOut(SharedData.oldOut)
         }
       }
-      win.cmdButton.get.reactions += {
+      window.get.cmdButton.get.reactions += {
         case event.ButtonClicked(_) =>
-          coordinatorRef ! GuiCommand(win.cmdField.get.text)
+          coordinatorRef ! GuiCommand(window.get.cmdField.get.text)
       }
-      win.sendTxButton.get.reactions += {
+      window.get.sendTxButton.get.reactions += {
         case scala.swing.event.ButtonClicked(_) => {
           SharedData.selfWrapper match {
             case Some(actorRefWrapper) =>
-              Base58.decode(win.txWin.get.recipField.get.text).toOption match {
-                case Some(pk) => Try{BigInt(win.txWin.get.deltaField.get.text)}.toOption match {
+              Base58.decode(window.get.txWin.get.recipField.get.text).toOption match {
+                case Some(pk) => Try{BigInt(window.get.txWin.get.deltaField.get.text)}.toOption match {
                   case Some(delta) => actorRefWrapper ! IssueTxToAddress(ByteArrayWrapper(pk),delta)
                   case None =>
                 }
@@ -141,12 +141,13 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
               }
             case None =>
           }
+          window.get.confirmSendToNetworkWindow.get.close()
+          window.get.txWin.get.issueTxWindow.get.close()
+          window.get.txWin = None
+          window.get.issueTxButton.get.enabled = true
         }
       }
-      win.confirmSendToNetworkWindow.get.close()
-      win.txWin.get.issueTxWindow.get.close()
-      win.txWin = None
-      win.issueTxButton.get.enabled = true
+      window.get.coordRef = coordinatorRef
     }
   }
 
@@ -230,6 +231,6 @@ object Prosomo extends App {
       instance.get.stopAll()
     }
   }
-  Thread.sleep(1000)
+  Thread.sleep(100)
   System.exit(0)
 }

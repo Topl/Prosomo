@@ -47,7 +47,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   override val holderIndex = -1
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
+  val storageDir:String = s"coordinatorData"
   val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
@@ -63,7 +63,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val sessionId:Sid = ByteArrayWrapper(fch.hash(seed))
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
-  var keyFile = KeyFile.empty
+  var keyFile:Option[KeyFile] = None
+  var keyDir = ""
   var password = ""
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
@@ -730,6 +731,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     if (t>globalSlot) {
       writeTimeInfo
       globalSlot = t
+      SharedData.globalSlot = globalSlot
       SharedData.diskAccess = false
     }
 
@@ -988,7 +990,32 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }
   }
 
+  def newHolderFromUI:Receive = {
+    case NewHolderFromUI(kf,ddir,pwd,name,kdir) => {
+      println("Bootstrapping Forger...")
+      val i = holders.length
+      val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(uuid),i,inputRef.map(_.actorRef),kf,ddir,pwd,kdir), name))
+      holders.find(newHolder.path == _.path) match {
+        case None => {
+          holders ::= newHolder
+          sendAssertDone(newHolder,HoldersFromLocal(holders))
+          sendAssertDone(newHolder,CoordRef(selfWrapper))
+          sendAssertDone(newHolder,GenBlock(genBlock))
+          sendAssertDone(newHolder,Initialize(globalSlot,None))
+          sendAssertDone(newHolder,SetClock(t0))
+          sendAssertDone(routerRef,HoldersFromLocal(holders))
+          sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
+          newHolder ! Run
+          holders.filterNot(_.remote).foreach(_ ! Diffuse)
+          println("Done, forging started...")
+        }
+        case _ => newHolder ! PoisonPill
+      }
+    }
+  }
+
   override def receive:Receive = giveTime orElse
+    newHolderFromUI orElse
     run orElse
     populate orElse
     receiveRemoteHolders orElse

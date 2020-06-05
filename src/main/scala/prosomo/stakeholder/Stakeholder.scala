@@ -25,7 +25,9 @@ class Stakeholder(
                    override val holderIndex:Int,
                    inputRef:Seq[ActorRefWrapper],
                    inputKeyFile:Option[KeyFile],
-                   inputDataDir:Option[String]
+                   inputDataDir:Option[String],
+                   inputPassword:Option[String],
+                   inputKeyDir:Option[String]
                  )
   extends ChainSelection
   with Forging
@@ -64,13 +66,16 @@ class Stakeholder(
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   //stakeholder password, set at runtime, for research runs with deterministic entropy
-  var password = ""
+  var password = inputPassword match {
+    case Some(str)=>str
+    case None => ""
+  }
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
-  //empty keyfile, doesn't write anything to disk
-  var keyFile:KeyFile = inputKeyFile match {
-    case None => KeyFile.empty
-    case Some(file) => file
+  var keyFile:Option[KeyFile] = inputKeyFile
+  var keyDir = inputKeyDir match {
+    case None => storageDir+"/keys/"
+    case Some(dir) => dir
   }
   var chainUpdateLock = false
   var localState:State = Map()
@@ -133,11 +138,12 @@ class Stakeholder(
   var tineProvider:Option[ActorRefWrapper] = None
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
-
 }
 
 object Stakeholder {
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),None,None))
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),None,None,None,None))
+  def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef],keyFile: KeyFile,dir:String,password:String,kdir:String): Props =
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),Some(keyFile),Some(dir),Some(password),Some(kdir)))
 }
 

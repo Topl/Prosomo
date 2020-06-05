@@ -300,7 +300,8 @@ trait Receive extends Members {
       println("Holder "+holderIndex.toString+s" starting on global slot ${globalSlot}")
       inputPassword match {
         case Some(pw) => password = pw
-        case None => password = s"password_holder_$holderIndex"
+        case None if password == "" => password = s"password_holder_$holderIndex"
+        case _ =>
       }
       salt = fch.hash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
@@ -311,33 +312,36 @@ trait Receive extends Members {
         val seed1 = fch.hash(rngSeed.nextString(32))
         val seed2 = fch.hash(rngSeed.nextString(32))
         val seed3 = fch.hash(rngSeed.nextString(32))
-        keyFile = KeyFile.fromSeed(
+        keyFile = Some(KeyFile.fromSeed(
           password,
-          storageDir,
+          s"$storageDir/keys/",
           serializer,
           sig:Sig,
           vrf:Vrf,
           kes:Kes,
-          globalSlot,
+          0,
           seed1,
           seed2,
           seed3
-        )
+        ))
       }
-      Try{KeyFile.restore(storageDir)} match {
-        case Success(Some(restoredFile:KeyFile)) => {
-          println("Reading keyfile ...")
-          keyFile = restoredFile
+      keyFile match {
+        case None => Try{KeyFile.restore(s"$storageDir/keys/")} match {
+          case Success(Some(restoredFile:KeyFile)) => {
+            println("Reading keyfile ...")
+            keyFile = Some(restoredFile)
+          }
+          case Success(None) => {
+            generateNewKeys
+          }
+          case Failure(exception) => {
+            exception.printStackTrace()
+            generateNewKeys
+          }
         }
-        case Success(None) => {
-          generateNewKeys
-        }
-        case Failure(exception) => {
-          exception.printStackTrace()
-          generateNewKeys
-        }
+        case _ =>
       }
-      keys = keyFile.getKeys(password,serializer,sig,vrf,kes)
+      keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
       val genesisBlock = blocks.getIfPresent((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {

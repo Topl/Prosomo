@@ -19,6 +19,7 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   var issueState:State = Map()
   var confirmedState:State = Map()
   val fch:Fch = new Fch
+
   def addTx(transaction: Transaction) = {
     if (transaction.sender == pkw) {
       if (!pendingTxsOut.keySet.contains(transaction.sid)) {
@@ -36,13 +37,21 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   }
 
   def getConfirmedBalance:BigInt = {
-    availableBalance = confirmedState(pkw)._1
-    availableBalance
+    confirmedState.get(pkw) match {
+      case Some(info) =>
+        availableBalance = info._1
+        availableBalance
+      case None => BigInt(0)
+    }
   }
 
   def getPendingBalance:BigInt = {
-    totalBalance = issueState(pkw)._1
-    totalBalance
+    issueState.get(pkw) match {
+      case Some(info) =>
+        totalBalance = info._1
+        totalBalance
+      case None => BigInt(0)
+    }
   }
 
   def getNumPending:Int = {
@@ -50,13 +59,21 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   }
 
   def getTxCounter:Int = {
-    txCounter = issueState(pkw)._3
-    txCounter
+    issueState.get(pkw) match {
+      case Some(info) =>
+        txCounter = info._3
+        txCounter
+      case None => 0
+    }
   }
 
   def getConfirmedTxCounter:Int = {
-    confirmedTxCounter = confirmedState(pkw)._3
-    confirmedTxCounter
+    confirmedState.get(pkw) match {
+      case Some(info) =>
+        confirmedTxCounter = info._3
+        confirmedTxCounter
+      case None => 0
+    }
   }
 
   def update(state:State) = {

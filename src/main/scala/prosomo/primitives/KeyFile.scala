@@ -303,7 +303,7 @@ object KeyFile {
       )
     }
     val dateString = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString.replace(":", "-")
-    val fileName = s"$defaultKeyDir/keys/$dateString-${Base58.encode(newKeys.get.pkw.data)}.json"
+    val fileName = s"$defaultKeyDir/$dateString-${Base58.encode(newKeys.get.pkw.data)}.json"
     val tempFile = new KeyFile(sig_info,vrf_info,kes_info,fileName,"NEWKEY")
     val file = new File(fileName)
     file.getParentFile.mkdirs
@@ -340,7 +340,7 @@ object KeyFile {
       )
     }
     val dateString = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString.replace(":", "-")
-    val fileName = s"$defaultKeyDir/keys/$dateString-${Base58.encode(keyFile.sig_info._1++keyFile.vrf_info._1++keyFile.kes_info._1)}.json"
+    val fileName = s"$defaultKeyDir/$dateString-${Base58.encode(keyFile.sig_info._1++keyFile.vrf_info._1++keyFile.kes_info._1)}.json"
     val tempFile = KeyFile(sig_info,vrf_info,kes_info,fileName,keyFile.fileName)
     val w = new BufferedWriter(new FileWriter(fileName))
     w.write(tempFile.json.toString())
@@ -367,7 +367,7 @@ object KeyFile {
       }
     }
     var recoveredKey:Option[KeyFile] = None
-    var files = getListOfFiles(s"$storageDir/keys/")
+    var files = getListOfFiles(s"$storageDir/")
 
     while (files.length>0) {
       Try{readFile(files.head.getPath)} match {

@@ -39,9 +39,10 @@ trait Members extends SimpleTypes with Actor with Timers {
   var password:String
   var derivedKey:Array[Byte]
   var salt:Array[Byte]
+  var keyDir:String
   var wallet:Wallet
   var keys:Keys
-  var keyFile:KeyFile
+  var keyFile:Option[KeyFile]
   var localState:State
   var eta:Eta
   var stakingState:State
