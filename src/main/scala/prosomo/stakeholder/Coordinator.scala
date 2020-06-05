@@ -993,7 +993,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def newHolderFromUI:Receive = {
     case NewHolderFromUI(kf,ddir,pwd,name,kdir) => {
       println("Bootstrapping Forger...")
-      val i = holders.length
+      val i = 0
       val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(uuid),i,inputRef.map(_.actorRef),kf,ddir,pwd,kdir), name))
       holders.find(newHolder.path == _.path) match {
         case None => {
