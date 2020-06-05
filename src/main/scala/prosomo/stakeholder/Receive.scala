@@ -295,10 +295,13 @@ trait Receive extends Members {
     }
 
     /**allocation and vars of simulation*/
-    case Initialize(gs) => {
+    case Initialize(gs,inputPassword) => {
       globalSlot = gs
       println("Holder "+holderIndex.toString+s" starting on global slot ${globalSlot}")
-      password = s"password_holder_$holderIndex"
+      inputPassword match {
+        case Some(pw) => password = pw
+        case None => password = s"password_holder_$holderIndex"
+      }
       salt = fch.hash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
       def generateNewKeys:Unit = {

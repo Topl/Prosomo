@@ -14,7 +14,7 @@ trait Staking extends Members {
   import prosomo.primitives.Parameters._
 
   /**
-    * Aggregate staking function used for calculating threshold per epoch
+    * Aggregate staking function used for calculating threshold per epoch, fixed difficulty
     * @param a relative stake
     * @return probability of being elected slot leader
     */
@@ -28,9 +28,9 @@ trait Staking extends Members {
   }
 
   /**
-    * Aggregate staking function used for calculating threshold per epoch
+    * Aggregate staking function used for calculating threshold per epoch, dynamic difficulty
     * @param a relative stake
-    * @param m_f coefficient
+    * @param m_f coefficient log(1-f(slot-parentSlot))
     * @return probability of being elected slot leader
     */
   def phi(a:Ratio,m_f:Ratio): Ratio = {
@@ -43,7 +43,7 @@ trait Staking extends Members {
   }
 
   /**
-    * Aggregate staking function parameterized in terms of slot and parent slot
+    * Aggregate staking function parameterized in terms of slot and parent slot, dynamic difficulty
     * @param a relative stake
     * @param s_interval delta between slot of header and slot of parent
     * @return probability of being elected slot leader
@@ -104,9 +104,9 @@ trait Staking extends Members {
 
   /**
     * calculates alpha, the epoch relative stake, from the staking state
-    * @param holderKey
-    * @param ls
-    * @return
+    * @param holderKey the holder public address
+    * @param ls state from which the relative stake is calculated
+    * @return state allocated to holderKey divided by all stake in state
     */
   def relativeStake(holderKey:PublicKeyW,ls:State): Ratio = {
     var netStake:BigInt = 0

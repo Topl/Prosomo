@@ -2,12 +2,16 @@ package prosomo.primitives
 
 import java.io.{BufferedReader, File, InputStreamReader}
 import java.net.URL
+
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import prosomo.remote._
+import scorex.util.encode.Base58
+
 import scala.math.BigInt
 import scala.util.Try
 
@@ -19,7 +23,7 @@ import scala.util.Try
 object Parameters {
   val fch = new Fch
   val localChainId = ByteArrayWrapper(fch.hash("LOCAL_CHAIN"))
-  val prosomoNodeUID:String = java.util.UUID.randomUUID.toString.filterNot("-".toSet)
+  val prosomoNodeUID:String = Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
   //tag for identifying ledger entries
   val genesisBytes = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
   val declaredAddressFromRemote = Try{

@@ -21,7 +21,8 @@ import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessage
 
 /**
   * Primary interface between Stakeholder system and network controller,
-  * All messages from local and remote are processed here
+  * All messages from local and remote are processed here,
+  * Acts as remote interface, should only communicate with Stakeholder and Network Controller
   * @param seed entropy for randomness
   * @param inputRef network controller refs
   */

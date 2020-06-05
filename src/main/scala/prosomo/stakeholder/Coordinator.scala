@@ -25,7 +25,8 @@ import com.google.common.cache.LoadingCache
   * Coordinator actor that initializes the genesis block and instantiates the staking party,
   * Sends messages to participants to execute a round,
   * Acts as local interface for GUI, the global clock, and any global functionality, e.g. the genesis block,
-  * Has consensus members for reasearch oriented tests and commands
+  * Has consensus members for research oriented tests and commands
+  * Acts as local interface, Should only communicate with Router and Stakeholders
   */
 
 class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
@@ -291,7 +292,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**sends start command to each stakeholder*/
     case Run => {
       println("Starting")
-      sendAssertDone(holders.filterNot(_.remote),Initialize(0))
+      sendAssertDone(holders.filterNot(_.remote),Initialize(0,None))
       println("Run")
       sendAssertDone(holders.filterNot(_.remote),SetClock(t0))
       if (useFencing) sendAssertDone(routerRef,SetClock(t0))
@@ -522,7 +523,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(newHolder,HoldersFromLocal(holders))
               sendAssertDone(newHolder,CoordRef(selfWrapper))
               sendAssertDone(newHolder,GenBlock(genBlock))
-              sendAssertDone(newHolder,Initialize(0))
+              sendAssertDone(newHolder,Initialize(0,None))
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
               sendAssertDone(routerRef,HoldersFromLocal(holders))
@@ -699,7 +700,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(newHolder,HoldersFromLocal(holders))
                 sendAssertDone(newHolder,CoordRef(selfWrapper))
                 sendAssertDone(newHolder,GenBlock(genBlock))
-                sendAssertDone(newHolder,Initialize(0))
+                sendAssertDone(newHolder,Initialize(0,None))
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
                 sendAssertDone(routerRef,HoldersFromLocal(holders))

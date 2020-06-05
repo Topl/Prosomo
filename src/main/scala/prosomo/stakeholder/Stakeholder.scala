@@ -11,17 +11,21 @@ import scala.math.BigInt
 import scala.util.Random
 
 /**
-  * Stakeholder actor that executes the staking procedure and participates in consensus
-  * Each stakeholder actor represents a distinct node view with different modifiers in their pools and databases
+  * Stakeholder actor that executes the staking procedure and participates in consensus,
+  * Each stakeholder actor represents a distinct node view with different modifiers in their pools and databases,
+  * This is the primary node view holder,
+  * Should only communicate with local and remote interfaces (Coordinator and Router respectively)
   * @param inputSeed input entropy
-  * @param holderIndex and integer index for identifying executing actors in thread locks
+  * @param holderIndex an integer index for identifying executing actors in thread locks
   * @param inputRef network controller refs and router ref
   */
 
 class Stakeholder(
                    inputSeed:Array[Byte],
                    override val holderIndex:Int,
-                   inputRef:Seq[ActorRefWrapper]
+                   inputRef:Seq[ActorRefWrapper],
+                   inputKeyFile:Option[KeyFile],
+                   inputDataDir:Option[String]
                  )
   extends ChainSelection
   with Forging
@@ -39,7 +43,10 @@ class Stakeholder(
   implicit val routerRef:ActorRefWrapper = inputRef(0)
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = dataFileDir+self.path.toStringWithoutAddress.drop(5)
+  val storageDir:String = inputDataDir match {
+    case None => dataFileDir+self.path.toStringWithoutAddress.drop(5)
+    case Some(dir) => dir
+  }
   val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   val chainStorage = new ChainStorage(storageDir)
@@ -50,18 +57,21 @@ class Stakeholder(
   override val fch = new Fch
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
-  var wallet:Wallet = new Wallet(keys.pkw,fee_r)
+  var wallet:Wallet = Wallet(keys.pkw,fee_r)
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(fch.hash(holderId.toString))
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
-  //stakeholder password, set at runtime
+  //stakeholder password, set at runtime, for research runs with deterministic entropy
   var password = ""
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
   //empty keyfile, doesn't write anything to disk
-  var keyFile:KeyFile = KeyFile.empty
+  var keyFile:KeyFile = inputKeyFile match {
+    case None => KeyFile.empty
+    case Some(file) => file
+  }
   var chainUpdateLock = false
   var localState:State = Map()
   var eta:Eta = Array()
@@ -128,6 +138,6 @@ class Stakeholder(
 
 object Stakeholder {
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),None,None))
 }
 

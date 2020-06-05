@@ -113,6 +113,8 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   window match {
     case None =>
     case Some(win) => Try{
+      window.get.activePane.get.pages(1).enabled = true
+      window.get.activePane.get.pages(2).enabled = true
       win.connectButton.get.text = "Connected"
       win.window.get.reactions += {
         case event.WindowClosed(_) => {
@@ -139,12 +141,12 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
               }
             case None =>
           }
-          win.confirmSendToNetworkWindow.get.close()
-          win.txWin.get.issueTxWindow.get.close()
-          win.txWin = None
-          win.issueTxButton.get.enabled = true
         }
       }
+      win.confirmSendToNetworkWindow.get.close()
+      win.txWin.get.issueTxWindow.get.close()
+      win.txWin = None
+      win.issueTxButton.get.enabled = true
     }
   }
 
@@ -163,7 +165,6 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run() {
-        //log.error("Unexpected shutdown")
         stopAll()
       }
     })

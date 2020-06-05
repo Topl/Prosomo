@@ -67,6 +67,6 @@ case class GetState(s:State)
 case class GetBlockTree(t:Any,h:Any)
 case class GetPositionData(s:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]))
 case class Adversary(s:String)
-case class Initialize(gs:Slot)
+case class Initialize(gs:Slot,password:Option[String])
 case class GuiCommand(s:String)
 

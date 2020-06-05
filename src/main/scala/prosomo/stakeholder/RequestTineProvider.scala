@@ -4,8 +4,9 @@ import akka.actor.{Actor, PoisonPill, Props, Timers}
 import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks}
 import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
-import prosomo.primitives.{Fch, Mac, SharedData, Sig, Types}
+import prosomo.primitives.{Fch, Mac, SharedData, Sig, SimpleTypes, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
+
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random
@@ -52,7 +53,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
       breakable{
         while (returnedIdList.length <= depth) {
           blockStorage.restore(id) match {
-            case Some(block:Block) =>{
+            case Some(block:Block) => {
               returnedIdList ::= id
               send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
               id = block.parentSlotId
@@ -74,8 +75,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   }
 }
 
-object RequestTineProvider extends Types {
-  val fch = new Fch
+object RequestTineProvider extends SimpleTypes {
   case class Info(
     ref:ActorRefWrapper,
     startId:SlotId,

@@ -1,25 +1,62 @@
 package prosomo
 
 import java.awt.event.{ActionEvent, ActionListener}
-import java.awt.{Color, Dimension}
-import prosomo.primitives.Parameters.devMode
-import prosomo.primitives.{ColorTextArea, SharedData}
+import java.awt.{CardLayout, Color, Dimension}
+
+import prosomo.primitives.Parameters.{devMode, fch}
+import prosomo.primitives.{Bip39, ColorTextArea, SharedData}
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, SwingUtilities}
 import scorex.util.encode.Base58
+
 import scala.swing.Font.Style
 import scala.swing._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
+import java.io.File
+
+import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased, KeyTyped}
 
 /**
   * A class for the user interface, will fail gracefully if any component is not able to load
   * @param config base config to be modified by window elements
   */
 
-class ProsomoWindow(config:Config) {
+
+/*
+
+Outline:
+  * Connection status and config
+  * Basic wallet stats, transaction issue dialog box
+ GUI elements in 4 tabs:
+    * Active peers on network
+    - Network stats, number of peers, active stake, tine qualities, block time
+    * Node view management
+    - Secure key creation, key management
+  * Terminal output, max 2000 lines
+ */
+
+class ProsomoWindow(config:Config) extends ActionListener {
+
   var windowConfig:Config = config
   var waitToConnect = true
   var runApp = true
+  val listener = this
+
+  def uuid: String = java.util.UUID.randomUUID.toString
+
+  def bytes2hex(b: Array[Byte]): String = {
+    b.map("%02x" format _).mkString
+  }
+
+  def hex2bytes(hex: String): Array[Byte] = {
+    if (hex.contains(" ")) {
+      hex.split(" ").map(Integer.parseInt(_, 16).toByte)
+    } else if (hex.contains("-")) {
+      hex.split("-").map(Integer.parseInt(_, 16).toByte)
+    } else {
+      hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
+    }
+  }
 
   val cmdField = Try{
     new TextField {
@@ -120,12 +157,16 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
-  upnpCheck.get.reactions += {
-    case event.ButtonClicked(_) => if (upnpCheck.get.selected) {declaredAddressField.get.enabled = false} else {declaredAddressField.get.enabled = true}
+  Try{
+    upnpCheck.get.reactions += {
+      case event.ButtonClicked(_) => if (upnpCheck.get.selected) {declaredAddressField.get.enabled = false} else {declaredAddressField.get.enabled = true}
+    }
   }
 
   val connectButton = Try{
     new Button("Connect") {
+      enabled = false
+      tooltip = "Enter a name below before you connect"
       reactions += {
         case event.ButtonClicked(_) =>
           val useUpnp = if (upnpCheck.get.selected) {"yes"} else {"no"}
@@ -231,7 +272,7 @@ class ProsomoWindow(config:Config) {
           confirmSendToNetworkWindow.get.open()
       }
     }
-  }
+  }.toOption
 
   val sendTxButton = Try {
     new Button ("Send")
@@ -250,18 +291,14 @@ class ProsomoWindow(config:Config) {
               close()
             }
           }
-          //maximumSize = new Dimension(150,50)
-          //minimumSize = new Dimension(150,50)
         },BorderPanel.Position.West)
-        //maximumSize = new Dimension(300,100)
-        //minimumSize = new Dimension(300,100)
       }
       maximumSize = new Dimension(240,50)
       minimumSize = new Dimension(240,50)
       pack()
       centerOnScreen()
     }
-  }
+  }.toOption
 
   class IssueTxWindow(sender:String,inbox:Seq[String]) extends ActionListener {
 
@@ -384,25 +421,6 @@ class ProsomoWindow(config:Config) {
     }
   }
 
-  var keyWin:Option[KeyManagerWindow] = None
-
-  class KeyManagerWindow() extends ActionListener {
-
-    val window = Try{
-
-      new Frame {
-        maximumSize = new Dimension(1200,500)
-        minimumSize = new Dimension(1200,500)
-      }
-    }
-
-    override def actionPerformed(e: ActionEvent): Unit = {
-      e.getSource match {
-        case _ =>
-      }
-    }
-  }
-
   val pendingTxField = Try{
     new TextField {
       editable=false
@@ -451,6 +469,358 @@ class ProsomoWindow(config:Config) {
     }
   }.toOption
 
+  Try{
+    javax.swing.UIManager.put("FileChooser.readOnly", true)
+  }
+
+  val keyLocation = config.getString("params.keyFileDir")
+
+  val keyDir = new File(keyLocation)
+
+  Try{keyDir.mkdirs()}
+
+  val keysFileChooser = Try {
+    new FileChooser(keyDir) {
+      fileSelectionMode = FileChooser.SelectionMode.DirectoriesOnly
+      listenTo(mouse.clicks)
+      listenTo(mouse.moves)
+      listenTo(mouse.wheel)
+      listenTo(keys)
+      reactions += {
+        case event: InputEvent => listener.actionPerformed(new ActionEvent(this,2,"2"))
+        case _ =>
+      }
+      peer.setControlButtonsAreShown(false)
+    }
+  }.toOption
+
+  var keyFileDir = ""
+
+  val newKeyButton = Try{
+    new Button ("Create New Key") {
+      reactions += {
+        case ButtonClicked(_) => {
+          val file = new File(keyLocation+"/"+agentNameField.get.text+"_"+System.currentTimeMillis().toString+"/")
+          file.mkdirs()
+          keysFileChooser.get.selectedFile = file
+          keysFileChooser.get.peer.rescanCurrentDirectory()
+          keyFileDir = keysFileChooser.get.selectedFile.getAbsolutePath
+          keyWin match {
+            case None =>
+            case Some(win) => keyWin = None
+          }
+          keyWin = Try{new KeyManagerWindow(true)}.toOption
+          keyWin.get.window.get.open()
+        }
+      }
+    }
+  }.toOption
+
+  val loadKeyButton = Try{
+    new Button ("Load Key") {
+      enabled = false
+      reactions += {
+        case ButtonClicked(_) =>
+          keyWin match {
+            case None =>
+            case Some(win) => keyWin = None
+          }
+          keyWin = Try{new KeyManagerWindow(false)}.toOption
+          keyWin.get.window.get.open()
+      }
+    }
+  }.toOption
+
+  var keyWin:Option[KeyManagerWindow] = None
+
+  class KeyManagerWindow(newKey:Boolean) extends ActionListener {
+
+    var windowEntropy1 = fch.hash(uuid)
+    var windowEntropy2 = fch.hash(uuid)
+    var windowEntropy3 = fch.hash(uuid)
+
+    val passwordHelp = Try {
+      new TextField("  Enter Password: ") {
+        editable = false
+        border = BorderFactory.createEmptyBorder()
+      }
+    }.toOption
+
+    val passwordField = Try{
+      new PasswordField() {
+        text = ""
+        columns = 30
+        listenTo(keys)
+        reactions += {
+          case event: KeyReleased => listener.actionPerformed(new ActionEvent(this,5,"5"))
+          case _ =>
+        }
+      }
+    }.toOption
+
+    val confirmHelp = Try {
+      new TextField("  Confirm Password: ") {
+        editable = false
+        border = BorderFactory.createEmptyBorder()
+      }
+    }.toOption
+
+    val confirmPasswordField = Try{
+      new PasswordField() {
+        text = ""
+        columns = 30
+        listenTo(keys)
+        reactions += {
+          case event: KeyReleased => listener.actionPerformed(new ActionEvent(this,5,"5"))
+          case _ =>
+        }
+      }
+    }.toOption
+
+    val bip39Help = Try {
+      new TextField("  Enter or generate BIP39 mnemonic phrase: ") {
+        editable = false
+        border = BorderFactory.createEmptyBorder()
+      }
+    }.toOption
+
+    val bip39Field = Try{
+      new TextField("") {
+        columns = 120
+      }
+    }
+
+    val bip39 = Bip39("en")
+
+    val readyButton = Try{
+      new Button (if(newKey){"Generate"}else{"Load"}) {
+        if (newKey) enabled = false
+        reactions += {
+          case scala.swing.event.ButtonClicked(_) => {
+            listener.actionPerformed(new ActionEvent(this,4,"4"))
+          }
+        }
+      }
+    }.toOption
+
+    val window = Try{
+      new Frame {
+        title = if (newKey) {"Create Key"} else {"Load Key"}
+        iconImage = toolkit.getImage("src/main/resources/Logo.png")
+        contents = new BoxPanel(Orientation.Vertical) {
+          border = Swing.EmptyBorder(10, 10, 10, 10)
+          contents += new BoxPanel(Orientation.Horizontal) {
+            contents += passwordHelp.get
+            contents += passwordField.get
+          }
+          if (newKey) contents += new BoxPanel(Orientation.Horizontal) {
+            contents += confirmHelp.get
+            contents += confirmPasswordField.get
+          }
+          if (newKey) contents += {
+            new BoxPanel(Orientation.Horizontal) {
+              contents += bip39Help.get
+              contents += new Button ("Seed New Phrase") {
+                reactions += {
+                  case scala.swing.event.ButtonClicked(_) =>
+                    windowEntropy1 = fch.hash(uuid)
+                    bip39Field.get.text = bip39.uuidSeedPhrase(bytes2hex(windowEntropy1))._2
+                    windowEntropy2 = fch.hash(uuid)
+                    windowEntropy3 = fch.hash(uuid)
+                    bip39Field.get.editable = false
+                }
+              }
+            }
+          }
+          if (newKey) contents += bip39Field.get
+          contents += new BoxPanel(Orientation.Horizontal) {
+            contents += readyButton.get
+            contents += new Button ("Cancel") {
+              reactions += {
+                case scala.swing.event.ButtonClicked(_) => {
+                  close()
+                }
+              }
+            }
+          }
+        }
+        if (newKey) {
+          minimumSize = new Dimension(800,200)
+        }
+        pack()
+        centerOnScreen()
+      }
+    }
+
+    override def actionPerformed(e: ActionEvent): Unit = {
+      e.getSource match {
+        case _ =>
+      }
+    }
+  }
+
+
+  val keysFileElem = Try {
+    new BoxPanel(Orientation.Vertical) {
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += new TextField("   Select the directory of your key, keep one account per directory, old keys are erased   "){
+          editable = false
+          border=BorderFactory.createEmptyBorder()
+        }
+        contents += loadKeyButton.get
+        contents += newKeyButton.get
+      }
+      contents += keysFileChooser.get
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
+
+  val dataDir = new File(config.getString("params.dataFileDir"))
+
+  Try{dataDir.mkdirs()}
+
+  var dataLocation = ""
+
+  val nodeViewFileChooser = Try {
+    new FileChooser(dataDir) {
+      fileSelectionMode = FileChooser.SelectionMode.DirectoriesOnly
+      peer.setControlButtonsAreShown(false)
+      listenTo(mouse.clicks)
+      listenTo(mouse.moves)
+      listenTo(mouse.wheel)
+      listenTo(keys)
+      reactions += {
+        case event: InputEvent => listener.actionPerformed(new ActionEvent(this,1,"1"))
+        case _ =>
+      }
+    }
+  }
+
+  val newNodeViewButton = Try{
+    new Button ("Create Node View") {
+      reactions += {
+        case ButtonClicked(_) => {
+          val file = new File(dataDir+"/"+agentNameField.get.text+"_"+System.currentTimeMillis().toString+"/")
+          file.mkdirs()
+          nodeViewFileChooser.get.selectedFile = file
+          nodeViewFileChooser.get.peer.rescanCurrentDirectory()
+          dataLocation = nodeViewFileChooser.get.selectedFile.getAbsolutePath
+        }
+      }
+    }
+  }.toOption
+
+  val openNodeViewButton = Try{
+    new Button ("Load Node View") {
+      enabled = false
+      reactions += {
+        case ButtonClicked(_) => {
+          dataLocation = nodeViewFileChooser.get.selectedFile.getAbsolutePath
+          listener.actionPerformed(new ActionEvent(this,3,"3"))
+        }
+      }
+    }
+  }.toOption
+
+  val nodeViewFileElem = Try {
+    new BoxPanel(Orientation.Vertical) {
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += new TextField("   Select the directory of your node view data, including block and state databases   "){
+          editable = false
+          border=BorderFactory.createEmptyBorder()
+        }
+        contents += openNodeViewButton.get
+        contents += newNodeViewButton.get
+      }
+      contents += nodeViewFileChooser.get
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
+
+  val nameHelp = Try{
+    new TextField {
+      text = "Enter your name or an alias with no special characters, then press Connect: "
+      editable = false
+      maximumSize = new Dimension(500,30)
+      minimumSize = new Dimension(500,30)
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
+
+  val nameField = Try{
+    new TextField {
+      text = ""
+      editable = true
+      maximumSize = new Dimension(250,30)
+      minimumSize = new Dimension(250,30)
+      listenTo(keys)
+      reactions += {
+        case event: KeyReleased => listener.actionPerformed(new ActionEvent(this,0,"0"))
+        case _ =>
+      }
+      peer.addActionListener(listener)
+    }
+  }.toOption
+
+  val agentNameHelp = Try{
+    new TextField {
+      text = "Your agent name as seen by peers: "
+      editable = false
+      maximumSize = new Dimension(250,30)
+      minimumSize = new Dimension(250,30)
+      border=BorderFactory.createEmptyBorder()
+    }
+  }.toOption
+
+  val agentNameField = Try{
+    new TextField {
+      text = ""
+      columns = 100
+      editable = false
+      maximumSize = new Dimension(500,30)
+      minimumSize = new Dimension(500,30)
+    }
+  }.toOption
+
+  val netStatsElem = Try{
+    new ScrollPane(new BoxPanel(Orientation.Vertical) {
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += nameHelp.get
+        contents += nameField.get
+
+      }
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += agentNameHelp.get
+        contents += agentNameField.get
+      }
+      border=BorderFactory.createEmptyBorder()
+      maximumSize = new Dimension(2000,2000)
+      preferredSize = new Dimension(800,400)
+      minimumSize = new Dimension(100,100)
+    })
+  }.toOption
+
+  val activePane = Try{
+    new TabbedPane {
+      pages += new TabbedPane.Page("Network Info",netStatsElem.get)
+      pages += new TabbedPane.Page("Active Peers",peerListElem.get)
+      pages += new TabbedPane.Page("Manage Node View",nodeViewFileElem.get)
+      pages += new TabbedPane.Page("Manage Keys",keysFileElem.get)
+      tooltip = "Select a tab"
+    }
+  }.toOption
+
+  Try {
+    (1 to 3).foreach(activePane.get.pages(_).enabled = false)
+  }
+
+  Try {
+    activePane.get.peer.setToolTipTextAt(0,"Network name and stats")
+    activePane.get.peer.setToolTipTextAt(1,"List of discovered peers with stake info")
+    activePane.get.peer.setToolTipTextAt(2,"Choose the blockchain data on disk")
+    activePane.get.peer.setToolTipTextAt(3,"Load your keys from disk")
+  }
+
   def refreshOutput = {
     Swing.onEDT {
       if (!outputElem.get.verticalScrollBar.valueIsAdjusting) {
@@ -479,13 +849,6 @@ class ProsomoWindow(config:Config) {
 
   val window:Option[Frame] = Try{
     new Frame {
-      /*
-      GUI additions:
-        - network stats, number of peers, active stake
-        - basic wallet stats, transaction issue dialog box
-        - tine qualities, block time
-        - secure key creation
-       */
       reactions += {
         case event.WindowClosing(_) => {
           waitToConnect = false
@@ -502,7 +865,7 @@ class ProsomoWindow(config:Config) {
         if (devMode) contents += commandElem.get
         contents += connectElem.get
         contents += walletElem.get
-        contents += peerListElem.get
+        contents += activePane.get
         contents += outputElem.get
       }
       pack()
@@ -520,6 +883,7 @@ class ProsomoWindow(config:Config) {
         Thread.sleep(100)
       }
       if (runApp) {
+        nameField.get.enabled = false
         connectButton.get.enabled = false
         connectButton.get.text = "Connecting..."
         knownAddressField.get.editable = false
@@ -528,5 +892,49 @@ class ProsomoWindow(config:Config) {
         System.setOut(SharedData.printStream)
       }
     }
+  }
+
+  override def actionPerformed(e: ActionEvent): Unit = {
+    e.getActionCommand match {
+      case "0" =>
+        agentNameField.get.text = nameField.get.text + "_" + prosomo.primitives.Parameters.prosomoNodeUID
+        if (nameField.get.text != "" && nameField.get.text.forall((('a'to'z')++('A'to'Z')++('0'to'9')).toSet.contains(_))) {
+          connectButton.get.enabled = true
+        } else {connectButton.get.enabled = false}
+      case "1" =>
+        nodeViewFileChooser.get.peer.getSelectedFile match {
+          case null =>
+            openNodeViewButton.get.enabled = false
+          case file if file.exists() =>
+            openNodeViewButton.get.enabled = true
+          case _ =>
+            openNodeViewButton.get.enabled = false
+        }
+      case "2" =>
+        keysFileChooser.get.peer.getSelectedFile match {
+          case null => loadKeyButton.get.enabled = false
+          case file if file.exists() => loadKeyButton.get.enabled = true
+          case _ => loadKeyButton.get.enabled = false
+        }
+      case "3" =>
+        activePane.get.pages(3).enabled = true
+        activePane.get.pages(2).enabled = false
+        activePane.get.peer.setSelectedIndex(3)
+      case "4" =>
+        keyWin.get.window.get.close()
+        activePane.get.pages(3).enabled = false
+        activePane.get.peer.setSelectedIndex(0)
+        keyWin = None
+      case "5" => {
+        val pw1 = keyWin.get.passwordField.get.peer.getPassword.mkString
+        val pw2 = keyWin.get.confirmPasswordField.get.peer.getPassword.mkString
+        if (pw1 == pw2 && pw1.length>=6) {
+          keyWin.get.readyButton.get.enabled = true
+        } else {
+          keyWin.get.readyButton.get.enabled = false
+        }
+      }
+    }
+
   }
 }

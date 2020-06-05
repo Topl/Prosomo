@@ -53,7 +53,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     decrypted
   }
 
-  def getVrfPrivateKey(password: String,serializer:Serializer,vrf:Vrf): Try[Array[Byte]] = Try {
+  def getVrfPrivateKey(password: String,vrf:Vrf): Try[Array[Byte]] = Try {
     val (
       pubKeyBytes_vrf: Array[Byte],
       cipherText: Array[Byte],
@@ -95,7 +95,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     val out = new Keys
     out.sk_sig = getSigningPrivateKey(password,sig).get
     out.pk_sig = sig_info._1
-    out.sk_vrf = getVrfPrivateKey(password,serializer,vrf).get
+    out.sk_vrf = getVrfPrivateKey(password,vrf).get
     out.pk_vrf = vrf_info._1
     out.sk_kes = {getKesPrivateKey(password,serializer,kes)} match {
       case Success(value:MalkinKey) => value
@@ -289,7 +289,6 @@ object KeyFile {
       )
     }
     val kes_info = {
-
       val salt = fch.hash(uuid)
       val ivData = fch.hash(uuid).slice(0, 16)
       val derivedKey = getDerivedKey(password, salt)
@@ -309,9 +308,7 @@ object KeyFile {
     val file = new File(fileName)
     file.getParentFile.mkdirs
     val w = new BufferedWriter(new FileWriter(file))
-    //println("writing key "+fileName)
     w.write(tempFile.json.toString())
-    //println("done writing key")
     w.close()
     tempFile
   }
