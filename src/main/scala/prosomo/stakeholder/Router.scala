@@ -498,7 +498,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                       }
                     }
                   }
-                  case None => println("error: could not parse actor path")
+                  case None => println("error: could not parse actor path "+string)
                 }
               }
               if (toDiffuse) holders.filterNot(_.remote).foreach(_ ! Diffuse)
