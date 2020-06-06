@@ -774,28 +774,23 @@ trait SerializationMethods extends SimpleTypes {
     val header = Some(dBlockHeader(headerBytes))
     val bodyLen = stream.getInt
     val bodyBytes = new ByteStream(stream.get(bodyLen),stream.caseObject)
-    val body = stream.caseObject match {
-      case DeserializeBlock if !bodyBytes.empty => {
-        Some(dTransactionSet(bodyBytes))
+    stream.caseObject match {
+      case DeserializeBlock => {
+        val body = {
+          if (!bodyBytes.empty)  {
+            Some(dTransactionSet(bodyBytes))
+          } else {
+            Some(Seq())
+          }
+        }
+        assert(stream.empty)
+        Block(id,header,body,None)
       }
-      case DeserializeBlock if bodyBytes.empty => {
-        Some(Seq())
-      }
-      case _ => None
-    }
-    val genSet = stream.caseObject match {
-      case DeserializeGenesisBlock if !bodyBytes.empty => {
-        Some(dGenesisSet(bodyBytes))
-      }
-      case DeserializeGenesisBlock if !bodyBytes.empty => {
-        Some(Seq())
-      }
-      case _ => {
-        None
+      case DeserializeGenesisBlock => {
+        assert(stream.empty)
+        Block(id,header,None,Some(dGenesisSet(bodyBytes)))
       }
     }
-    assert(stream.empty)
-    Block(id,header,body,genSet)
   }
 
   private def sTxMap(txs:Map[Sid,Transaction]):Array[Byte] = {

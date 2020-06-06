@@ -3,6 +3,7 @@ package prosomo.stakeholder
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+
 import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
 import io.circe.Json
 import io.circe.syntax._
@@ -13,12 +14,15 @@ import prosomo.components.{Wallet, _}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
 import scorex.util.encode.Base58
+
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
 import scala.util.{Random, Try}
 import java.io.IOException
+
 import com.google.common.cache.LoadingCache
+import prosomo.components.Serializer.DeserializeGenesisBlock
 
 
 /**
@@ -47,7 +51,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   override val holderIndex = -1
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = s"coordinatorData"
+  val storageDir:String = "coordinator"
   val localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
@@ -147,17 +151,18 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     System.currentTimeMillis()+localClockOffset
   }
 
-  def getTimeInfo = {
-    def getListOfFiles(dir: String):List[File] = {
-      val d = new File(dir)
-      if (d.exists && d.isDirectory) {
-        d.listFiles.filter(_.isFile).toList
-      } else {
-        List[File]()
-      }
+  def getListOfFiles(dir: String):List[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory) {
+      d.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
     }
+  }
+
+  def getTimeInfo = {
     val files = getListOfFiles(s"$storageDir/time/")
-    val inputFiles = getListOfFiles("time/")
+    val inputFiles = getListOfFiles("src/main/resources/time/")
     (files.length,inputFiles.length) match {
       case (x:Int,y:Int) if x > 0 && y == 0 => {
         println("Coordinator loading time information...")
@@ -238,7 +243,21 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           println("Recovered Genesis Block")
         }
         case None => {
-          forge
+          val inputFiles = getListOfFiles("src/main/resources/genesis/")
+          inputFiles.length match {
+            case x:Int if x == 1 =>
+              val data = readFile(inputFiles.head.getPath)(0)
+              serializer.fromBytes(new ByteStream(Base58.decode(data).get,DeserializeGenesisBlock)) match {
+                case b: Block =>
+                  genBlock = Block(hash(b.prosomoHeader, serializer), b.blockHeader, b.blockBody, b.genesisSet)
+                  verifyBlock(genBlock)
+                  println("Recovered Genesis Block")
+                case _ =>
+                  println("error: genesis block is corrupted")
+                  System.exit(0)
+              }
+            case _ => forge
+          }
         }
       }
       setupLocal
@@ -274,6 +293,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case out:Block => genBlock = out
     }
     blocks.store(genBlockKey,genBlock)
+    val file = new File("src/main/resources/genesis/blockData")
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(Base58.encode(serializer.getBytes(genBlock)))
+    bw.close()
   }
 
   def setupLocal:Unit = {

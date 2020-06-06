@@ -669,7 +669,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }
         readyButton.get.reactions += {
           case scala.swing.event.ButtonClicked(_) =>
-            keyFileDir = keysFileChooser.get.selectedFile.getAbsolutePath
+            keyFileDir = keysFileChooser.get.selectedFile.getPath
             if (newKey) {
             if (bip39.phraseCheckSum(bip39Field.get.text) && hex2bytes(bip39.phraseToHex(bip39Field.get.text)).length == 32) {
               Try {
@@ -771,18 +771,18 @@ class ProsomoWindow(config:Config) extends ActionListener {
           file.mkdirs()
           nodeViewFileChooser.get.selectedFile = file
           nodeViewFileChooser.get.peer.rescanCurrentDirectory()
-          dataLocation = nodeViewFileChooser.get.selectedFile.getAbsolutePath
+          dataLocation = nodeViewFileChooser.get.selectedFile.getPath
         }
       }
     }
   }.toOption
 
-  val openNodeViewButton = Try{
+  val openNodeViewButton = Try {
     new Button ("Load Node View") {
       enabled = false
       reactions += {
         case ButtonClicked(_) => {
-          dataLocation = nodeViewFileChooser.get.selectedFile.getAbsolutePath
+          dataLocation = nodeViewFileChooser.get.selectedFile.getPath
           listener.actionPerformed(new ActionEvent(this,3,"3"))
         }
       }
