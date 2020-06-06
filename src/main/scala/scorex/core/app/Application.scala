@@ -127,5 +127,5 @@ trait Application extends ScorexLogging {
 
 object Application {
 
-  val ApplicationNameLimit: Int = 50
+  val ApplicationNameLimit: Int = 100
 }
