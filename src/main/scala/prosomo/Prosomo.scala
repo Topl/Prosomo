@@ -26,7 +26,7 @@ import scala.swing._
 import scala.util.Try
 
 /**
-  * The Prosomo simulation runtime
+  * The Prosomo testnet runtime
   * The App instantiates this class with a given configuration with user defined inputs
   * The actor system in this class is interfaced with the GUI element so buttons can trigger messages to be passed
   * Coordinator is the only actor ref that should receive messages from GUI reaction events

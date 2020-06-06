@@ -26,16 +26,6 @@ trait Utilities extends Members with Types {
     }
   }
 
-  def containsDuplicates(s:Map[String,String]):Boolean = {
-    var s1:List[String] = List()
-    var s2:List[String] = List()
-    for (entry <- s) {
-      s1 ++= List(entry._1)
-      s2 ++= List(entry._2)
-    }
-    (s1.distinct.size != s1.size) && (s2.distinct.size != s2.size)
-  }
-
   /**
     * utility for timing execution of methods
     * @param block any execution block

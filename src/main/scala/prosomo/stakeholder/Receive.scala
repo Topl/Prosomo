@@ -530,7 +530,7 @@ trait Receive extends Members {
     /**prints stats */
     case Verify => {
       val trueChain = verifyChain(localChain, genBlockHash)
-      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDoubleString + ", blocks forged = "
+      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString + ", Valid chain = "
         + trueChain.toString)
       var chainBytes:Array[Byte] = Array()
@@ -554,7 +554,7 @@ trait Receive extends Members {
 
     /**prints stats */
     case Status => {
-      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDoubleString + ", blocks forged = "
+      println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString+", MemPool Size = "+memPool.size+" Num Gossipers = "+gossipers.length.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
@@ -600,7 +600,7 @@ trait Receive extends Members {
           val fileString = (
             holderIndex.toString + " "
               + globalSlot.toString + " "
-              + keys.alpha.toDoubleString + " "
+              + keys.alpha.toDouble + " "
               + blocksForged.toString + " "
               + getActiveSlots(localChain).toString + " "
               + "\n"

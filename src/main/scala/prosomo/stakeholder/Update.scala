@@ -87,7 +87,7 @@ trait Update extends Members {
             keys.alpha = alphaCache.get.get(keys.pkw)
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
-              println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDoubleString+"\nEta:"+Base58.encode(eta))
+              println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
             }
           }
           case _ =>
@@ -145,6 +145,25 @@ trait Update extends Members {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
+        SharedData.blockTime = {
+          val head = localChain.getLastActiveSlot(globalSlot)
+          globalSlot.toDouble/getBlockHeader(head).get._9.toDouble
+        }
+        SharedData.txsPerSecond = {
+          var net = 0
+          for (entry<-localState.toSeq) {
+            net += entry._2._3
+          }
+          net.toDouble/globalSlot.toDouble
+        }
+        SharedData.activePeers = holders.size
+        SharedData.activeStake = {
+          var out = 0.0
+          for (info<-inbox) {
+            out += relativeStake(ByteArrayWrapper(info._2._2._1++info._2._2._2++info._2._2._3),stakingState).toDouble
+          }
+          out
+        }
         for (holder<-holders) {
           inbox.toList.find(info=>info._2._1==holder) match {
             case Some(inboxInfo) => Try{
@@ -152,7 +171,7 @@ trait Update extends Members {
               val str = holder.actorPath.toString
               wallet.confirmedState.get(hpk) match {
                 case Some(st) => {
-                  val ha = relativeStake(hpk,wallet.confirmedState).toDoubleString
+                  val ha = relativeStake(hpk,wallet.confirmedState).toDouble
                   SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
                   SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
                 }
@@ -160,7 +179,7 @@ trait Update extends Members {
               }
               stakingState.get(hpk) match {
                 case Some(st) => {
-                  val ha = relativeStake(hpk,stakingState).toDoubleString
+                  val ha = relativeStake(hpk,stakingState).toDouble
                   SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
                   SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
                 }
@@ -175,7 +194,7 @@ trait Update extends Members {
           val str = selfWrapper.actorPath.toString
           wallet.confirmedState.get(hpk) match {
             case Some(st) => {
-              val ha = relativeStake(hpk,wallet.confirmedState).toDoubleString
+              val ha = relativeStake(hpk,wallet.confirmedState).toDouble
               SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
               SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
             }
@@ -183,7 +202,7 @@ trait Update extends Members {
           }
           stakingState.get(hpk) match {
             case Some(st) => {
-              val ha = relativeStake(hpk,stakingState).toDoubleString
+              val ha = relativeStake(hpk,stakingState).toDouble
               SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
               SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
             }

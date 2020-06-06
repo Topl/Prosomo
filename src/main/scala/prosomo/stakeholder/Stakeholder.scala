@@ -13,13 +13,16 @@ import scala.util.Random
 /**
   * Stakeholder actor that executes the staking procedure and participates in consensus,
   * Each stakeholder actor represents a distinct node view with different modifiers in their pools and databases,
-  * This is the primary node view holder,
+  * This is the primary node view holder in testnet configuration
   * Should only communicate with local and remote interfaces (Coordinator and Router respectively)
   * @param inputSeed input entropy
   * @param holderIndex an integer index for identifying executing actors in thread locks
   * @param inputRef network controller refs and router ref
+  * @param inputKeyFile UI generated keyfile
+  * @param inputDataDir UI chosen data path
+  * @param inputPassword UI password
+  * @param inputKeyDir UI key dir for updates
   */
-
 class Stakeholder(
                    inputSeed:Array[Byte],
                    override val holderIndex:Int,

@@ -61,6 +61,12 @@ object SharedData extends Types {
 
   var scorexSettings:Option[ScorexSettings] = None
 
+  var activePeers:Int = 0
+  var activeStake:Double = 0.0
+  var blockTime:Double = 0.0
+  var txsPerSecond:Double = 0.0
+
+
   var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
   var confirmedBalance:Map[String,BigInt] = Map()
   var stakingBalance:Map[String,BigInt] = Map()

@@ -116,7 +116,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def uuid:String
   def bytes2hex(b: Array[Byte]):String
   def hex2bytes(hex: String): Array[Byte]
-  def containsDuplicates(s:Map[String,String]):Boolean
   def getBlockHeader(bid:SlotId):Option[BlockHeader]
   def getParentBlockHeader(b:BlockHeader):Option[BlockHeader]
   def getParentId(bid:SlotId):Option[SlotId]

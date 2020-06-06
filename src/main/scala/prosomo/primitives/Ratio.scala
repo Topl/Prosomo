@@ -104,7 +104,7 @@ case class Ratio(n: BigInt, d: BigInt) {
 
   override def toString = numer + (if (denom != 1) ("/"+ denom) else "")
 
-  def toDoubleString = this.toBigDecimal.toDouble
+  def toDouble = this.toBigDecimal.toDouble
 
   override def equals(that: Any) = that match {
     case that: Ratio  => numer == that.numer && denom == that.denom

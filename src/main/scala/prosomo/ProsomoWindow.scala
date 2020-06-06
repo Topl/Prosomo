@@ -33,10 +33,11 @@ Outline:
   * Basic wallet stats, transaction issue dialog box
  GUI elements in 4 tabs:
     * Active peers on network
-    - Network stats, number of peers, active stake, tine qualities, block time
+    * Network stats, number of peers, active stake, tine qualities, block time
     * Node view management
-    - Secure key creation, key management
+    * Secure key creation, key management
   * Terminal output, max 2000 lines
+
  */
 
 class ProsomoWindow(config:Config) extends ActionListener {
@@ -63,6 +64,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
       hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
     }
   }
+
+  /********************************************************************************************************************/
 
   val cmdField = Try{
     new TextField {
@@ -248,6 +251,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
       border=BorderFactory.createEmptyBorder()
     }
   }.toOption
+
+  /********************************************************************************************************************/
 
   var txWin:Option[IssueTxWindow] = None
 
@@ -486,6 +491,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
       minimumSize = new Dimension(100,100)
     }
   }.toOption
+
+  /********************************************************************************************************************/
 
   Try{
     javax.swing.UIManager.put("FileChooser.readOnly", true)
@@ -742,6 +749,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
+  /********************************************************************************************************************/
+
   val dataDir = new File(config.getString("params.dataFileDir"))
 
   Try{dataDir.mkdirs()}
@@ -804,6 +813,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
+  /********************************************************************************************************************/
+
   val nameHelp = Try{
     new TextField {
       text = "Enter your name or an alias with no special characters, then press Connect: "
@@ -849,23 +860,35 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
+  val netStats = Try{
+    new TextArea {
+      text = ""
+      editable = false
+      border=BorderFactory.createEmptyBorder()
+      background = backgroundC
+      foreground = foregroundC
+    }
+  }.toOption
+
   val netStatsElem = Try{
     new ScrollPane(new BoxPanel(Orientation.Vertical) {
       contents += new BoxPanel(Orientation.Horizontal) {
         contents += nameHelp.get
         contents += nameField.get
-
       }
       contents += new BoxPanel(Orientation.Horizontal) {
         contents += agentNameHelp.get
         contents += agentNameField.get
       }
+      contents += netStats.get
       border=BorderFactory.createEmptyBorder()
       maximumSize = new Dimension(2000,2000)
       preferredSize = new Dimension(800,400)
       minimumSize = new Dimension(100,100)
     })
   }.toOption
+
+  /********************************************************************************************************************/
 
   val activePane = Try{
     new TabbedPane {
@@ -910,6 +933,16 @@ class ProsomoWindow(config:Config) extends ActionListener {
       val (ptxs,ttxs,cb,pb) = SharedData.walletInfo
       Swing.onEDT{
         pendingTxField.get.text = s"Pending Txs: $ptxs" + s"   Confirmed Txs: $ttxs" + s"   Balance: $cb" + s"   Pending: $pb"
+      }
+    }
+    Swing.onEDT{
+      netStats.get.text = {
+        var text = "\n\n"
+        text += s"        Number of active peers discovered on the network: ${SharedData.activePeers}\n\n"
+        text += f"        Proportion of active stake online in the current staking distribution: ${SharedData.activeStake}%1.5f\n\n"
+        text += f"        Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f\n\n"
+        text += f"        Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f\n\n"
+        text
       }
     }
   }
@@ -964,7 +997,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   override def actionPerformed(e: ActionEvent): Unit = {
     e.getActionCommand match {
       case "0" =>
-        agentNameField.get.text = nameField.get.text + "_" + prosomo.primitives.Parameters.prosomoNodeUID
+        agentNameField.get.text = nameField.get.text + "_" + prosomo.primitives.Parameters.prosomoNodeUID.take(8)
         if (nameField.get.text != "" && nameField.get.text.forall((('a'to'z')++('A'to'Z')++('0'to'9')).toSet.contains(_))) {
           connectButton.get.enabled = true
         } else {connectButton.get.enabled = false}
