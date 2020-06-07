@@ -7,6 +7,7 @@ import org.iq80.leveldb.impl.Iq80DBFactory._
 import io.iohk.iodb.ByteArrayWrapper
 
 /**
+  * AMS 2020:
   * Disk storage database using LevelDB
   * this is the primary disk storage interface used for consensus
   * @param dir database directory

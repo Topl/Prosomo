@@ -3,6 +3,7 @@ package prosomo.stakeholder
 import prosomo.primitives.Types
 
 /**
+  * AMS 2020:
   * Some useful and not so useful methods
   */
 

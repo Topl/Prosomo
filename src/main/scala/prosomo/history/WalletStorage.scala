@@ -5,9 +5,10 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
 import prosomo.components.{Serializer, Wallet}
 
-/*
-  Wallet is saved to disk on reorg
- */
+/**
+  * AMS 2020:
+  * Wallet is saved to disk on reorg
+  */
 
 class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._

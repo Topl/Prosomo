@@ -7,6 +7,7 @@ import prosomo.primitives.Ed25519VRF.{PointAccum, PointExt}
 import java.security._
 
 /**
+  * AMS 2020:
   * ECVRF-ED25519-SHA512-TAI
   * Elliptic curve Verifiable Random Function based on EdDSA
   * Bouncy Castle implementation of Ed25519 used

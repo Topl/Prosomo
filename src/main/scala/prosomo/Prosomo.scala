@@ -26,6 +26,7 @@ import scala.swing._
 import scala.util.Try
 
 /**
+  * AMS 2020:
   * The Prosomo testnet runtime
   * The App instantiates this class with a given configuration with user defined inputs
   * The actor system in this class is interfaced with the GUI element so buttons can trigger messages to be passed

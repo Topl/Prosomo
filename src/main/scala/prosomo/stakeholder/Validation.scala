@@ -9,6 +9,7 @@ import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 
 /**
+  * AMS 2020:
   * All verification methods required to participate in consensus
   */
 

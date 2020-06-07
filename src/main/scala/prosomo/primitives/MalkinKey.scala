@@ -2,6 +2,7 @@ package prosomo.primitives
 import com.google.common.primitives.Ints
 
 /**
+  * AMS 2020:
   * MalkinKey is a private key of the MMM construction with a specified time step offset
   * the offset is constrained by the public key and signatures include the offset
   */

@@ -23,6 +23,7 @@ import scala.util.{Failure, Success, Try}
 import prosomo.primitives.Types.Slot
 
 /**
+  * AMS 2020:
   * Key container and file loader, updates keys with secure erasure on disk and encrypts/decrypts local keys
   * @param sig_info encryption info
   * @param vrf_info encryption info

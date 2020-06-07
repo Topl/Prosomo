@@ -6,8 +6,9 @@ import prosomo.primitives.{Ratio, Sig}
 import scala.math.BigInt
 
 /**
+  * AMS 2020:
   * Tx methods required by the wallet and the Stakeholder actors
-  **/
+  */
 
 trait Transactions {
 

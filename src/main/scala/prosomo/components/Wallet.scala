@@ -3,10 +3,16 @@ package prosomo.components
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Ratio, Sig, Types}
 import prosomo.stakeholder.Transactions
-
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
 import scala.util.Random
+
+/**
+  * AMS 2020:
+  * Wallet for tracking transactions pertaining to the provided public address
+  * @param pkw public address of the wallet
+  * @param fee_r forger fee
+  */
 
 case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transactions {
   var pendingTxsOut:Map[Sid,Transaction] = Map()

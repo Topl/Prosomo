@@ -4,6 +4,11 @@ import prosomo.primitives.Types._
 import prosomo.primitives.Mac
 import prosomo.components.{Block,Transaction}
 
+/**
+  * AMS 2020:
+  * Message codes used for prosomo, message data types for serialization
+  */
+
 object SpecTypes {
   /*
   used message codes in bifrost:

@@ -8,6 +8,11 @@ import prosomo.components.Serializer.DeserializeRequestBlock
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.{RequestBlockType, requestBlockCode}
 
+/**
+  * AMS 2020:
+  * Holders build tines by requesting individual block ids
+  */
+
 object RequestBlockSpec extends MessageSpecV1[RequestBlockType] with SerializationMethods {
   override val messageCode: MessageCode = requestBlockCode
   override val messageName: String = "Request Block"

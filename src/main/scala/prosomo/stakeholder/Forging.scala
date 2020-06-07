@@ -10,6 +10,7 @@ import scala.math.BigInt
 import scala.util.Try
 
 /**
+  * AMS 2020:
   * Forging routines for the genesis block and all other blocks,
   * Implements the Staking Procedure described in Ouroboros Genesis,
   * Newly forged blocks are immediately broadcast to network and placed first in line in the TinePool

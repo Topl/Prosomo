@@ -10,6 +10,7 @@ import scala.math.BigInt
 import scala.util.Random
 
 /**
+  * AMS 2020:
   * The root trait for actors that will participate in consensus
   * All members required to execute Ouroboros routines and maintain state, mempool, tinepool, and wallet
   */
@@ -62,6 +63,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var genBlockHash:Hash
   var roundBlock:Int
   var t0:Long
+  var t1:Long
   var localSlot:Slot
   var currentEpoch:Int
   var updating:Boolean

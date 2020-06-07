@@ -6,6 +6,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader}
 import scala.math.BigInt
 
 /**
+  * AMS 2020:
   * Mathematical methods required for the Staking Procedure described in Ouroboros Genesis
   */
 

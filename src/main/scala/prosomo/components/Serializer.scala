@@ -2,15 +2,16 @@ package prosomo.components
 
 import prosomo.primitives._
 
-/*
-   Serializer class for actors
- */
+/**
+  * AMS 2020:
+  * Serializer class for actors
+  */
 
 class Serializer extends SimpleTypes with SerializationMethods
 
-/*
-  Deserialize pattern matching
- */
+/**
+  * Deserialize pattern matching, feel free to add distinct case objects for new classes to be parsed
+  */
 
 object Serializer {
   case object DeserializeBlock

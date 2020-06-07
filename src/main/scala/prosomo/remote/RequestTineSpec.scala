@@ -8,6 +8,12 @@ import prosomo.components.Serializer.DeserializeRequestTine
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.{RequestTineType, requestTineCode}
 
+/**
+  * AMS 2020:
+  * Used for bootstrapping when the tine building procedure reaches a set depth
+  * Providerized response, one provider per stakeholder instance sends a limited rate of blocks per second
+  */
+
 object RequestTineSpec extends MessageSpecV1[RequestTineType] with SerializationMethods {
   override val messageCode: MessageCode = requestTineCode
   override val messageName: String = "Request Blocks"

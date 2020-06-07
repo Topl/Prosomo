@@ -3,8 +3,9 @@ package prosomo.components
 import prosomo.primitives.Types._
 import scala.math.BigInt
 
-/*
- Simple account transactions
- */
+/**
+  * AMS 2020:
+  * Simple account transactions, used for research and experiments
+  */
 
 case class Transaction(sender:PublicKeyW,receiver:PublicKeyW,delta:BigInt,sid:Sid,nonce:Int,signature: Signature)

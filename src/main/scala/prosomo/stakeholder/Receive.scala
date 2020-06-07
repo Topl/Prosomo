@@ -17,6 +17,7 @@ import scala.util.Random
 import scala.util.{Failure, Success, Try}
 
 /**
+  * AMS 2020:
   * The receive statement of Stakeholder,
   * Contains cases of all messages Stakeholder will encounter from local and remote interfaces
   * Message authentication occurs for Block passing and TinePool messages
@@ -73,7 +74,6 @@ trait Receive extends Members {
               if (verifyBlock(value.block)) {
                 blocks.add(value.block)
                 if (bSlot <= globalSlot) {
-                  //if (holderIndex == SharedData.printingHolder && printFlag) {println("Holder " + holderIndex.toString + " Got New Tine")}
                   val newId = (bSlot, bHash)
                   send(selfWrapper,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   if (!bootStrapLock) {
@@ -82,6 +82,9 @@ trait Receive extends Members {
                       tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
                       buildTine((jobNumber,tinePool(jobNumber)))
                       tineCounter += 1
+                      if (holderIndex == SharedData.printingHolder) {
+                        SharedData.averageNetworkDelay = (t1-bSlot*slotT).toDouble/tineCounter.toDouble
+                      }
                     } else {
                       tinePool.foreach(job => buildTine(job))
                     }
@@ -436,6 +439,7 @@ trait Receive extends Members {
 
     /**sets the slot from coordinator time*/
     case value:GetTime => if (!actorStalled) {
+      t1 = value.t1
       globalSlot = ((value.t1 - t0) / slotT).toInt
     }
 

@@ -7,9 +7,10 @@ import prosomo.primitives.{ByteStream, LDBStore, SharedData, SimpleTypes}
 import scorex.util.encode.Base58
 import scala.util.Try
 
-/*
-  Storage for block body and header data stored separately in databases that are split into thirds of epochs
- */
+/**
+  * AMS 2020:
+  * Storage for block body and header data stored separately in databases that are split into thirds of epochs
+  */
 
 class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   import prosomo.components.Serializer._

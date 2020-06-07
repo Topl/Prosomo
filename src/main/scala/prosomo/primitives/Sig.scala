@@ -6,6 +6,7 @@ import org.bouncycastle.crypto.params.{Ed25519KeyGenerationParameters, Ed25519Pr
 import org.bouncycastle.math.ec.rfc8032.Ed25519
 
 /**
+  * AMS 2020:
   * Ledger signing routine using Ed25519
   * this is the only functionality needed for issuing transactions
   */

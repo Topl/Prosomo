@@ -4,9 +4,10 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Tine, Serializer}
 import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
 
-/*
-  Chain is stored to disk with each reorg so the node will have quick access to vrf nonces and slotIds
-  Local chain is restored from the last saved configuration upon restart
+/**
+  * AMS 2020:
+  * Chain is stored to disk with each reorg so the node will have quick access to vrf nonces and slotIds
+  * Local chain is restored from the last saved configuration upon restart
  */
 
 class ChainStorage(dir:String) extends SimpleTypes {

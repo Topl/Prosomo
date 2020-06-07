@@ -5,6 +5,7 @@ import scorex.util.encode.Base58
 import scala.math.BigInt
 
 /**
+  * AMS 2020:
   * Implementation of the MMM construction:
   * Malkin, T., Micciancio, D. and Miner, S. (2002) ‘Efficient generic
   * forward-secure signatures with an unbounded number of time

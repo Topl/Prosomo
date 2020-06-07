@@ -15,10 +15,13 @@ import scorex.util.encode.Base58
 import scala.math.BigInt
 import scala.util.Try
 
-/*
-    Consensus parameters, loaded from application.conf first as base config
-    command line inputs loaded second
- */
+/**
+  * AMS 2020:
+  * Consensus and network parameters are initialized here from application.conf
+  * Command line arguments are read in as either a *.conf file in the project directory or as a HOCON formatted string
+  * E.g.  executing "./prosomo server.conf settings.conf input{params{mySetting=set}}" would read in the following order
+  *     application.conf, server.conf, settings.conf, input{params{mySetting=set}}
+  */
 
 object Parameters {
   val fch = new Fch

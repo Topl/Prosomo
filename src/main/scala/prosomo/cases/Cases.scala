@@ -8,9 +8,10 @@ import prosomo.primitives.{KeyFile, Mac}
 
 import scala.math.BigInt
 
-/*
-  Case objects and classes for pattern matching messages between actors
- */
+/**
+  * AMS 2020:
+  * Case objects and classes for pattern matching messages between actors
+  */
 
 case object Diffuse
 case object Inbox

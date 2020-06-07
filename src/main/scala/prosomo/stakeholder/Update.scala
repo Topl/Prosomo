@@ -10,6 +10,7 @@ import scorex.util.encode.Base58
 import scala.util.Try
 
 /**
+  * AMS 2020:
   * All methods required to update the Node View of Stakeholder to the latest global slot provided by Coordinator
   */
 
@@ -149,6 +150,7 @@ trait Update extends Members {
           val head = localChain.getLastActiveSlot(globalSlot)
           globalSlot.toDouble/getBlockHeader(head).get._9.toDouble
         }
+        SharedData.activeSlots = 1.0/SharedData.blockTime
         SharedData.txsPerSecond = {
           var net = 0
           for (entry<-localState.toSeq) {

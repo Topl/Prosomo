@@ -9,8 +9,16 @@ import org.bouncycastle.math.raw.Nat;
 import org.bouncycastle.math.raw.Nat256;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Strings;
-
 import java.security.SecureRandom;
+
+/**
+ * AMS 2020:
+ * An exact copy of Ed25519.java from Bouncy Castle with selected methods and members made public for easy use in Scala
+ * Signing functionality is preserved and acts identically to that of Ed25519.java,
+ * Only modification is private members are made public,  if anyone is aware of a better workaround let me know
+ * Vrf.scala is a wrapper for this underlying signing functionality that makes all necessary calculations for the VRF functionality
+ * No VRF calculations are done here
+ */
 
 public abstract class Ed25519VRF
 {

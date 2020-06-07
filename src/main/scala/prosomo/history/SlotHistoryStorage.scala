@@ -4,7 +4,11 @@ import prosomo.primitives.{ByteStream, Fch, LDBStore, Types}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Serializer
 
-//Storage for tine structure information and research
+/**
+  * AMS 2020:
+  * Storage for tine structure information and research
+  */
+
 
 class SlotHistoryStorage(dir:String) extends Types {
   import prosomo.components.Serializer._

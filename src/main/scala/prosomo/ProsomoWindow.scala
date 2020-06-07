@@ -21,6 +21,7 @@ import prosomo.components.Serializer
 import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased}
 
 /**
+  * AMS 2020:
   * A class for the user interface, will fail gracefully if any component is not able to load
   * @param config base config to be modified by window elements
   */
@@ -304,7 +305,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val confirmSendToNetworkWindow = Try {
     new Frame {
       title = "Confirm"
-      iconImage = toolkit.getImage("src/main/resources/Logo.png")
+      iconImage = toolkit.getImage("src/universal/conf/Logo.png")
       contents = new BorderPanel {
         border = Swing.EmptyBorder(10, 10, 10, 10)
         add(sendTxButton.get,BorderPanel.Position.East)
@@ -408,7 +409,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }.toOption
 
         title = "Issue Transaction"
-        iconImage = toolkit.getImage("src/main/resources/Logo.png")
+        iconImage = toolkit.getImage("src/universal/conf/Logo.png")
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += senderElem.get
@@ -627,7 +628,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     val window = Try{
       new Frame {
         title = if (newKey) {"Create Key"} else {"Load Key"}
-        iconImage = toolkit.getImage("src/main/resources/Logo.png")
+        iconImage = toolkit.getImage("src/universal/conf/Logo.png")
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += new BoxPanel(Orientation.Horizontal) {
@@ -941,7 +942,9 @@ class ProsomoWindow(config:Config) extends ActionListener {
         text += s"        Number of active peers discovered on the network: ${SharedData.activePeers}\n\n"
         text += f"        Proportion of active stake online in the current staking distribution: ${SharedData.activeStake}%1.5f\n\n"
         text += f"        Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f\n\n"
+        text += f"        Proportion of active slots as block number divided by global slot: ${SharedData.activeSlots}%5.5f\n\n"
         text += f"        Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f\n\n"
+        text += f"        Average block delay: ${SharedData.averageNetworkDelay}%5.5f\n\n"
         text
       }
     }
@@ -957,8 +960,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
           prosomo.primitives.Parameters.useGui = false
         }
       }
-      title = "Prosomo 0.7"
-      iconImage = toolkit.getImage("src/main/resources/Logo.png")
+      title = "Prosomo"
+      iconImage = toolkit.getImage("src/universal/conf/Logo.png")
 
       contents = new BoxPanel(Orientation.Vertical) {
         border = Swing.EmptyBorder(10, 10, 10, 10)

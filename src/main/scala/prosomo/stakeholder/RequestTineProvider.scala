@@ -12,6 +12,7 @@ import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random
 
 /**
+  * AMS 2020:
   * Provider for remote TinePool syncing, used only for bootstrapping peers
   * @param blockStorage block database to be checked, should be thread safe with read/write locks
   * @param routerRef actor ref to send network messages to

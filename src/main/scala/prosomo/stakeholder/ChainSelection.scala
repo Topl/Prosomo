@@ -10,6 +10,7 @@ import scala.util.Try
 import scala.util.control.Breaks.{break, breakable}
 
 /**
+  * AMS 2020:
   * Primary consensus routines,
   * Implements the Maxvalid-BG chain selection rule specified in Ouroboros Genesis
   * TinePool functionality is executed in these methods,

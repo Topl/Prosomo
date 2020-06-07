@@ -3,15 +3,20 @@ package prosomo.primitives
 import scala.math.BigInt
 import java.math.BigInteger
 import scala.language.implicitConversions
-/*
-  Ratio class for handling stake distribution and threshold quantities that range from 0.0 to 1.0
 
-  Copied from:
-  https://gist.github.com/martintrojer/5845678
-
-  Credit to Martin Trojer, http://martintrojer.github.io/
-
- */
+/**
+  * Ratio class for handling stake distribution and threshold quantities that range from 0.0 to 1.0
+  *
+  * Copied from:
+  * https://gist.github.com/martintrojer/5845678
+  *
+  * Credit to Martin Trojer, http://martintrojer.github.io/
+  *
+  * AMS 2020: Modification made for consensus routines, added comparison operators and some QOL tweaks for ease of use
+  *
+  * @param n  BigInt numerator
+  * @param d  BigInt denominator
+  */
 
 case class Ratio(n: BigInt, d: BigInt) {
 

@@ -8,6 +8,11 @@ import prosomo.components.Serializer.DeserializeDiffuse
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.{DiffuseDataType,diffuseCode}
 
+/**
+  * AMS 2020:
+  * Diffuse data is used to identify peers with their forging public address and message authentication keys
+  * Critical for peer discovery
+  */
 
 object DiffuseDataSpec extends MessageSpecV1[DiffuseDataType] with SerializationMethods {
   override val messageCode: MessageCode = diffuseCode

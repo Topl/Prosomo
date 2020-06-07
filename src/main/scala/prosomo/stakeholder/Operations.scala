@@ -4,6 +4,7 @@ import prosomo.components.Tine
 import scala.util.Try
 
 /**
+  * AMS 2020:
   * Some utilities for checking database and tine operations during chain selection
   */
 

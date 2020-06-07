@@ -9,6 +9,16 @@ import prosomo.primitives._
 
 import scala.math.BigInt
 
+/**
+  * AMS 2020:
+  * Byte serializers for all types and classes,
+  * ALL types and serializers are to be represented and linked here,
+  * Use of off the shelf serializers will not be allowed,
+  * getBytes are statically type cast for performance,
+  * parse bytes uses pattern matching to identify class to be parsed,
+  * Each class has its own serializer object for better concurrency
+  */
+
 trait SerializationMethods extends SimpleTypes {
   import Serializer._
   import prosomo.remote.SpecTypes.{
@@ -21,9 +31,6 @@ trait SerializationMethods extends SimpleTypes {
     SendTxType
   }
 
-  /*
-     byte serializers for all types and classes
-   */
   def getBytes(bytes:Array[Byte]):Array[Byte] = bytes
   def getBytes(int:BigInt):Array[Byte] = sBigInt(int)
   def getBytes(int:Int):Array[Byte] = Ints.toByteArray(int)

@@ -6,6 +6,7 @@ import prosomo.cases.MessageFromLocalToRemote
 import scala.concurrent.Future
 
 /**
+  * AMS 2020:
   * Wrapper class for akka ActorRef, remote and local actors handled accordingly
   * Router ref is the interface with network controller for sending messages to remote
   * A handy way of treating actor paths from remote and local on the same footing

@@ -6,10 +6,11 @@ import java.io.PrintStream
 import prosomo.ProsomoWindow
 import scorex.core.settings.ScorexSettings
 
-/*
-  Singlton object for quick sharing of references and data between actors with no message passing
-  Used for GUI information, the printing stakeholder writes to members that the GUI reads
-  Includes timing tools and aux information for debugging
+/**
+  * AMS 2020:
+  * Singlton object for quick sharing of references and data between actors with no message passing
+  * Used for GUI information, the printing stakeholder writes to members that the GUI reads
+  * Includes timing tools and aux information for debugging
  */
 
 object SharedData extends Types {
@@ -65,7 +66,8 @@ object SharedData extends Types {
   var activeStake:Double = 0.0
   var blockTime:Double = 0.0
   var txsPerSecond:Double = 0.0
-
+  var activeSlots:Double = 0.0
+  var averageNetworkDelay:Double = 0.0
 
   var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
   var confirmedBalance:Map[String,BigInt] = Map()

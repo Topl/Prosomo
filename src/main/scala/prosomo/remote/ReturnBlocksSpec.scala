@@ -8,6 +8,12 @@ import prosomo.components.Serializer.DeserializeReturnBlocks
 import prosomo.primitives.{ByteStream, Mac}
 import prosomo.remote.SpecTypes.{ReturnBlocksType,returnBlocksCode}
 
+/**
+  * AMS 2020:
+  * Tine and Request block response,
+  * blocks are passed one at a time with this message
+  */
+
 object ReturnBlocksSpec extends MessageSpecV1[ReturnBlocksType] with SerializationMethods {
   override val messageCode: MessageCode = returnBlocksCode
   override val messageName: String = "Return Blocks"

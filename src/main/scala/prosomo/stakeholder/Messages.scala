@@ -9,6 +9,7 @@ import scala.concurrent.Await
 import scala.math.BigInt
 
 /**
+  * AMS 2020:
   * Local Akka message passing routines using ActorRefWrapper,
   * Provides some utilities for coordinator to collect info about state from Stakeholders
   */

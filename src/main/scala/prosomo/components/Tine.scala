@@ -6,9 +6,10 @@ import scorex.util.encode.Base58
 import prosomo.primitives.Types._
 import scala.collection.immutable.ListMap
 
-/*
-  Tine keeps track of a set of slotIds and vrf nonces for fast epoch nonce calculation
- */
+/**
+  * AMS 2020:
+  * Tine keeps track of a set of slotIds and vrf nonces for fast epoch nonce calculation
+  */
 
 case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
 

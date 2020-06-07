@@ -4,9 +4,10 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Mac, SimpleTypes}
 import prosomo.primitives.Types.{BlockHeader,GenesisSet,TransactionSet}
 
-/*
-  Block container with optional fields and a unique identifier
- */
+/**
+  * AMS 2020:
+  * Block container with optional fields and a unique identifier
+  */
 
 case class Block(identifier:ByteArrayWrapper,
                  blockHeader:Option[BlockHeader],

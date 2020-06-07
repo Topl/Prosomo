@@ -44,7 +44,7 @@ import org.apache.commons.net.ntp.TimeStamp;
  * <br>
  * Example: NTPClient clock.psu.edu
  *
- ***/
+ */
 public class NTPClient
 {
 

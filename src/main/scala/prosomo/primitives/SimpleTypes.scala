@@ -4,9 +4,11 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Transaction
 import scala.math.BigInt
 
-/*
-  Shared types referenced project wide
- */
+/**
+  * AMS 2020:
+  * Shared types trait referenced project wide,
+  * you will need this if you want to interact with any consensus components
+  */
 
 trait SimpleTypes {
   val pk_length = 32

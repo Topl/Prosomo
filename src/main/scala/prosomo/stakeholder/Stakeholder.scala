@@ -11,10 +11,12 @@ import scala.math.BigInt
 import scala.util.Random
 
 /**
+  * AMS 2020:
   * Stakeholder actor that executes the staking procedure and participates in consensus,
   * Each stakeholder actor represents a distinct node view with different modifiers in their pools and databases,
   * This is the primary node view holder in testnet configuration
   * Should only communicate with local and remote interfaces (Coordinator and Router respectively)
+  * All members required for consensus are initialized
   * @param inputSeed input entropy
   * @param holderIndex an integer index for identifying executing actors in thread locks
   * @param inputRef network controller refs and router ref
@@ -112,10 +114,9 @@ class Stakeholder(
   var genBlockHash: Hash = ByteArrayWrapper(Array())
   //placeholder for forged block if elected slot leader
   var roundBlock: Int = 0
-  //max time steps set by coordinator
-  var tMax = 0
   //start system time set by coordinator
   var t0:Long = 0
+  var t1:Long = 0
   //current slot that is being processed by stakeholder
   var localSlot = 0
   //current epoch that is being processed by stakeholder

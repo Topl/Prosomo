@@ -5,6 +5,11 @@ import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Transaction}
 
+/**
+  * AMS 2020:
+  * Types and hash functions for quickly hashing different data types
+  */
+
 trait Types extends SimpleTypes {
   val fch:Fch
 

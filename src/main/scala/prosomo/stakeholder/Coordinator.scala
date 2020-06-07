@@ -26,6 +26,7 @@ import prosomo.components.Serializer.DeserializeGenesisBlock
 
 
 /**
+  * AMS 2020:
   * Coordinator actor that initializes the genesis block and instantiates the staking party,
   * Sends messages to participants to execute a round,
   * Acts as local interface for GUI, the global clock, and any global functionality, e.g. the genesis block,
@@ -93,8 +94,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var genBlockHeader: BlockHeader = _
   var genBlockHash: Hash = ByteArrayWrapper(Array())
   var roundBlock: Int = 0
-  var tMax = 0
   var t0:Long = 0
+  var t1:Long = 0
   var localSlot = 0
   var currentEpoch = -1
   var updating = false
@@ -162,7 +163,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def getTimeInfo = {
     val files = getListOfFiles(s"$storageDir/time/")
-    val inputFiles = getListOfFiles("src/main/resources/time/")
+    val inputFiles = getListOfFiles("src/universal/conf/time/")
     (files.length,inputFiles.length) match {
       case (x:Int,y:Int) if x > 0 && y == 0 => {
         println("Coordinator loading time information...")
@@ -243,7 +244,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           println("Recovered Genesis Block")
         }
         case None => {
-          val inputFiles = getListOfFiles("src/main/resources/genesis/")
+          val inputFiles = getListOfFiles("src/universal/conf/genesis/")
           inputFiles.length match {
             case x:Int if x == 1 =>
               val data = readFile(inputFiles.head.getPath)(0)
@@ -293,7 +294,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case out:Block => genBlock = out
     }
     blocks.store(genBlockKey,genBlock)
-    val file = new File("src/main/resources/genesis/blockData")
+    val file = new File("src/universal/conf/genesis/blockData")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(Base58.encode(serializer.getBytes(genBlock)))
     bw.close()
@@ -332,7 +333,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**returns offset time to stakeholder that issues GetTime to coordinator*/
     case GetTime => {
       if (!actorStalled) {
-        val t1 = globalTime-tp
+        t1 = globalTime-tp
         sender() ! GetTime(t1)
       } else {
         sender() ! GetTime(tp)
@@ -745,7 +746,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def readCommand:Unit = {
     if (!useFencing) {
       if (!actorStalled) {
-        val t1 = globalTime-tp
+        t1 = globalTime-tp
         t = ((t1 - t0) / slotT).toInt
       } else {
         t = ((tp - t0) / slotT).toInt
@@ -837,7 +838,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def readCommand(cmd:String):Unit = {
     if (!useFencing) {
       if (!actorStalled) {
-        val t1 = globalTime-tp
+        t1 = globalTime-tp
         t = ((t1 - t0) / slotT).toInt
       } else {
         t = ((tp - t0) / slotT).toInt
@@ -893,10 +894,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       tn = t
     } else {
       if (!actorStalled) {
-        val t1 = globalTime-tp
+        t1 = globalTime-tp
         tn = ((t1 - t0) / slotT).toInt
       } else {
-        val t1 = tp
+        t1 = tp
         tn = ((t1 - t0) / slotT).toInt
       }
     }

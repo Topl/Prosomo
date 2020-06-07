@@ -9,6 +9,7 @@ import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 
 /**
+  * AMS 2020:
   * Methods regarding leger updates and state transitions using the account based transaction model,
   * Many more Tx models are to be incorporated, namely UTXOs, this outlines where state updates will be executed in the system
   */

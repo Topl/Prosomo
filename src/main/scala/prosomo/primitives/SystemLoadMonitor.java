@@ -3,9 +3,10 @@ package prosomo.primitives;
 import java.lang.management.ManagementFactory;
 import com.sun.management.OperatingSystemMXBean;
 
-/*
-    Simple monitor to limit activity when system is under load
-    used in local simulations only
+/**
+ *  AMS 2020:
+ *  Simple monitor to limit activity when system is under load
+ *  used in local simulations only
  */
 
 public class SystemLoadMonitor {

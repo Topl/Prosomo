@@ -7,9 +7,10 @@ import prosomo.primitives.{ByteStream, Fch, LDBStore, SharedData, Types}
 import scorex.util.encode.Base58
 import scala.util.Try
 
-/*
-  The state and epoch nonce are stored in separate databases split into thirds of epochs
- */
+/**
+  * AMS 2020:
+  * The state and epoch nonce are stored in separate databases split into thirds of epochs
+  */
 
 class StateStorage(dir:String,serializer:Serializer) extends Types {
   import prosomo.components.Serializer._

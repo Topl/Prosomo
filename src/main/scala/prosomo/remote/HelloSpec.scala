@@ -8,6 +8,12 @@ import prosomo.components.Serializer.DeserializeHello
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.{HelloDataType,helloCode}
 
+/**
+  * AMS 2020:
+  * Hello message for identity verification and gossip protocol response
+  * Critical for node view actor level peer discovery and gossip protocol
+  */
+
 object HelloSpec extends MessageSpecV1[HelloDataType] with SerializationMethods {
   override val messageCode: MessageCode = helloCode
   override val messageName: String = "Hello"

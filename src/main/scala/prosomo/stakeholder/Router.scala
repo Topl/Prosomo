@@ -20,6 +20,7 @@ import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.Da
 import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
 
 /**
+  * AMS 2020:
   * Primary interface between Stakeholder system and network controller,
   * All messages from local and remote are processed here,
   * Acts as remote interface, should only communicate with Stakeholder and Network Controller

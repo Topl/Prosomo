@@ -8,6 +8,12 @@ import prosomo.components.Serializer.DeserializeHoldersFromRemote
 import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.holdersFromRemote
 
+/**
+  * AMS 2020:
+  * Peers broadcast the stakeholders they have instantiated using this message
+  * Critical for peer discovery at the actor level, lets holders become aware of all active participants
+  */
+
 object HoldersFromRemoteSpec extends MessageSpecV1[List[String]] with SerializationMethods {
   override val messageCode: MessageCode = holdersFromRemote
   override val messageName: String = "Holders from remote"
