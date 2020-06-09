@@ -3,8 +3,9 @@ package prosomo.stakeholder
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
-import prosomo.primitives.{Mac, Parameters, Ratio, SharedData}
+import prosomo.primitives.{Mac, Parameters, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
+
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
 
@@ -13,7 +14,7 @@ import scala.util.control.Breaks.{break, breakable}
   * All verification methods required to participate in consensus
   */
 
-trait Validation extends Members {
+trait Validation extends Members with Types {
   import Parameters._
   /**
     * Block verify using key evolving signature
@@ -142,6 +143,12 @@ trait Validation extends Members {
       } else {
         tr_Ep = phi(alpha_Ep)
       }
+      val test:Rho = testStrategy match {
+        case "vrf" => y
+        case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
+        case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(bn))
+      }
+
       bool &&= (
         hash(parent,serializer) == h0
           && verifyBlockHeader(block)
@@ -152,7 +159,7 @@ trait Validation extends Members {
           && vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
           && vrf.vrfProofToHash(pi_y).deep == y.deep
           && tr_Ep == tr_c
-          && compare(y, tr_Ep)
+          && compare(test, tr_Ep)
         )
       if (!bool) {
         print(slot)
@@ -167,7 +174,7 @@ trait Validation extends Members {
           , vrf.vrfVerify(pk_vrf, eta_Ep ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y) //7
           , vrf.vrfProofToHash(pi_y).deep == y.deep //8
           , tr_Ep == tr_c //9
-          , compare(y, tr_Ep)//10
+          , compare(test, tr_Ep)//10
         ))
       }
     }
@@ -225,7 +232,11 @@ trait Validation extends Members {
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }
-
+                          val test = testStrategy match {
+                            case "vrf" => y
+                            case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
+                            case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(bn))
+                          }
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)
@@ -236,7 +247,7 @@ trait Validation extends Members {
                               && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
                               && vrf.vrfProofToHash(pi_y).deep == y.deep
                               && tr_Ep == tr_c
-                              && compare(y, tr_Ep)
+                              && compare(test, tr_Ep)
                             )
 
                           if (isValid) {
@@ -255,7 +266,7 @@ trait Validation extends Members {
                               , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
                               , vrf.vrfProofToHash(pi_y).deep == y.deep //8
                               , tr_Ep == tr_c //9
-                              , compare(y, tr_Ep) //10
+                              , compare(test, tr_Ep) //10
                             ))
                             println(s"Holder $holderIndex, ep: $ep, eta_tine: ${Base58.encode(eta_tine)}")
                             println(info)

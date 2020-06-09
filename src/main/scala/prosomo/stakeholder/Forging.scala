@@ -4,7 +4,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
-import prosomo.primitives.{Keys, Mac, MalkinKey, Ratio, SharedData}
+import prosomo.primitives.{Keys, Mac, MalkinKey, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 import scala.math.BigInt
 import scala.util.Try
@@ -16,7 +16,7 @@ import scala.util.Try
   * Newly forged blocks are immediately broadcast to network and placed first in line in the TinePool
   */
 
-trait Forging extends Members {
+trait Forging extends Members with Types {
 
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
   def forgeBlock(forgerKeys:Keys):Unit = Try{
@@ -26,13 +26,9 @@ trait Forging extends Members {
     val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)).get
     assert(pb._3 != slot)
     val ps:Slot = pb._3
-    if (f_dynamic) {
-      forge(threshold_cached(forgerKeys.alpha,slot-ps))
-    } else {
-      forge(phi(forgerKeys.alpha))
-    }
-    def forge(thr:Ratio) = if (compare(y, thr)) {
-      def blockInfo:String = {
+
+    def testThenForge(test:Rho,thr:Ratio) = if (compare(test, thr)) {
+      def metaInfo:String = {
         "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
       }
       val bn:Int = pb._9 + 1
@@ -41,7 +37,7 @@ trait Forging extends Members {
       val rho: Rho = vrf.vrfProofToHash(pi)
       val h: Hash = hash(pb,serializer)
       val ledger:Mac = signMac(hash(txs,serializer), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
-      val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,blockInfo)
+      val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,metaInfo)
       val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
@@ -64,6 +60,18 @@ trait Forging extends Members {
         }
       }
     }
+
+    if (f_dynamic) {
+      val test = testStrategy match {
+        case "vrf" => y
+        case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
+        case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(pb._9 + 1))
+      }
+      testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
+    } else {
+      testThenForge(y,phi(forgerKeys.alpha))
+    }
+
   }
 
   def forgeGenBlock(eta0:Eta,

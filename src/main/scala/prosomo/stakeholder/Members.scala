@@ -80,6 +80,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var tineProvider:Option[ActorRefWrapper]
   var alphaCache:Option[LoadingCache[ByteArrayWrapper,Ratio]]
   var thresholdCache:Option[LoadingCache[(Ratio,Slot),Ratio]]
+  var networkDelayList:List[Double]
 
   case object TimerKey
 

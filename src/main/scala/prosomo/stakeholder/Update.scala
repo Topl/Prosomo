@@ -164,6 +164,7 @@ trait Update extends Members {
           for (info<-inbox) {
             out += relativeStake(ByteArrayWrapper(info._2._2._1++info._2._2._2++info._2._2._3),stakingState).toDouble
           }
+          out += relativeStake(keys.pkw,stakingState).toDouble
           out
         }
         for (holder<-holders) {

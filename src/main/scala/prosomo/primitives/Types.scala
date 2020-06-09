@@ -1,5 +1,7 @@
 package prosomo.primitives
 
+import java.security.MessageDigest
+
 import prosomo.stakeholder.ActorRefWrapper
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
@@ -13,11 +15,11 @@ import prosomo.components.{Serializer, Transaction}
 trait Types extends SimpleTypes {
   val fch:Fch
 
-  /**
-    * main hash routine used in prosomo
-    * @param input any bytes
-    * @return wrapped byte array
-    */
+  def Sha512(bytes: Array[Byte]):Array[Byte] = {
+    val digest = MessageDigest.getInstance("SHA-512")
+    digest.update(bytes)
+    digest.digest()
+  }
 
   def hash(input:ActorRefWrapper, serializer: Serializer): Hash = {
     hash(input.path.toString,serializer)

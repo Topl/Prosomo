@@ -138,6 +138,7 @@ object Parameters {
   }
   val m_f_root:Ratio = maclaurin_coefficient(Ratio(f_s,4))
   val f_dynamic:Boolean = config.getBoolean("params.f_dynamic")
+  val testStrategy:String = config.getString("params.testStrategy")
   val f_min:Ratio = Ratio(config.getDouble("params.f_min"),4)
   val f_max:Ratio = Ratio(config.getDouble("params.f_max"),4)
   val num_f:Int = config.getInt("params.num_f")

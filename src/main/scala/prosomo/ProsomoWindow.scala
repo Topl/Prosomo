@@ -2,23 +2,19 @@ package prosomo
 
 import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.{Color, Dimension}
-
-import prosomo.primitives.Parameters.{devMode, fch}
-import prosomo.primitives.{Bip39, ColorTextArea, Kes, KeyFile, SharedData, Sig, Vrf}
+import java.io.File
+import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, JOptionPane, SwingUtilities}
+import prosomo.cases.NewHolderFromUI
+import prosomo.components.Serializer
+import prosomo.primitives.Parameters.{devMode, fch}
+import prosomo.primitives._
 import scorex.util.encode.Base58
-
 import scala.swing.Font.Style
 import scala.swing._
-import scala.util.Try
-import java.io.File
-
-import akka.actor.ActorRef
-import prosomo.cases.{GetTime, NewHolderFromUI}
-import prosomo.components.Serializer
-
 import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased}
+import scala.util.Try
 
 /**
   * AMS 2020:
@@ -42,7 +38,8 @@ Outline:
  */
 
 class ProsomoWindow(config:Config) extends ActionListener {
-
+  val imageName = getClass.getResource("/Logo.png").getPath
+  println(imageName)
   var windowConfig:Config = config
   var waitToConnect = true
   var runApp = true
@@ -305,7 +302,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val confirmSendToNetworkWindow = Try {
     new Frame {
       title = "Confirm"
-      iconImage = toolkit.getImage("src/universal/conf/Logo.png")
+      iconImage = toolkit.getImage(imageName)
       contents = new BorderPanel {
         border = Swing.EmptyBorder(10, 10, 10, 10)
         add(sendTxButton.get,BorderPanel.Position.East)
@@ -409,7 +406,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }.toOption
 
         title = "Issue Transaction"
-        iconImage = toolkit.getImage("src/universal/conf/Logo.png")
+        iconImage = toolkit.getImage(imageName)
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += senderElem.get
@@ -628,7 +625,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     val window = Try{
       new Frame {
         title = if (newKey) {"Create Key"} else {"Load Key"}
-        iconImage = toolkit.getImage("src/universal/conf/Logo.png")
+        iconImage = toolkit.getImage(imageName)
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += new BoxPanel(Orientation.Horizontal) {
@@ -929,7 +926,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     SwingUtilities.invokeAndWait(()=>peerList.get.peer.setListData(peerSeq.toArray))
   }
 
-  def refreshWallet = {
+  def refreshWallet() = {
     if (pendingTxField.get.enabled) {
       val (ptxs,ttxs,cb,pb) = SharedData.walletInfo
       Swing.onEDT{
@@ -953,15 +950,14 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val window:Option[Frame] = Try{
     new Frame {
       reactions += {
-        case event.WindowClosing(_) => {
+        case event.WindowClosing(_) =>
           waitToConnect = false
           runApp = false
           System.setOut(SharedData.oldOut)
           prosomo.primitives.Parameters.useGui = false
-        }
       }
       title = "Prosomo"
-      iconImage = toolkit.getImage("src/universal/conf/Logo.png")
+      iconImage = toolkit.getImage(imageName)
 
       contents = new BoxPanel(Orientation.Vertical) {
         border = Swing.EmptyBorder(10, 10, 10, 10)
@@ -981,7 +977,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     case None => Try{
       prosomo.primitives.Parameters.useGui = false
     }
-    case Some(frame) => Try{
+    case _ => Try{
       while (waitToConnect) {
         Thread.sleep(100)
       }

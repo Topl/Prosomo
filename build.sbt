@@ -125,13 +125,13 @@ pomIncludeRepository := { _ => false }
 
 homepage := Some(url("https://github.com/Topl/Prosomo"))
 
+//unmanagedResourceDirectories in Compile += { (baseDirectory in Compile)(_ / "conf") }.value
 
 assemblyMergeStrategy in assembly ~= { old: ((String) => MergeStrategy) => {
     case ps if ps.endsWith(".SF")      => MergeStrategy.discard
     case ps if ps.endsWith(".DSA")     => MergeStrategy.discard
     case ps if ps.endsWith(".RSA")     => MergeStrategy.discard
     case ps if ps.endsWith(".xml")     => MergeStrategy.first
-    // https://github.com/sbt/sbt-assembly/issues/370
     case PathList("module-info.class") => MergeStrategy.discard
     case PathList("module-info.java")  => MergeStrategy.discard
     case "META-INF/truffle/instrument" => MergeStrategy.concat

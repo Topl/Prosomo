@@ -136,6 +136,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
+  var networkDelayList: List[Double] = List(0.0)
 
   getTimeInfo
   self ! NewDataFile
@@ -162,8 +163,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def getTimeInfo = {
+    val timeDir = getClass.getResource("/time/").getPath
     val files = getListOfFiles(s"$storageDir/time/")
-    val inputFiles = getListOfFiles("src/universal/conf/time/")
+    val inputFiles = getListOfFiles(timeDir)
     (files.length,inputFiles.length) match {
       case (x:Int,y:Int) if x > 0 && y == 0 => {
         println("Coordinator loading time information...")
@@ -244,7 +246,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           println("Recovered Genesis Block")
         }
         case None => {
-          val inputFiles = getListOfFiles("src/universal/conf/genesis/")
+          println("Reading genesis block from resources...")
+          val genesisDir = getClass.getResource("/genesis").getPath
+          val inputFiles = getListOfFiles(genesisDir)
           inputFiles.length match {
             case x:Int if x == 1 =>
               val data = readFile(inputFiles.head.getPath)(0)
@@ -294,7 +298,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case out:Block => genBlock = out
     }
     blocks.store(genBlockKey,genBlock)
-    val file = new File("src/universal/conf/genesis/blockData")
+    val file = new File("src/main/resources/genesis/blockData")
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(Base58.encode(serializer.getBytes(genBlock)))
     bw.close()

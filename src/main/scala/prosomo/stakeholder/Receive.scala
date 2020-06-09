@@ -83,7 +83,13 @@ trait Receive extends Members {
                       buildTine((jobNumber,tinePool(jobNumber)))
                       tineCounter += 1
                       if (holderIndex == SharedData.printingHolder) {
-                        SharedData.averageNetworkDelay = (t1-bSlot*slotT).toDouble/tineCounter.toDouble
+                        networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
+                        if (networkDelayList.size > 100) networkDelayList.take(100)
+                        def average(points:List[Double]):Double={
+                          val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
+                          net/num
+                        }
+                        SharedData.averageNetworkDelay = average(networkDelayList)
                       }
                     } else {
                       tinePool.foreach(job => buildTine(job))
