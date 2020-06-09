@@ -38,7 +38,7 @@ Outline:
  */
 
 class ProsomoWindow(config:Config) extends ActionListener {
-  val imageName = getClass.getResource("/Logo.png").getPath
+  val imageName = getClass.getClassLoader.getResource("Logo.png").getPath
   println(imageName)
   var windowConfig:Config = config
   var waitToConnect = true

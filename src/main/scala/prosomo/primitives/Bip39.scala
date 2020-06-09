@@ -24,7 +24,7 @@ import scala.math.BigInt
   */
 
 case class Bip39 (phraseLanguage: String) extends ScorexLogging {
-  val phraseListDir = getClass.getResource("/bip-0039/").getPath
+  val phraseListDir = getClass.getClassLoader.getResource("/bip-0039/").getPath
   val iso639_1_toFile: Map[String,String] = Map(
     "zh-hans"->"chinese_simplified.txt",
     "zh-hant"->"chinese_traditional.txt",

@@ -163,7 +163,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   }
 
   def getTimeInfo = {
-    val timeDir = getClass.getResource("/time/").getPath
+    val timeDir = getClass.getClassLoader.getResource("/time/").getPath
     val files = getListOfFiles(s"$storageDir/time/")
     val inputFiles = getListOfFiles(timeDir)
     (files.length,inputFiles.length) match {
@@ -247,7 +247,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         }
         case None => {
           println("Reading genesis block from resources...")
-          val genesisDir = getClass.getResource("/genesis").getPath
+          val genesisDir = getClass.getClassLoader.getResource("/genesis/").getPath
           val inputFiles = getListOfFiles(genesisDir)
           inputFiles.length match {
             case x:Int if x == 1 =>
