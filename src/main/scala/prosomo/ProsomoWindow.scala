@@ -46,8 +46,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   System.setProperty("apple.laf.useScreenMenuBar", "true")
   System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prosomo")
   UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName)
-  
-  Thread.sleep(10000)
+
   var windowConfig:Config = config
   var waitToConnect = true
   var runApp = true
@@ -145,6 +144,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       editable = true
       maximumSize = new Dimension(150,50)
       minimumSize = new Dimension(150,50)
+      peer.setOpaque(false)
     }
   }.toOption
 
@@ -239,6 +239,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           maximumSize = new Dimension(122,50)
           minimumSize = new Dimension(122,50)
           border=BorderFactory.createEmptyBorder()
+          peer.setOpaque(false)
         }
         contents += knownAddressField.get
         contents += new TextField("  Declared address: ") {
@@ -246,6 +247,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           maximumSize = new Dimension(125,50)
           minimumSize = new Dimension(125,50)
           border=BorderFactory.createEmptyBorder()
+          peer.setOpaque(false)
         }
         contents += declaredAddressField.get
         maximumSize = new Dimension(2000,50)
@@ -358,6 +360,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           border = BorderFactory.createEmptyBorder()
         }
         contents += deltaField.get
+        peer.setOpaque(false)
       }
     }.toOption
 
@@ -387,6 +390,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
             contents += new TextField("  Recipient Public Address: ") {
               editable = false
               border = BorderFactory.createEmptyBorder()
+              peer.setOpaque(false)
             }
             contents += recipField.get
           }
@@ -400,6 +404,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
             minimumSize = new Dimension(fieldWidth,fieldHight)
             maximumSize = new Dimension(fieldWidth,fieldHight)
             horizontalAlignment = Alignment.Right
+            peer.setOpaque(false)
           }
         }.toOption
 
@@ -408,6 +413,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
             contents += new TextField("  Sender Public Address: ") {
               editable=false
               border=BorderFactory.createEmptyBorder()
+              peer.setOpaque(false)
             }
             contents += senderField.get
           }
@@ -423,6 +429,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
               contents += new TextField("  Choose Public Address: ") {
                 editable = false
                 border = BorderFactory.createEmptyBorder()
+                peer.setOpaque(false)
               }
               contents += recipDropList.get
             }
@@ -459,6 +466,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         s"Pending Txs: $ptxs" + s"   Confirmed Txs: $ttxs" + s"   Balance: $cb" + s"   Pending: $pb"
       }
       enabled = false
+      peer.setOpaque(false)
     }
   }.toOption
 
@@ -575,6 +583,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       new TextField(if(newKey){"  Enter a new password, 6 characters or longer: "}else{"  Enter Password: "}) {
         editable = false
         border = BorderFactory.createEmptyBorder()
+        peer.setOpaque(false)
       }
     }.toOption
 
@@ -594,6 +603,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       new TextField("  Confirm Password: ") {
         editable = false
         border = BorderFactory.createEmptyBorder()
+        peer.setOpaque(false)
       }
     }.toOption
 
@@ -613,6 +623,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       new TextField("  Enter or generate BIP39 mnemonic phrase: ") {
         editable = false
         border = BorderFactory.createEmptyBorder()
+        peer.setOpaque(false)
       }
     }.toOption
 
@@ -746,6 +757,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         contents += new TextField("   Select the directory of your key, keep one account per directory, old keys are erased   "){
           editable = false
           border=BorderFactory.createEmptyBorder()
+          peer.setOpaque(false)
         }
         contents += loadKeyButton.get
         contents += newKeyButton.get
@@ -810,6 +822,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         contents += new TextField("   Select the directory of your node view data, including block and state databases   "){
           editable = false
           border=BorderFactory.createEmptyBorder()
+          peer.setOpaque(false)
         }
         contents += openNodeViewButton.get
         contents += newNodeViewButton.get
@@ -828,6 +841,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       maximumSize = new Dimension(500,30)
       minimumSize = new Dimension(500,30)
       border=BorderFactory.createEmptyBorder()
+      peer.setOpaque(false)
     }
   }.toOption
 
@@ -853,6 +867,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       maximumSize = new Dimension(250,30)
       minimumSize = new Dimension(250,30)
       border=BorderFactory.createEmptyBorder()
+      peer.setOpaque(false)
     }
   }.toOption
 
@@ -863,6 +878,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       editable = false
       maximumSize = new Dimension(500,30)
       minimumSize = new Dimension(500,30)
+      peer.setOpaque(false)
     }
   }.toOption
 
