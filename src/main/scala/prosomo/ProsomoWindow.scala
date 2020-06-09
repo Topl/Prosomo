@@ -41,6 +41,12 @@ class ProsomoWindow(config:Config) extends ActionListener {
 
   val icon = new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))
 
+  import javax.swing.UIManager
+
+  System.setProperty("apple.laf.useScreenMenuBar", "true")
+  System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prosomo")
+  UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName)
+  
   Thread.sleep(10000)
   var windowConfig:Config = config
   var waitToConnect = true
