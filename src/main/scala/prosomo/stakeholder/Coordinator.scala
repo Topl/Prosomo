@@ -142,8 +142,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   self ! NewDataFile
   self ! Populate
 
-  def readFile(filename: String): Seq[String] = {
-    val bufferedSource = scala.io.Source.fromFile(filename)
+  def readFile(file:File): Seq[String] = {
+    val bufferedSource = scala.io.Source.fromFile(file)
     val lines = (for (line <- bufferedSource.getLines()) yield line).toList
     bufferedSource.close
     lines
@@ -153,33 +153,14 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     System.currentTimeMillis()+localClockOffset
   }
 
-  def getListOfFiles(dir: String):List[File] = {
-    val d = new File(dir)
-    if (d.exists && d.isDirectory) {
-      d.listFiles.filter(_.isFile).toList
-    } else {
-      List[File]()
-    }
-  }
-
   def getTimeInfo = {
-    val timeDir = getClass.getClassLoader.getResource("/time/").getPath
-    val files = getListOfFiles(s"$storageDir/time/")
-    val inputFiles = getListOfFiles(timeDir)
-    (files.length,inputFiles.length) match {
-      case (x:Int,y:Int) if x > 0 && y == 0 => {
-        println("Coordinator loading time information...")
-        val lines = readFile(files.head.getPath)
-        val t0in:Long = lines(0).toLong
-        val tw:Long = lines(1).toLong
-        val tpin:Long = lines(2).toLong
-        val offset =  System.currentTimeMillis()-tw
-        t0 = t0in + offset
-        tp = tpin
-      }
-      case (x:Int,y:Int) if y > 0 => {
-        println("Coordinator loading input time information...")
-        val lines = readFile(inputFiles.head.getPath)
+    val timeDataFile = new File(s"$storageDir/time/timeInfo")
+    val timeGenesis : Option[Array[String]] = Try{
+      scala.io.Source.fromResource("time/t0").getLines.toArray
+    }.toOption
+    timeGenesis match {
+      case Some(lines) =>
+        println("Coordinator loading genesis time information...")
         val t0in:Long = lines(0).toLong
         t0 = t0in
         try {
@@ -191,14 +172,22 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             SharedData.throwError
         }
         tp = 0
-      }
-      case _ => t0 = System.currentTimeMillis()
+      case None => Try{
+        println("Coordinator loading time data information...")
+        val lines = readFile(timeDataFile)
+        val t0in:Long = lines(0).toLong
+        val tw:Long = lines(1).toLong
+        val tpin:Long = lines(2).toLong
+        val offset =  System.currentTimeMillis()-tw
+        t0 = t0in + offset
+        tp = tpin
+      }.orElse(Try{t0 = System.currentTimeMillis()})
     }
     globalSlot = ((globalTime - t0) / slotT).toInt
   }
 
   def writeTimeInfo = {
-    val file = new File(s"$storageDir/time/timeInfo.txt")
+    val file = new File(s"$storageDir/time/timeInfo")
     file.getParentFile.mkdirs
     val bw = new BufferedWriter(new FileWriter(file))
     val tw = System.currentTimeMillis()
@@ -245,25 +234,20 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           verifyBlock(genBlock)
           println("Recovered Genesis Block")
         }
-        case None => {
+        case None => Try{
           println("Reading genesis block from resources...")
-          val genesisDir = getClass.getClassLoader.getResource("/genesis/").getPath
-          val inputFiles = getListOfFiles(genesisDir)
-          inputFiles.length match {
-            case x:Int if x == 1 =>
-              val data = readFile(inputFiles.head.getPath)(0)
-              serializer.fromBytes(new ByteStream(Base58.decode(data).get,DeserializeGenesisBlock)) match {
-                case b: Block =>
-                  genBlock = Block(hash(b.prosomoHeader, serializer), b.blockHeader, b.blockBody, b.genesisSet)
-                  verifyBlock(genBlock)
-                  println("Recovered Genesis Block")
-                case _ =>
-                  println("error: genesis block is corrupted")
-                  System.exit(0)
-              }
-            case _ => forge
+          import scala.io.Source
+          val blockTxt : Array[String] = Source.fromResource("genesis/blockData").getLines.toArray
+          serializer.fromBytes(new ByteStream(Base58.decode(blockTxt.head).get,DeserializeGenesisBlock)) match {
+            case b: Block =>
+              genBlock = Block(hash(b.prosomoHeader, serializer), b.blockHeader, b.blockBody, b.genesisSet)
+              verifyBlock(genBlock)
+              println("Recovered Genesis Block")
+            case _ =>
+              println("error: genesis block is corrupted")
+              System.exit(0)
           }
-        }
+        }.orElse(Try{forge})
       }
       setupLocal
     }

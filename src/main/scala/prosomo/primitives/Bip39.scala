@@ -2,7 +2,6 @@ package prosomo.primitives
 
 import scorex.util.ScorexLogging
 import scorex.crypto.hash.Sha256
-import scala.io.Source
 import scala.math.BigInt
 
 /**
@@ -24,7 +23,6 @@ import scala.math.BigInt
   */
 
 case class Bip39 (phraseLanguage: String) extends ScorexLogging {
-  val phraseListDir = getClass.getClassLoader.getResource("/bip-0039/").getPath
   val iso639_1_toFile: Map[String,String] = Map(
     "zh-hans"->"chinese_simplified.txt",
     "zh-hant"->"chinese_traditional.txt",
@@ -37,7 +35,7 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
   )
   var wordList: List[String] = List.fill(2048)("")
   try {
-    wordList = Source.fromFile(phraseListDir + iso639_1_toFile(phraseLanguage.toLowerCase)).getLines.toList
+    wordList = scala.io.Source.fromResource("bip-0039/" + iso639_1_toFile(phraseLanguage.toLowerCase)).getLines.toList
   } catch {
     case _: Exception => log.error("File not found or data corrupted")
   }
@@ -79,8 +77,7 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
       "spanish.txt"->"a556a26c6a5bb36db0fb7d8bf579cb7465fcaeec03957c0dda61b569962d9da5"
     )
     (phraseLanguagesHash(iso639_1_toFile(phraseLanguage.toLowerCase))
-      == Sha256.hash(Source.fromFile(phraseListDir + iso639_1_toFile(phraseLanguage.toLowerCase))
-      .getLines.toList.mkString).map("%02x" format _).mkString)
+      == Sha256.hash(scala.io.Source.fromResource("bip-0039/" + iso639_1_toFile(phraseLanguage.toLowerCase)).getLines.toList.mkString).map("%02x" format _).mkString)
   }
 
   def toBinaryIndex(i: Int): String = String.format("%11s", BigInt(i).toString(2) ).replace(' ', '0')

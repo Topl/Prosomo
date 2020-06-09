@@ -38,8 +38,10 @@ Outline:
  */
 
 class ProsomoWindow(config:Config) extends ActionListener {
-  val imageName = getClass.getClassLoader.getResource("Logo.png").getPath
-  println(imageName)
+
+  val icon = new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))
+
+  Thread.sleep(10000)
   var windowConfig:Config = config
   var waitToConnect = true
   var runApp = true
@@ -302,7 +304,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val confirmSendToNetworkWindow = Try {
     new Frame {
       title = "Confirm"
-      iconImage = toolkit.getImage(imageName)
+      iconImage = icon.getImage
       contents = new BorderPanel {
         border = Swing.EmptyBorder(10, 10, 10, 10)
         add(sendTxButton.get,BorderPanel.Position.East)
@@ -406,7 +408,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }.toOption
 
         title = "Issue Transaction"
-        iconImage = toolkit.getImage(imageName)
+        iconImage = icon.getImage
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += senderElem.get
@@ -625,7 +627,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     val window = Try{
       new Frame {
         title = if (newKey) {"Create Key"} else {"Load Key"}
-        iconImage = toolkit.getImage(imageName)
+        iconImage = icon.getImage
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += new BoxPanel(Orientation.Horizontal) {
@@ -957,7 +959,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           prosomo.primitives.Parameters.useGui = false
       }
       title = "Prosomo"
-      iconImage = toolkit.getImage(imageName)
+      iconImage = icon.getImage
 
       contents = new BoxPanel(Orientation.Vertical) {
         border = Swing.EmptyBorder(10, 10, 10, 10)
