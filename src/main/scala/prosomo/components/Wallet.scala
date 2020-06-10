@@ -24,6 +24,7 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
   var netStake0:BigInt = 1
   var issueState:State = Map()
   var confirmedState:State = Map()
+  var reallocated:Map[PublicKeyW,Int] = Map()
   val fch:Fch = new Fch
 
   def addTx(transaction: Transaction) = {
@@ -98,6 +99,18 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
         }
         case _ => {
           pendingTxsOut = Map()
+        }
+      }
+    }
+    for (entry<-reallocated.keySet) {
+      confirmedState.get(entry) match {
+        case None => reallocated -= entry
+        case Some(info) => {
+          if (info._3 > reallocated(entry) && info._1 > 0) {
+            reallocated -= entry
+          } else if (info._1 == 0) {
+            reallocated -= entry
+          }
         }
       }
     }
@@ -183,8 +196,10 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
       val trans:Transaction = signTransaction(sk_sig,sender,recip,delta,txC,sig,rng,serializer)
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
         case Some(value:State) => {
-          issueState = value
-          pendingTxsOut += (trans.sid->trans)
+          if (sender == pkw) {
+            issueState = value
+            pendingTxsOut += (trans.sid->trans)
+          }
           Some(trans)
         }
         case _ => {
@@ -194,6 +209,10 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
     } else {
       None
     }
+  }
+
+  def isSameLedgerId(publicAddress:PublicKeyW):Boolean = {
+    publicAddress.data.take(pk_length).deep == pkw.data.take(pk_length).deep && publicAddress != pkw
   }
 
 }

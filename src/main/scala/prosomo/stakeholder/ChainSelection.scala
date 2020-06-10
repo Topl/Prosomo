@@ -61,23 +61,27 @@ trait ChainSelection extends Members {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
       send(selfWrapper,gossipers, SendTx(trans))
     }
-    walletStorage.store(wallet,serializer)
+
     def collectStake:Unit = {
-      for (entry<-localState) {
-        if (entry._1.data.take(pk_length).deep == keys.pkw.data.take(pk_length).deep && entry._1 != keys.pkw) {
-          wallet.issueTx((value.recip,value.delta),keys.sk_sig,sig,rng,serializer) match {
+      for (entry<-wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
+        if (wallet.isSameLedgerId(entry._1) && entry._2._1 > 0) {
+          wallet.issueTx(entry._1,wallet.pkw,entry._2._1,keys.sk_sig,sig,rng,serializer) match {
             case Some(trans:Transaction) => {
-              walletStorage.store(wallet,serializer)
+              if (holderIndex == SharedData.printingHolder && printFlag)
+                println("Holder " + holderIndex.toString + " Reallocated Stake")
               txCounter += 1
               memPool += (trans.sid->(trans,0))
               send(selfWrapper,gossipers, SendTx(trans))
+              wallet.reallocated += (entry._1->trans.nonce)
             }
             case _ =>
           }
         }
       }
     }
+
     collectStake
+    walletStorage.store(wallet,serializer)
   }
 
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = {
