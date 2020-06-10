@@ -93,7 +93,7 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
     * @param phrase user input seedphrase
     * @return true if seedphrase is valid, false if seedphrase invalid
     */
-  def phraseCheckSum(phrase: String): Boolean = {
+  def validateInputPhrase(phrase: String): Boolean = {
     val phraseWords: List[String] = phrase.split(" ").toList
     val pl = phraseWords.length
     if (phraseWords.forall(word => wordList.contains(word)) && validPhraseLengths.contains(pl)) {

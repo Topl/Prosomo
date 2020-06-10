@@ -62,6 +62,22 @@ trait ChainSelection extends Members {
       send(selfWrapper,gossipers, SendTx(trans))
     }
     walletStorage.store(wallet,serializer)
+    def collectStake:Unit = {
+      for (entry<-localState) {
+        if (entry._1.data.take(pk_length).deep == keys.pkw.data.take(pk_length).deep && entry._1 != keys.pkw) {
+          wallet.issueTx((value.recip,value.delta),keys.sk_sig,sig,rng,serializer) match {
+            case Some(trans:Transaction) => {
+              walletStorage.store(wallet,serializer)
+              txCounter += 1
+              memPool += (trans.sid->(trans,0))
+              send(selfWrapper,gossipers, SendTx(trans))
+            }
+            case _ =>
+          }
+        }
+      }
+    }
+    collectStake
   }
 
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = {

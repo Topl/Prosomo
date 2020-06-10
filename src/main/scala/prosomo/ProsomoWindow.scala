@@ -19,6 +19,7 @@ import scala.util.Try
 /**
   * AMS 2020:
   * A class for the user interface, will fail gracefully if any component is not able to load
+  * This represents a proof of concept demo of all the elements needed to interact with the chain
   * @param config base config to be modified by window elements
   */
 
@@ -144,7 +145,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
       editable = true
       maximumSize = new Dimension(150,50)
       minimumSize = new Dimension(150,50)
-      peer.setOpaque(false)
     }
   }.toOption
 
@@ -183,16 +183,20 @@ class ProsomoWindow(config:Config) extends ActionListener {
       enabled = false
       tooltip = "Enter a name below before you connect"
       reactions += {
-        case event.ButtonClicked(_) =>
+        case event.ButtonClicked(_) => {
           val useUpnp = if (upnpCheck.get.selected) {"yes"} else {"no"}
-          val knownPeer = "\""+knownAddressField.get.text+"\""
-          val declaredAddress = "\""+declaredAddressField.get.text+"\""
-          val str = s"input{scorex{network{upnpEnabled=$useUpnp,knownPeers=[$knownPeer]}}}"
-          windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
-          if (!upnpCheck.get.selected) Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
+          val str1 = s"input{scorex{network{upnpEnabled=$useUpnp}}}"
+          windowConfig = ConfigFactory.parseString(str1).getConfig("input").withFallback(windowConfig)
+
+          val knownPeer = knownAddressField.get.text
+          val str2 = "input{scorex{network{knownPeers=[\""+knownPeer+"\"]}}}"
+          if (knownPeer != "") windowConfig = ConfigFactory.parseString(str2).getConfig("input").withFallback(windowConfig)
+
+          val declaredAddress = declaredAddressField.get.text
+          if (!upnpCheck.get.selected) Try{config.getString("scorex.network.declaredAddress")}.toOption match {
             case Some(adr) if adr != "" =>
-            case _ => {
-              val str = s"input{scorex{network{declaredAddress=$declaredAddress}}}"
+            case _ => if (declaredAddress != "") {
+              val str = "input{scorex{network{declaredAddress=\""+declaredAddress+"\"}}}"
               Try{
                 windowConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(windowConfig)
               }.toOption match {
@@ -201,6 +205,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
               }
             }
           }
+
           Try{windowConfig.getString("scorex.network.agentName")}.toOption match {
             case Some(adr) if adr != "" && adr != "prosomo" =>
             case _ => {
@@ -213,6 +218,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
               }
             }
           }
+
           Try{windowConfig.getString("scorex.network.nodeName")}.toOption match {
             case Some(adr) if adr != "" && adr != "prosomo" =>
             case _ => {
@@ -225,8 +231,10 @@ class ProsomoWindow(config:Config) extends ActionListener {
               }
             }
           }
+
           upnpCheck.get.enabled = false
           waitToConnect = false
+        }
       }
     }
   }.toOption
@@ -596,6 +604,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
           case event: KeyReleased => listener.actionPerformed(new ActionEvent(this,5,"5"))
           case _ =>
         }
+        maximumSize = new Dimension(125,50)
+        minimumSize = new Dimension(125,50)
       }
     }.toOption
 
@@ -616,6 +626,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
           case event: KeyReleased => listener.actionPerformed(new ActionEvent(this,5,"5"))
           case _ =>
         }
+        maximumSize = new Dimension(125,50)
+        minimumSize = new Dimension(125,50)
       }
     }.toOption
 
@@ -695,7 +707,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           case scala.swing.event.ButtonClicked(_) =>
             keyFileDir = keysFileChooser.get.selectedFile.getPath
             if (newKey) {
-            if (bip39.phraseCheckSum(bip39Field.get.text) && hex2bytes(bip39.phraseToHex(bip39Field.get.text)).length == 32) {
+            if (bip39.validateInputPhrase(bip39Field.get.text)) {
               Try {
                 val keyFile:KeyFile = KeyFile.fromSeed(
                   passwordField.get.peer.getPassword.mkString,keyFileDir,
@@ -704,7 +716,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
                   new Vrf,
                   new Kes,
                   SharedData.globalSlot,
-                  hex2bytes(bip39.phraseToHex(bip39Field.get.text)),
+                  fch.hash(hex2bytes(bip39.phraseToHex(bip39Field.get.text))),
                   windowEntropy2,
                   windowEntropy3
                 )
@@ -720,7 +732,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
             } else {
               JOptionPane.showMessageDialog(
                 this.peer,
-                "Invalid BIP39 mnemonic phrase.\nMust be have at least 24 words for 256 bits of entropy total.",
+                "Invalid BIP39 mnemonic phrase.\nA valid phrase can have 12, 15, 18, 21, or 24 words.\nTry generating a new phrase.",
                 "Invalid Phrase",
                 JOptionPane.WARNING_MESSAGE
               )
@@ -1021,7 +1033,9 @@ class ProsomoWindow(config:Config) extends ActionListener {
     e.getActionCommand match {
       case "0" =>
         agentNameField.get.text = nameField.get.text + "_" + prosomo.primitives.Parameters.prosomoNodeUID.take(8)
-        if (nameField.get.text != "" && nameField.get.text.forall((('a'to'z')++('A'to'Z')++('0'to'9')).toSet.contains(_))) {
+        if (nameField.get.text != ""
+          && nameField.get.text.forall((('a'to'z')++('A'to'Z')++('0'to'9')).toSet.contains(_))
+        ) {
           connectButton.get.enabled = true
         } else {connectButton.get.enabled = false}
       case "1" =>

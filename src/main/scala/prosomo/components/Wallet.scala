@@ -176,4 +176,24 @@ case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transacti
       None
     }
   }
+
+  def issueTx(sender:PublicKeyW,recip:PublicKeyW,delta:BigInt,sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Option[Transaction] = {
+    if (issueState.keySet.contains(sender)) {
+      val txC = issueState(sender)._3
+      val trans:Transaction = signTransaction(sk_sig,sender,recip,delta,txC,sig,rng,serializer)
+      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
+        case Some(value:State) => {
+          issueState = value
+          pendingTxsOut += (trans.sid->trans)
+          Some(trans)
+        }
+        case _ => {
+          None
+        }
+      }
+    } else {
+      None
+    }
+  }
+
 }

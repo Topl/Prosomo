@@ -218,7 +218,7 @@ object Prosomo extends App {
             Thread.sleep(10)
           }
           instance.get.stopAll()
-        }
+        } orElse Try{println("Error: instance terminated")}
       }
       case _ =>
     }
