@@ -40,6 +40,8 @@ Outline:
 
 class ProsomoWindow(config:Config) extends ActionListener {
 
+  val peerDiscoveryAddress = "34.72.8.173:9084"
+
   val icon = new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))
 
   import javax.swing.UIManager
@@ -140,7 +142,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
 
   val knownAddressField = Try{
     new TextField {
-      text = "35.192.11.126:9084"
+      text = peerDiscoveryAddress
       columns = 20
       editable = true
       maximumSize = new Dimension(150,50)
