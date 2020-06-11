@@ -147,7 +147,7 @@ class NetworkController(settings: NetworkSettings,
       else peerManagerRef ! ConfirmConnection(connectionId, sender())
 
     case Connected(remoteAddress, _) =>
-      log.warn(s"Connection to peer $remoteAddress is already established")
+      log.info(s"Connection to peer $remoteAddress is already established")
       sender() ! Close
 
     case ConnectionConfirmed(connectionId, handlerRef) =>
@@ -236,10 +236,10 @@ class NetworkController(settings: NetworkSettings,
             pullMode = true
           )
         } else {
-          log.warn(s"Connection to peer $remote is already established")
+          log.info(s"Connection to peer $remote is already established")
         }
       case None =>
-        log.warn(s"Can't obtain remote address for peer $peer")
+        log.info(s"Can't obtain remote address for peer $peer")
     }
   }
 
