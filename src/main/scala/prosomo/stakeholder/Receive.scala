@@ -46,7 +46,7 @@ trait Receive extends Members {
         if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
-              memPool += (value.transaction.sid->(value.transaction,0))
+              if (!bootStrapLock) memPool += (value.transaction.sid->(value.transaction,0))
               send(selfWrapper,gossipers, SendTx(value.transaction))
             }
           }
@@ -138,7 +138,7 @@ trait Receive extends Members {
                         case scheduledMessage:Cancellable => scheduledMessage.cancel
                         case null =>
                       }
-                      bootStrapMessage = context.system.scheduler.scheduleOnce(5*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+                      bootStrapMessage = context.system.scheduler.scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
                     }
                   } else {
                     buildTine((value.job,tinePool(value.job)))

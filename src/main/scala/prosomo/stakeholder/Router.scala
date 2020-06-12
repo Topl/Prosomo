@@ -56,6 +56,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var transactionCounter:Int = 0
   var pathToPeer:Map[ActorPath,String] = Map()
   var connectedPeer:Set[ConnectedPeer] = Set()
+  var bootStrapJobs:Set[ActorRefWrapper] = Set()
   implicit val routerRef = ActorRefWrapper.routerRef(self)
 
   private case object ActorPathSendTimerKey
@@ -368,7 +369,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:DiffuseDataType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     DiffuseData(s,msg._3,msg._4)
                   )(context.system.dispatcher,self)
                 case None =>
@@ -381,7 +382,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:HelloDataType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     Hello(s,msg._3)
                   )(context.system.dispatcher,self)
                 case None => println("error: Hello message not parsed")
@@ -394,7 +395,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:RequestBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestBlock(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
                 case None => println("error: RequestBlock message not parsed")
@@ -407,7 +408,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:RequestTineType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     RequestTine(msg._3,msg._4,msg._5,msg._6)
                   )(context.system.dispatcher,self)
                 case None => println("error: RequestTine message not parsed")
@@ -420,7 +421,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:ReturnBlocksType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     ReturnBlocks(msg._3,msg._4,msg._5)
                   )(context.system.dispatcher,self)
                 case None => println("error: ReturnBlocks message not parsed")
@@ -433,7 +434,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:SendBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendBlock(msg._3,msg._4)
                   )(context.system.dispatcher,self)
                 case None => println("error: SendBlock message not parsed")
@@ -446,7 +447,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:SendTxType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                     SendTx(msg._3)
                   )(context.system.dispatcher,self)
                 case None => println("error: SendTx message not parsed")
@@ -632,6 +633,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case Register => {
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       sender() ! "done"
+    }
+    case BootstrapJob(bootStrapper) => {
+      if (bootStrapJobs.contains(bootStrapper)) {
+        bootStrapJobs -= bootStrapper
+      } else {
+        bootStrapJobs += bootStrapper
+      }
     }
   }
 

@@ -188,7 +188,7 @@ trait Validation extends Members with Types {
     */
   def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
-
+    var gcCounter = 0
     val candidateTine = subChain(localChain, 0, prefix) ++ tine
 
     history.get(candidateTine.getLastActiveSlot(prefix)) match {
@@ -206,6 +206,8 @@ trait Validation extends Members with Types {
         var pid:SlotId = candidateTine.getLastActiveSlot(prefix)
         breakable{
           for (id <- tine.ordered) {
+            gcCounter += 1
+            if (gcCounter%100==0) System.gc()
             updateLocalState(ls,id) match {
               case Some(newState:State) => {
                 getBlockHeader(id) match {

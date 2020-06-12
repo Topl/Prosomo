@@ -72,4 +72,5 @@ case class GetPositionData(s:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRef
 case class Adversary(s:String)
 case class Initialize(gs:Slot,password:Option[String])
 case class GuiCommand(s:String)
+case class BootstrapJob(ref:ActorRefWrapper)
 

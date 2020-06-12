@@ -93,8 +93,9 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     None
   }
 
+  val newPort = scala.util.Random.nextInt(65535 - 49152) + 49152
+
   val externalSocketAddress: Option[InetSocketAddress] = if (settings.network.upnpEnabled) {
-    val newPort = scala.util.Random.nextInt(65535 - 49152) + 49152
     Try{
       upnpGateway.get.addPort(newPort)
       upnpGateway.map(u => new InetSocketAddress(u.externalAddress, newPort))
@@ -194,7 +195,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
 
   def stopAll(): Unit = synchronized {
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
+    upnpGateway.foreach(_.deletePort(newPort))
     networkControllerRef ! ShutdownNetwork
     log.info("Stopping actors (incl. block generator)")
     actorSystem.terminate().onComplete { _ =>

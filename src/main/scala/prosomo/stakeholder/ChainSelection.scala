@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{RequestBlock, RequestTine, SendTx}
+import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Block, Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
 
@@ -206,8 +206,7 @@ trait ChainSelection extends Members {
     assert(!tine.isEmpty)
 
     if (job == bootStrapJob) {
-      bootStrapJob = -1
-      bootStrapLock = false
+      routerRef ! BootstrapJob(selfWrapper)
     }
 
     val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
@@ -331,6 +330,11 @@ trait ChainSelection extends Members {
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
 
+    if (job == bootStrapJob) {
+      bootStrapJob = -1
+      bootStrapLock = false
+      routerRef ! BootstrapJob(selfWrapper)
+    }
 
   }
 
