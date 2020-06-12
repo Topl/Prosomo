@@ -630,7 +630,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       coordinatorRef ! HoldersFromRemote(holders)
     }
     case Register => {
-      networkController ! RegisterMessageSpecs(messageSpecs, self)
+      networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       sender() ! "done"
     }
   }

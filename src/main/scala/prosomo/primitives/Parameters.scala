@@ -233,7 +233,7 @@ object Parameters {
   val stakeScale:Double = config.getDouble("params.stakeScale")
   val initStakeMin:Double = config.getDouble("params.initStakeMin")
   val timeServer:String = config.getString("params.timeServer")
-  val messageSpecs = Seq(
+  val prosomoMessageSpecs = Seq(
     DiffuseDataSpec,
     HelloSpec,
     RequestBlockSpec,

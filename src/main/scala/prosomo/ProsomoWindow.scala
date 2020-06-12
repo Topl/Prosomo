@@ -40,15 +40,16 @@ Outline:
 
 class ProsomoWindow(config:Config) extends ActionListener {
 
-  val peerDiscoveryAddress = "34.72.8.173:9084"
-
-  val icon = new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))
-
   import javax.swing.UIManager
+  val peerDiscoveryAddress = "34.72.8.173:9084"
+  val logo = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))}.toOption
+  val icon = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Icon.png"))}.toOption
 
-  System.setProperty("apple.laf.useScreenMenuBar", "true")
-  System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prosomo")
-  UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName)
+  Try{
+    System.setProperty("apple.laf.useScreenMenuBar", "true")
+    System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prosomo")
+    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName)
+  }
 
   var windowConfig:Config = config
   var waitToConnect = true
@@ -95,8 +96,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
-  val backgroundC = Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)
-  val foregroundC = Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)
+  val backgroundC = Try{Color.getHSBColor(1.0.toFloat,0.0.toFloat,0.15.toFloat)}
+  val foregroundC = Try{Color.getHSBColor(0.46.toFloat,0.6.toFloat,0.7.toFloat)}
 
   def peerSeq:Seq[String] = {
     var out:Seq[String] = Seq()
@@ -127,8 +128,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }
         out
       })
-      background = backgroundC
-      foreground = foregroundC
+      background = backgroundC.get
+      foreground = foregroundC.get
     }
   }.toOption
 
@@ -150,33 +151,46 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
+  val uiDeclaredAddress = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
+    case Some(adr) if adr != "" => adr
+    case None => {
+      prosomo.primitives.Parameters.declaredAddressFromRemote match {
+        case Some(str) =>str+":9084"
+        case None => ""
+      }
+    }
+  }
+
   val declaredAddressField = Try{
     new TextField {
-      text = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
-        case Some(adr) if adr != "" => adr
-        case None => {
-          prosomo.primitives.Parameters.declaredAddressFromRemote match {
-            case Some(str) =>str+":9084"
-            case None => ""
-          }
-        }
-      }
       columns = 20
       editable = true
       maximumSize = new Dimension(150,50)
       minimumSize = new Dimension(150,50)
+      enabled = false
+      text = ""
+      peer.setOpaque(false)
     }
   }.toOption
 
   val upnpCheck = Try{
     new CheckBox() {
       text = "UPNP"
+      selected = true
     }
   }.toOption
 
   Try{
     upnpCheck.get.reactions += {
-      case event.ButtonClicked(_) => if (upnpCheck.get.selected) {declaredAddressField.get.enabled = false} else {declaredAddressField.get.enabled = true}
+      case event.ButtonClicked(_) => if (upnpCheck.get.selected) {
+        declaredAddressField.get.enabled = false
+        declaredAddressField.get.text = ""
+        declaredAddressField.get.peer.setOpaque(false)
+      } else {
+        declaredAddressField.get.enabled = true
+        declaredAddressField.get.text = uiDeclaredAddress
+        declaredAddressField.get.peer.setOpaque(true)
+      }
     }
   }
 
@@ -322,7 +336,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val confirmSendToNetworkWindow = Try {
     new Frame {
       title = "Confirm"
-      iconImage = icon.getImage
+      iconImage = icon.get.getImage
       contents = new BorderPanel {
         border = Swing.EmptyBorder(10, 10, 10, 10)
         add(sendTxButton.get,BorderPanel.Position.East)
@@ -430,7 +444,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }.toOption
 
         title = "Issue Transaction"
-        iconImage = icon.getImage
+        iconImage = icon.get.getImage
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += senderElem.get
@@ -501,8 +515,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     new ColorTextArea {
       editable = false
       font = swing.Font("Monospaced",Style.Plain,14)
-      background = backgroundC
-      foreground = foregroundC
+      background = backgroundC.get
+      foreground = foregroundC.get
       lineWrap = true
     }
   }.toOption
@@ -522,14 +536,14 @@ class ProsomoWindow(config:Config) extends ActionListener {
     javax.swing.UIManager.put("FileChooser.readOnly", true)
   }
 
-  val keyLocation = config.getString("params.keyFileDir")
+  val keyLocation = Try{config.getString("params.keyFileDir")}.toOption
 
-  val keyDir = new File(keyLocation)
+  val keyDir = Try{new File(keyLocation.get)}.toOption
 
-  Try{keyDir.mkdirs()}
+  Try{keyDir.get.mkdirs()}
 
   val keysFileChooser = Try {
-    new FileChooser(keyDir) {
+    new FileChooser(keyDir.get) {
       fileSelectionMode = FileChooser.SelectionMode.DirectoriesOnly
       listenTo(mouse.clicks)
       listenTo(mouse.moves)
@@ -549,7 +563,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     new Button ("Create New Key") {
       reactions += {
         case ButtonClicked(_) => {
-          val file = new File(keyLocation+"/"+agentNameField.get.text+"_"+System.currentTimeMillis().toString+"/")
+          val file = new File(keyLocation.get+"/"+agentNameField.get.text+"_"+System.currentTimeMillis().toString+"/")
           file.mkdirs()
           keysFileChooser.get.selectedFile = file
           keysFileChooser.get.peer.rescanCurrentDirectory()
@@ -658,7 +672,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     val window = Try{
       new Frame {
         title = if (newKey) {"Create Key"} else {"Load Key"}
-        iconImage = icon.getImage
+        iconImage = icon.get.getImage
         contents = new BoxPanel(Orientation.Vertical) {
           border = Swing.EmptyBorder(10, 10, 10, 10)
           contents += new BoxPanel(Orientation.Horizontal) {
@@ -684,7 +698,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
                       this.peer,
                       "A new mnemonic phrase has been generated for you.\nWrite it down, it will not be shown again.\nYou may use it to recover your account in the future.",
                       "New Phrase",
-                      JOptionPane.INFORMATION_MESSAGE
+                      JOptionPane.INFORMATION_MESSAGE,
+                      logo.get
                     )
                 }
               }
@@ -726,7 +741,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
                 keyFile
               }.toOption match {
                 case None =>
-                  JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE)
+                  JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE,logo.get)
                 case Some(kf) =>
                   windowKeyFile = kf
                   listener.actionPerformed(new ActionEvent(this,4,"4"))
@@ -736,7 +751,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
                 this.peer,
                 "Invalid BIP39 mnemonic phrase.\nA valid phrase can have 12, 15, 18, 21, or 24 words.\nTry generating a new phrase.",
                 "Invalid Phrase",
-                JOptionPane.WARNING_MESSAGE
+                JOptionPane.WARNING_MESSAGE,
+                logo.get
               )
             }
           } else {
@@ -746,7 +762,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
               keyFile
             }.toOption match {
               case None =>
-                JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE)
+                JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE,logo.get)
               case Some(kf) =>
                 windowKeyFile = kf
                 listener.actionPerformed(new ActionEvent(this,4,"4"))
@@ -901,8 +917,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
       text = ""
       editable = false
       border=BorderFactory.createEmptyBorder()
-      background = backgroundC
-      foreground = foregroundC
+      background = backgroundC.get
+      foreground = foregroundC.get
     }
   }.toOption
 
@@ -985,6 +1001,17 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }
 
+  val windowContents = Try{
+    new BoxPanel(Orientation.Vertical) {
+      border = Swing.EmptyBorder(10, 10, 10, 10)
+      if (devMode) contents += commandElem.get
+      contents += connectElem.get
+      contents += walletElem.get
+      contents += activePane.get
+      contents += outputElem.get
+    }
+  }.toOption
+
   val window:Option[Frame] = Try{
     new Frame {
       reactions += {
@@ -995,21 +1022,17 @@ class ProsomoWindow(config:Config) extends ActionListener {
           prosomo.primitives.Parameters.useGui = false
       }
       title = "Prosomo"
-      iconImage = icon.getImage
-
-      contents = new BoxPanel(Orientation.Vertical) {
-        border = Swing.EmptyBorder(10, 10, 10, 10)
-        if (devMode) contents += commandElem.get
-        contents += connectElem.get
-        contents += walletElem.get
-        contents += activePane.get
-        contents += outputElem.get
-      }
+      iconImage = icon.get.getImage
+      contents = windowContents.get
       pack()
       centerOnScreen()
       open()
     }
   }.toOption
+
+  def showUpnpWarn = Try{
+    JOptionPane.showMessageDialog(windowContents.get.peer, "A Upnp device could not be found.\nTry connecting with Upnp disabled.\nIf you have access to your router,\nyou may have to manually forward ports.\nRestart the application to try again.", "Connection Failed", JOptionPane.WARNING_MESSAGE,logo.get)
+  }
 
   window match {
     case None => Try{
@@ -1026,7 +1049,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
         knownAddressField.get.editable = false
         declaredAddressField.get.editable = false
         outputText.get.text = "Loading..."
-        System.setOut(SharedData.printStream)
       }
     }
   }

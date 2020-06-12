@@ -1,5 +1,5 @@
 -Xms512M
--Xmx1G
+-Xmx2G
 -Xss2M
 -XX:MaxMetaspaceSize=1024M
 -XX:PermSize=512m

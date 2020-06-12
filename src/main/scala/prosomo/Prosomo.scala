@@ -8,7 +8,7 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress}
-import prosomo.primitives.Parameters.{inputSeed, messageSpecs, useGui}
+import prosomo.primitives.Parameters.{inputSeed, prosomoMessageSpecs, useGui}
 import prosomo.primitives.{Fch, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
@@ -27,7 +27,7 @@ import scala.util.Try
 
 /**
   * AMS 2020:
-  * The Prosomo testnet runtime
+  * The Prosomo testnet runtime based on Scorex 2
   * The App instantiates this class with a given configuration with user defined inputs
   * The actor system in this class is interfaced with the GUI element so buttons can trigger messages to be passed
   * Coordinator is the only actor ref that should receive messages from GUI reaction events
@@ -38,12 +38,9 @@ import scala.util.Try
 class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with ScorexLogging {
   val fch = new Fch
   var runApp = true
-
-  //settings
+  var upnpFailed = false
   implicit val settings: ScorexSettings = ScorexSettings.fromConfig(config)
   SharedData.scorexSettings = Some(settings)
-
-  //api
   val apiRoutes: Seq[ApiRoute] = Seq()
 
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
@@ -53,12 +50,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
 
   protected val features: Seq[PeerFeature] = Seq()
-  protected val additionalMessageSpecs: Seq[MessageSpec[_]] = messageSpecs
-
-  //p2p
-  private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
-  // TODO use available port on gateway instead settings.network.bindAddress.getPort
-  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
+  protected val additionalMessageSpecs: Seq[MessageSpec[_]] = prosomoMessageSpecs
 
   private lazy val basicSpecs = {
     val invSpec = new InvSpec(settings.network.maxInvObjects)
@@ -80,12 +72,43 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     */
   val timeProvider = new NetworkTimeProvider(settings.ntp)
 
-  //an address to send to peers
-  lazy val externalSocketAddress: Option[InetSocketAddress] = {
-    settings.network.declaredAddress orElse {
-      // TODO use available port on gateway instead settings.bindAddress.getPort
-      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort))
+  /**
+    * Note AMS June 2020:
+    * The external address that peers will discover,
+    * The port range is defined by the Internet Assigned Numbers Authority for ephemeral ports 49152 to 65535
+    */
+  val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) {
+    Try{
+      UPnP.getValidGateway(settings.network)
+    }.toOption match {
+      case None =>{
+        println("Error: UPNP device not found, exiting")
+        runApp = false
+        upnpFailed = true
+        None
+      }
+      case Some(plug) => plug
     }
+  } else {
+    None
+  }
+
+  val externalSocketAddress: Option[InetSocketAddress] = if (settings.network.upnpEnabled) {
+    val newPort = scala.util.Random.nextInt(65535 - 49152) + 49152
+    Try{
+      upnpGateway.get.addPort(newPort)
+      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, newPort))
+    }.toOption match {
+      case None =>{
+        println("Error: UPNP port mapping failed, exiting")
+        runApp = false
+        upnpFailed = true
+        None
+      }
+      case Some(adr) => adr
+    }
+  } else {
+    settings.network.declaredAddress
   }
 
   val scorexContext = ScorexContext(
@@ -97,23 +120,22 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   )
 
   val peerManagerRef = PeerManagerRef(settings, scorexContext)
-
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, scorexContext)
-
   val swaggerConfig:String = ""
-
   lazy val combinedRoute: Route = CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
 
-  log.debug(s"Starting application with settings \n$settings")
+  log.info(s"Starting application with settings \n$settings")
   log.info("Using seed: "+inputSeed)
-
   val routerRef:ActorRef = actorSystem.actorOf(Router.props(fch.hash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
   val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(fch.hash(inputSeed),Seq(routerRef)), "Coordinator")
 
   window match {
     case None =>
-    case Some(win) => Try{
+    case Some(_) => if (!upnpFailed) Try{
+      System.setOut(SharedData.printStream)
+      window.get.declaredAddressField.get.peer.setOpaque(false)
+      window.get.declaredAddressField.get.text = externalSocketAddress.get.toString
       window.get.activePane.get.pages(1).enabled = true
       window.get.activePane.get.pages(2).enabled = true
       window.get.connectButton.get.text = "Connected"
@@ -149,22 +171,20 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
         }
       }
       window.get.coordRef = coordinatorRef
+    } else {
+      window.get.showUpnpWarn
+      window.get.outputText.get.text = "Connection Failed"
     }
   }
 
   def run(): Unit = {
     require(settings.network.agentName.length <= Application.ApplicationNameLimit)
-
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
     log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
-
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     val bindAddress = settings.restApi.bindAddress
-
     Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
-
-    //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run() {
         stopAll()
@@ -176,7 +196,6 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     log.info("Stopping network services")
     upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
-
     log.info("Stopping actors (incl. block generator)")
     actorSystem.terminate().onComplete { _ =>
       log.info("Exiting from the app...")
@@ -192,10 +211,10 @@ object Prosomo extends App {
   val input = args
   var instance:Option[Prosomo] = None
   if (useGui) {
-    val newWindow = new ProsomoWindow(prosomo.primitives.Parameters.config)
+    val newWindow = Try{new ProsomoWindow(prosomo.primitives.Parameters.config)}.toOption
     //shared reference to window so stakeholder can enable buttons when started
-    SharedData.prosomoWindow = Some(newWindow)
-    newWindow.window match {
+    SharedData.prosomoWindow = newWindow
+    newWindow match {
       case None => {
         instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
         Try{
@@ -206,15 +225,15 @@ object Prosomo extends App {
           instance.get.stopAll()
         }
       }
-      case Some(frame) if newWindow.runApp => {
-        instance = Try{new Prosomo(newWindow.windowConfig,Some(newWindow))}.toOption
+      case Some(_) if newWindow.get.runApp => {
+        instance = Try{new Prosomo(newWindow.get.windowConfig,Some(newWindow.get))}.toOption
         Try{
           instance.get.run()
           var i = 0
-          while (newWindow.runApp) {
-            newWindow.refreshOutput
+          while (newWindow.get.runApp) {
+            newWindow.get.refreshOutput
             i+=1
-            if (i%100==0) {i=0;newWindow.refreshPeerList;newWindow.refreshWallet}
+            if (i%100==0) {i=0;newWindow.get.refreshPeerList;newWindow.get.refreshWallet}
             Thread.sleep(10)
           }
           instance.get.stopAll()
