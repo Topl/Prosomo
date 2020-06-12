@@ -58,7 +58,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   //p2p
   private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
   // TODO use available port on gateway instead settings.network.bindAddress.getPort
-  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
+  upnpGateway.foreach(_.addPort(10000 + scala.util.Random.nextInt(10000)))
 
   private lazy val basicSpecs = {
     val invSpec = new InvSpec(settings.network.maxInvObjects)
