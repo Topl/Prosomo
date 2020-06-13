@@ -831,7 +831,6 @@ trait SerializationMethods extends SimpleTypes {
     val stateBytes2 = getBytes(wallet.confirmedState)
     val output = Bytes.concat(
       wallet.pkw.data,
-      getBytes(wallet.fee_r),
       sTxMap(wallet.pendingTxsOut),
       getBytes(wallet.availableBalance),
       getBytes(wallet.totalBalance),
@@ -849,32 +848,29 @@ trait SerializationMethods extends SimpleTypes {
 
   private def dWallet(stream: ByteStream):Wallet = {
     val out1:ByteArrayWrapper = ByteArrayWrapper(stream.get(pkw_length))
+    val out = components.Wallet(out1)
     val out2len = stream.getInt
-    val out2Bytes = new ByteStream(stream.get(out2len),stream.caseObject)
-    val out2:Ratio = dRatio(out2Bytes)
-    val out = components.Wallet(out1,out2)
-    val out3len = stream.getInt
-    val b1 = new ByteStream(stream.get(out3len),stream.caseObject)
+    val b1 = new ByteStream(stream.get(out2len),stream.caseObject)
     out.pendingTxsOut = dTxMap(b1)
-    val out4len = stream.getInt
-    val b2 = new ByteStream(stream.get(out4len),stream.caseObject)
+    val out3len = stream.getInt
+    val b2 = new ByteStream(stream.get(out3len),stream.caseObject)
     out.availableBalance = dBigInt(b2)
-    val out5len = stream.getInt
-    val b3 = new ByteStream(stream.get(out5len),stream.caseObject)
+    val out4len = stream.getInt
+    val b3 = new ByteStream(stream.get(out4len),stream.caseObject)
     out.totalBalance = dBigInt(b3)
     out.txCounter = stream.getInt
     out.confirmedTxCounter = stream.getInt
-    val out8len = stream.getInt
-    val b4 = new ByteStream(stream.get(out8len),stream.caseObject)
+    val out5len = stream.getInt
+    val b4 = new ByteStream(stream.get(out5len),stream.caseObject)
     out.netStake = dBigInt(b4)
-    val out9len = stream.getInt
-    val b5 = new ByteStream(stream.get(out9len),stream.caseObject)
+    val out6len = stream.getInt
+    val b5 = new ByteStream(stream.get(out6len),stream.caseObject)
     out.netStake0 = dBigInt(b5)
-    val out10len = stream.getInt
-    val b6 = new ByteStream(stream.get(out10len),stream.caseObject)
+    val out7len = stream.getInt
+    val b6 = new ByteStream(stream.get(out7len),stream.caseObject)
     out.issueState = dState(b6)
-    val out11len = stream.getInt
-    val b7 = new ByteStream(stream.get(out11len),stream.caseObject)
+    val out8len = stream.getInt
+    val b7 = new ByteStream(stream.get(out8len),stream.caseObject)
     out.confirmedState = dState(b7)
     assert(stream.empty)
     out

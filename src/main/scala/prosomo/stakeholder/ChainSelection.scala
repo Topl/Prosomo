@@ -113,7 +113,7 @@ trait ChainSelection extends Members {
               }
               case None => {
                 if (counter>2*tineMaxTries) {
-                  if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Old Tine")
+                  if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Tine")
                   tinePool -= job._1
                 } else {
                   tinePool -= job._1
@@ -266,7 +266,6 @@ trait ChainSelection extends Members {
         case Some(reorgState:(State,Eta)) => {
           localState = reorgState._1
           eta = reorgState._2
-          //println(s"Holder $holderIndex set eta to "+Base58.encode(eta))
         }
         case _ => {
           println("Error: invalid state and eta on adopted tine")

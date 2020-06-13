@@ -1,9 +1,11 @@
 package prosomo.history
 
-import prosomo.primitives.{ByteStream, Fch, LDBStore, Ratio, SimpleTypes}
+import prosomo.primitives.{ByteStream, Fch, LDBStore, SimpleTypes}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
 import prosomo.components.{Serializer, Wallet}
+
+import scala.util.Try
 
 /**
   * AMS 2020:
@@ -20,18 +22,18 @@ class WalletStorage(dir:String) extends SimpleTypes {
     walletStore.refresh()
   }
 
-  def restore(serializer: Serializer,pkw:ByteArrayWrapper,fee_r:Ratio):Wallet = if (storageFlag) {
+  def restore(serializer: Serializer,pkw:ByteArrayWrapper):Wallet = if (storageFlag) {
     def newWallet:Wallet = {
       println("New wallet")
-      val out = components.Wallet(pkw,fee_r)
+      val out = components.Wallet(pkw)
       store(out,serializer)
       out
     }
     walletStore.get(ByteArrayWrapper(fch.hash(pkw.data))) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream = new ByteStream(bytes.data,DeserializeWallet)
-        serializer.fromBytes(byteStream) match {
-          case w:Wallet if w.pkw == pkw => {
+        Try{serializer.fromBytes(byteStream)}.toOption match {
+          case Some(w:Wallet) if w.pkw == pkw => {
             println("Recovered wallet")
             w
           }
@@ -42,7 +44,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
     }
   } else {
     println("New wallet")
-    components.Wallet(pkw,fee_r)
+    components.Wallet(pkw)
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString

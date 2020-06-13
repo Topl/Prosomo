@@ -995,6 +995,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
         text += f"        Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f\n\n"
         text += f"        Proportion of active slots as block number divided by global slot: ${SharedData.activeSlots}%5.5f\n\n"
         text += f"        Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f\n\n"
+        text += s"        Transactions in mempool: ${SharedData.numTxsMempool}\n\n"
         text += f"        Average block delay: ${SharedData.averageNetworkDelay}%5.5f\n\n"
         text
       }

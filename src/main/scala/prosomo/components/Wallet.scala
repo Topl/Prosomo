@@ -11,10 +11,10 @@ import scala.util.Random
   * AMS 2020:
   * Wallet for tracking transactions pertaining to the provided public address
   * @param pkw public address of the wallet
-  * @param fee_r forger fee
   */
 
-case class Wallet(pkw:ByteArrayWrapper,fee_r:Ratio) extends Types with Transactions {
+case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
+  import prosomo.primitives.Parameters.fee_r
   var pendingTxsOut:Map[Sid,Transaction] = Map()
   var availableBalance:BigInt = 0
   var totalBalance:BigInt = 0

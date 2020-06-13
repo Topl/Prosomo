@@ -64,7 +64,7 @@ class Stakeholder(
   override val fch = new Fch
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
-  var wallet:Wallet = Wallet(keys.pkw,fee_r)
+  var wallet:Wallet = Wallet(keys.pkw)
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(fch.hash(holderId.toString))

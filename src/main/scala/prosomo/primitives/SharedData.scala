@@ -66,6 +66,7 @@ object SharedData extends Types {
   var activeStake:Double = 0.0
   var blockTime:Double = 0.0
   var txsPerSecond:Double = 0.0
+  var numTxsMempool:Int = 0
   var activeSlots:Double = 0.0
   var averageNetworkDelay:Double = 0.0
 

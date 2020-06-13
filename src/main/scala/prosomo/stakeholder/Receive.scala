@@ -59,7 +59,12 @@ trait Receive extends Members {
 
     /**
       * Block passing for newly forged blocks only,
-      * If block is not found in database it is added to the TinePool as a new open tine and then sent to gossipers
+      * If block is not found in database it is added to the tinepool as a new open tine and then sent to gossipers
+      * Note AMS 2020:
+      * This is where tines are introduced to the tinepool,
+      * blocks below the checkpoint depth and blocks from the future never enter tinepool
+      * if bootstrapping no new tines are made until the job is done or the connection is lost,
+      * when bootstrapping new blocks are added to database but do not enter tinepool
       **/
     case value:SendBlock => {
       if (!actorStalled) {
@@ -73,26 +78,33 @@ trait Receive extends Members {
             if (verifyMac(value.block.id,value.mac)) {
               if (verifyBlock(value.block)) {
                 blocks.add(value.block)
-                if (bSlot <= globalSlot) {
+                if (bSlot <= globalSlot && bSlot > globalSlot-k_s) {
                   val newId = (bSlot, bHash)
                   send(selfWrapper,gossipers, SendBlock(value.block,signMac(value.block.id, sessionId, keys.sk_sig, keys.pk_sig)))
                   if (!bootStrapLock) {
-                    if (tinePool.keySet.size < tineMaxTries) {
-                      val jobNumber = tineCounter
-                      tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
-                      buildTine((jobNumber,tinePool(jobNumber)))
-                      tineCounter += 1
-                      if (holderIndex == SharedData.printingHolder) {
-                        networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
-                        if (networkDelayList.size > 100) networkDelayList.take(100)
-                        def average(points:List[Double]):Double={
-                          val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
-                          net/num
-                        }
-                        SharedData.averageNetworkDelay = average(networkDelayList)
-                      }
+                    if (tinePool.keySet.size > tineMaxTries) {
+                      if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Tine")
+                      tinePool -= tinePool.keySet.min
                     } else {
-                      tinePool.foreach(job => buildTine(job))
+                      for (entry <- tinePool) {
+                        if (entry._2._1.last._1 <= globalSlot-k_s || !holders.contains(entry._2._5)) {
+                          if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Tine")
+                          tinePool -= entry._1
+                        }
+                      }
+                    }
+                    val jobNumber = tineCounter
+                    tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
+                    buildTine((jobNumber,tinePool(jobNumber)))
+                    tineCounter += 1
+                    if (holderIndex == SharedData.printingHolder) {
+                      networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
+                      if (networkDelayList.size > 100) networkDelayList.take(100)
+                      def average(points:List[Double]):Double={
+                        val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
+                        net/num
+                      }
+                      SharedData.averageNetworkDelay = average(networkDelayList)
                     }
                   }
                 }
@@ -112,7 +124,14 @@ trait Receive extends Members {
 
     case BootstrapJob => {
       println(s"Holder $holderIndex Bootstrapping...")
-      buildTine((bootStrapJob,tinePool(bootStrapJob)))
+      if (holders.contains(tinePool(bootStrapJob)._5)) {
+        buildTine((bootStrapJob,tinePool(bootStrapJob)))
+      } else {
+        println(s"Holder $holderIndex Lost Connection with Tine Provider")
+        tinePool -= bootStrapJob
+        bootStrapJob = -1
+        bootStrapLock = false
+      }
     }
 
     /**
@@ -337,7 +356,7 @@ trait Receive extends Members {
       keyFile match {
         case None => Try{KeyFile.restore(s"$storageDir/keys/")} match {
           case Success(Some(restoredFile:KeyFile)) => {
-            println("Reading keyfile ...")
+            println("Reading Keyfile")
             keyFile = Some(restoredFile)
           }
           case Success(None) => {
@@ -351,7 +370,7 @@ trait Receive extends Members {
         case _ =>
       }
       keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
-      wallet = walletStorage.restore(serializer,keys.pkw,fee_r)
+      wallet = walletStorage.restore(serializer,keys.pkw)
       val genesisBlock = blocks.getIfPresent((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {

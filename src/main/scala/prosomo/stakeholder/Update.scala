@@ -151,6 +151,7 @@ trait Update extends Members {
           globalSlot.toDouble/getBlockHeader(head).get._9.toDouble
         }
         SharedData.activeSlots = 1.0/SharedData.blockTime
+        SharedData.numTxsMempool = memPool.keySet.size
         SharedData.txsPerSecond = {
           var net = 0
           for (entry<-localState.toSeq) {
