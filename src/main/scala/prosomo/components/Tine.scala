@@ -70,6 +70,15 @@ case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
     ListMap(data.toSeq.sortBy(_._1):_*).toArray.map(toSlotId)
   }
 
+  def largestGap:Int = {
+    var diff:List[Int] = List(0)
+    val slots = ordered.map(sid=>sid._1)
+    for (i <- 1 until slots.length) {
+      diff ::= slots(i) - slots(i-1)
+    }
+    diff.max
+  }
+
   def copy(c:Tine):Unit = {
     for (slot <- c.slots) {
       update(c.get(slot),c.getNonce(slot))

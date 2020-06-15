@@ -8,13 +8,16 @@ trapExit := false
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.8",
   organization := "co.topl",
-  version := "0.7"
+  version := "0.7.6"
 )
 
 scalaVersion := "2.12.8"
 organization := "co.topl"
-version := "0.7"
+version := "0.7.6"
 
+mainClass in (Compile, run) := Some("prosomo.Prosomo")
+mainClass in runMain := Some("prosomo.Prosomo")
+mainClass in stage := Some("prosomo.Prosomo")
 mainClass in assembly := Some("prosomo.Prosomo")
 
 test in assembly := {}
@@ -124,8 +127,6 @@ fork := false
 pomIncludeRepository := { _ => false }
 
 homepage := Some(url("https://github.com/Topl/Prosomo"))
-
-//unmanagedResourceDirectories in Compile += { (baseDirectory in Compile)(_ / "conf") }.value
 
 assemblyMergeStrategy in assembly ~= { old: ((String) => MergeStrategy) => {
     case ps if ps.endsWith(".SF")      => MergeStrategy.discard

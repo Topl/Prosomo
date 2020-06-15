@@ -154,7 +154,11 @@ trait ChainSelection extends Members {
     }
 
     if (foundAncestor) {
-      tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
+      if (tine.largestGap < slotWindow) {
+        if (holderIndex == SharedData.printingHolder && printFlag)
+          println("Holder " + holderIndex.toString + " Tine Completed")
+        tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
+      }
       tinePool -= job._1
     }
   }
@@ -232,7 +236,7 @@ trait ChainSelection extends Members {
 
     def adoptTine:Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
-        println("Holder " + holderIndex.toString + " Adopting Chain")
+        println("Holder " + holderIndex.toString + " Tine Adopted")
       collectLedger(subChain(localChain,prefix+1,globalSlot))
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
@@ -315,6 +319,8 @@ trait ChainSelection extends Members {
     }
 
     def dropTine:Unit = {
+      if (holderIndex == SharedData.printingHolder && printFlag)
+        println("Holder " + holderIndex.toString + " Tine Rejected")
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
         if (id._1 > -1) {

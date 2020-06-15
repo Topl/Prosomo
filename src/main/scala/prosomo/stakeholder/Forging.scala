@@ -67,9 +67,9 @@ trait Forging extends Members with Types {
         case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
         case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(pb._9 + 1))
       }
-      testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
+      if (!bootStrapLock && slot - ps < slotWindow) testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
     } else {
-      testThenForge(y,phi(forgerKeys.alpha))
+      if (!bootStrapLock && slot - ps < slotWindow) testThenForge(y,phi(forgerKeys.alpha))
     }
 
   }

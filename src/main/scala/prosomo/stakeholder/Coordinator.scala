@@ -137,6 +137,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
   var networkDelayList: List[Double] = List(0.0)
+  var holdersToIssueRandomly:List[ActorRefWrapper] = List()
 
   getTimeInfo
   self ! NewDataFile
@@ -211,6 +212,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       if (holderIndexMin > -1 && holderIndexMax > -1) {
         println("Populating...")
         holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)
+        holdersToIssueRandomly = holders
       } else {
         println("No Holders to start...")
       }
@@ -369,7 +371,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   /**randomly picks two holders and creates a transaction between the two*/
   def issueRandTx:Unit = {
     for (i <- 0 to txProbability.floor.toInt) if (holders.length > 1) {
-      Try{rng.shuffle(holders.filterNot(_.remote)).head}.toOption match {
+      Try{rng.shuffle(holdersToIssueRandomly).head}.toOption match {
         case Some(holder1:ActorRefWrapper) => {
           val r = rng.nextDouble
           if (r<txProbability%1.0) {

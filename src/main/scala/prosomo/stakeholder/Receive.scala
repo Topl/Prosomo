@@ -27,8 +27,6 @@ trait Receive extends Members {
   import Parameters._
   def receive: Receive = {
 
-    /**************************************************** Network Messages *********************************************************/
-
     /** Updates time, the kes key, and resets variables
       * Primary runtime loop for consensus
       **/
@@ -36,6 +34,8 @@ trait Receive extends Members {
       update
       context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
     }
+
+    /**************************************************** Network Messages *********************************************************/
 
     /**
       * Primary transaction passing method, each Tx signature is validated and the Tx is statefully checked
@@ -75,6 +75,15 @@ trait Receive extends Members {
             val bHash = hash(b,serializer)
             val bSlot = b._3
             val bRho = b._5
+            if (holderIndex == SharedData.printingHolder) {
+              networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
+              if (networkDelayList.size > 100) networkDelayList.take(100)
+              def average(points:List[Double]):Double={
+                val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
+                net/num
+              }
+              SharedData.averageNetworkDelay = average(networkDelayList)
+            }
             if (verifyMac(value.block.id,value.mac)) {
               if (verifyBlock(value.block)) {
                 blocks.add(value.block)
@@ -97,15 +106,6 @@ trait Receive extends Members {
                     tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
                     buildTine((jobNumber,tinePool(jobNumber)))
                     tineCounter += 1
-                    if (holderIndex == SharedData.printingHolder) {
-                      networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
-                      if (networkDelayList.size > 100) networkDelayList.take(100)
-                      def average(points:List[Double]):Double={
-                        val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
-                        net/num
-                      }
-                      SharedData.averageNetworkDelay = average(networkDelayList)
-                    }
                   }
                 }
               } else {println("error: invalid block")}
@@ -135,7 +135,7 @@ trait Receive extends Members {
     }
 
     /**
-      * Block passing, returned blocks are added to block database
+      * Block passing for tinepool functionality, returned blocks are added to block database
       **/
     case value:ReturnBlocks => {
       if (!actorStalled) {
@@ -178,7 +178,7 @@ trait Receive extends Members {
     }
 
     /**
-      * Block passing, parent ids that are not found are requested
+      * Block requesting for tinepool functionality, parent ids that are not found are requested from peers
       **/
     case value:RequestBlock => {
       if (!actorStalled) {
@@ -206,7 +206,8 @@ trait Receive extends Members {
     }
 
     /**
-      * Block passing, parent ids are requested with increasing depth of chain up to a finite number of attempts
+      * Block requesting for tinepool functionality, parent ids are requested with increasing depth of chain up to a finite number of attempts
+      * this message is sent as a result of a tine in tinepool becoming long enough to trigger bootstrapping mode,
       * Spins up a provider to search database for blocks
       **/
     case value:RequestTine => {
@@ -241,7 +242,7 @@ trait Receive extends Members {
     }
 
     /**
-      * Gossip protocol greeting message for populating inbox
+      * Gossip protocol greeting message for populating list of gossipers
       **/
     case value:Hello => {
       if (!actorStalled) {

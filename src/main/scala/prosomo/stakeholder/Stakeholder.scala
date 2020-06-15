@@ -46,12 +46,12 @@ class Stakeholder(
   with Utilities
   with Validation
 {
-  import Parameters.{dataFileDir,fee_r}
+  import Parameters.dataFileDir
   implicit val routerRef:ActorRefWrapper = inputRef(0)
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = inputDataDir match {
-    case None => dataFileDir+self.path.toStringWithoutAddress.drop(5)
+    case None => "coordinator/"+dataFileDir+self.path.toStringWithoutAddress.drop(5)
     case Some(dir) => dir
   }
   val localChain:Tine = new Tine
