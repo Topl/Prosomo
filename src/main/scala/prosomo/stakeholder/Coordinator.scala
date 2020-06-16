@@ -53,7 +53,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = "coordinator"
-  val localChain:Tine = new Tine
+  var localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
@@ -123,7 +123,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val pk_kes:PublicKey = sk_kes.getPublic(kes)
 
   var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
-  var genBlock:Block = _
   var roundDone = true
   var parties: List[List[ActorRefWrapper]] = List()
   var t:Slot = 0
@@ -138,6 +137,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var localClockOffset:Long = 0
   var networkDelayList: List[Double] = List(0.0)
   var holdersToIssueRandomly:List[ActorRefWrapper] = List()
+  var genesisBlock:Option[Block] = None
 
   getTimeInfo
   self ! NewDataFile
@@ -234,8 +234,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     case Register => {
       blocks.restore((0,genBlockKey)) match {
         case Some(b:Block) => {
-          genBlock = Block(hash(b.prosomoHeader,serializer),b.blockHeader,b.blockBody,b.genesisSet)
-          verifyBlock(genBlock)
+          genesisBlock = Some(Block(hash(b.prosomoHeader,serializer),b.blockHeader,b.blockBody,b.genesisSet))
+          verifyBlock(genesisBlock.get)
           println("Recovered Genesis Block")
         }
         case None => Try{
@@ -244,8 +244,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           val blockTxt : Array[String] = Source.fromResource("genesis/blockData").getLines.toArray
           serializer.fromBytes(new ByteStream(Base58.decode(blockTxt.head).get,DeserializeGenesisBlock)) match {
             case b: Block =>
-              genBlock = Block(hash(b.prosomoHeader, serializer), b.blockHeader, b.blockBody, b.genesisSet)
-              verifyBlock(genBlock)
+              genesisBlock = Some(Block(hash(b.prosomoHeader, serializer), b.blockHeader, b.blockBody, b.genesisSet))
+              verifyBlock(genesisBlock.get)
               println("Recovered Genesis Block")
             case _ =>
               println("error: genesis block is corrupted")
@@ -283,12 +283,12 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     println("Forge Genesis Block")
     val holderKeys = List.range(0,numGenesisHolders).map(i =>i-> pkFromIndex(i)).toMap
     forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
-      case out:Block => genBlock = out
+      case newBlock:Block => genesisBlock = Some(newBlock)
     }
-    blocks.store(genBlockKey,genBlock)
+    blocks.store(genBlockKey,genesisBlock.get)
     val file = new File("src/main/resources/genesis/blockData")
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(Base58.encode(serializer.getBytes(genBlock)))
+    bw.write(Base58.encode(serializer.getBytes(genesisBlock.get)))
     bw.close()
   }
 
@@ -301,7 +301,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     println("Sending holders coordinator ref")
     sendAssertDone(holders.filterNot(_.remote),CoordRef(selfWrapper))
     println("Send GenBlock")
-    sendAssertDone(holders.filterNot(_.remote),GenBlock(genBlock))
+    sendAssertDone(holders.filterNot(_.remote),GenBlock(genesisBlock.get))
     self ! Run
   }
 
@@ -539,7 +539,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               holders ::= newHolder
               sendAssertDone(newHolder,HoldersFromLocal(holders))
               sendAssertDone(newHolder,CoordRef(selfWrapper))
-              sendAssertDone(newHolder,GenBlock(genBlock))
+              sendAssertDone(newHolder,GenBlock(genesisBlock.get))
               sendAssertDone(newHolder,Initialize(0,None))
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
@@ -716,7 +716,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 holders ::= newHolder
                 sendAssertDone(newHolder,HoldersFromLocal(holders))
                 sendAssertDone(newHolder,CoordRef(selfWrapper))
-                sendAssertDone(newHolder,GenBlock(genBlock))
+                sendAssertDone(newHolder,GenBlock(genesisBlock.get))
                 sendAssertDone(newHolder,Initialize(0,None))
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
@@ -1017,7 +1017,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           holders ::= newHolder
           sendAssertDone(newHolder,HoldersFromLocal(holders))
           sendAssertDone(newHolder,CoordRef(selfWrapper))
-          sendAssertDone(newHolder,GenBlock(genBlock))
+          sendAssertDone(newHolder,GenBlock(genesisBlock.get))
           sendAssertDone(newHolder,Initialize(globalSlot,None))
           sendAssertDone(newHolder,SetClock(t0))
           sendAssertDone(routerRef,HoldersFromLocal(holders))

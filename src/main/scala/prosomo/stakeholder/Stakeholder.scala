@@ -4,7 +4,7 @@ import akka.actor.{ActorPath, Cancellable, Props}
 import com.google.common.cache.LoadingCache
 import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Serializer, Tine, Wallet}
+import prosomo.components.{Block, Serializer, Tine, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 
 import scala.math.BigInt
@@ -54,7 +54,7 @@ class Stakeholder(
     case None => "coordinator/"+dataFileDir+self.path.toStringWithoutAddress.drop(5)
     case Some(dir) => dir
   }
-  val localChain:Tine = new Tine
+  var localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
@@ -112,6 +112,8 @@ class Stakeholder(
   var genBlockHeader: BlockHeader = _
   //placeholder for genesis block ID
   var genBlockHash: Hash = ByteArrayWrapper(Array())
+  //genesis block
+  var genesisBlock: Option[Block] = None
   //placeholder for forged block if elected slot leader
   var roundBlock: Int = 0
   //start system time set by coordinator

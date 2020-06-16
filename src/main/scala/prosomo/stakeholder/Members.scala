@@ -22,7 +22,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
-  val localChain:Tine
+  var localChain:Tine
   val blocks:BlockStorage
   val walletStorage:WalletStorage
   val vrf:Vrf
@@ -81,6 +81,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var alphaCache:Option[LoadingCache[ByteArrayWrapper,Ratio]]
   var thresholdCache:Option[LoadingCache[(Ratio,Slot),Ratio]]
   var networkDelayList:List[Double]
+  var genesisBlock:Option[Block]
 
   case object TimerKey
 

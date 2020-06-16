@@ -372,7 +372,6 @@ trait Receive extends Members {
       }
       keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw)
-      val genesisBlock = blocks.getIfPresent((0,genBlockHash))
       chainStorage.restore(localChainId,serializer) match {
         case newChain:Tine if newChain.isEmpty => {
           localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
@@ -402,7 +401,7 @@ trait Receive extends Members {
           updateWallet
         }
         case newChain:Tine if !newChain.isEmpty => {
-          localChain.copy(newChain)
+          localChain = newChain
           val lastId = localChain.last
           localSlot = localChain.last._1
           currentEpoch = localSlot/epochLength
@@ -489,6 +488,7 @@ trait Receive extends Members {
       println("Holder "+holderIndex.toString+" got genesis block "+Base58.encode(genBlockHash.data))
       assert(genBlockHash == gb.b.id)
       assert(verifyBlock(gb.b))
+      genesisBlock = Some(gb.b)
       if (!blocks.knownIfPresent((0,gb.b.id))){
         blocks.add(gb.b)
       }

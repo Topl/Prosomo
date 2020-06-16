@@ -270,7 +270,7 @@ class NetworkController(settings: NetworkSettings,
     val selfAddressOpt = getNodeAddressForPeer(connectionId.localAddress)
 
     if (selfAddressOpt.isEmpty)
-      log.warn("Unable to define external address. Specify it manually in `scorex.network.declaredAddress`.")
+      log.info("Unable to define external address. Specify it manually in `scorex.network.declaredAddress`.")
 
     val connectionDescription = ConnectionDescription(connection, connectionId, selfAddressOpt, peerFeatures)
 
