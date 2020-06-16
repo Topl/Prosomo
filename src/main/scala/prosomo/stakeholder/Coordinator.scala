@@ -142,7 +142,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   getTimeInfo
   self ! NewDataFile
   self ! Populate
-
+  println("*****************************************************************")
+  println("Coordinator Seed: ["+prosomo.primitives.Parameters.inputSeed+"]")
+  println("*****************************************************************")
   def readFile(file:File): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(file)
     val lines = (for (line <- bufferedSource.getLines()) yield line).toList
@@ -1022,7 +1024,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
           newHolder ! Run
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
-          println("Done, forging started...")
+          println("Forging started.")
         }
         case _ => newHolder ! PoisonPill
       }

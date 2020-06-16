@@ -19,10 +19,9 @@ import scala.util.Try
 /**
   * AMS 2020:
   * A class for the user interface, will fail gracefully if any component is not able to load
-  * This represents a proof of concept demo of all the elements needed to interact with the chain
+  * This represents a proof of concept demo of all the elements needed to interact with the protocol
   * @param config base config to be modified by window elements
   */
-
 
 /*
 

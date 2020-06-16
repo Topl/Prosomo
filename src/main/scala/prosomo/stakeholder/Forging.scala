@@ -13,7 +13,9 @@ import scala.util.Try
   * AMS 2020:
   * Forging routines for the genesis block and all other blocks,
   * Implements the Staking Procedure described in Ouroboros Genesis,
-  * Newly forged blocks are immediately broadcast to network and placed first in line in the TinePool
+  * Newly forged blocks are immediately broadcast to network and placed first in line in the local tinepool,
+  * Forging is not allowed on tines with gaps longer than the slot window since these tines would never be adopted,
+  * Forging is prohibited during bootstrapping to prevent futile blocks being broadcast during long tine recoveries
   */
 
 trait Forging extends Members with Types {

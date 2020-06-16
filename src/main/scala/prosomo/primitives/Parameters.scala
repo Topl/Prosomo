@@ -55,6 +55,27 @@ object Parameters {
         case _ =>
       }
     )
+    Try{localConfig.getString("scorex.network.agentName")}.toOption match {
+      case Some(name) if name != "bootstrap" => {
+        val str = "input{scorex{network{agentName=\""+s"${name}_${prosomoNodeUID.take(8)}"+"\"}}}"
+        Try{
+          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None => println("Error: input not parsed")
+          case _ =>
+        }
+      }
+      case Some(name) if name == "bootstrap" =>
+      case None => {
+        val str = "input{scorex{network{agentName=\""+s"prosomo_${prosomoNodeUID.take(8)}"+"\"}}}"
+        Try{
+          localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None => println("Error: input not parsed")
+          case _ =>
+        }
+      }
+    }
     localConfig
   }
 
@@ -218,7 +239,7 @@ object Parameters {
   //seed for pseudo random runs
   val inputSeed:String = {
     if (randomFlag) {
-      java.util.UUID.randomUUID.toString
+      Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
     } else {
       config.getString("params.inputSeed")
     }
