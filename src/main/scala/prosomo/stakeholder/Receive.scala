@@ -30,10 +30,9 @@ trait Receive extends Members {
     /** Updates time, the kes key, and resets variables
       * Primary runtime loop for consensus
       **/
-    case Update => {
-      update
+    case Update =>
+      update()
       context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
-    }
 
     /**************************************************** Network Messages *********************************************************/
 
@@ -41,7 +40,7 @@ trait Receive extends Members {
       * Primary transaction passing method, each Tx signature is validated and the Tx is statefully checked
       * Newly encountered Txs are sent to gossipers
       **/
-    case value:SendTx => {
+    case value:SendTx =>
       if (!actorStalled) {
         if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
@@ -55,7 +54,6 @@ trait Receive extends Members {
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
     /**
       * Block passing for newly forged blocks only,
@@ -66,7 +64,7 @@ trait Receive extends Members {
       * if bootstrapping no new tines are made until the job is done or the connection is lost,
       * when bootstrapping new blocks are added to database but do not enter tinepool
       **/
-    case value:SendBlock => {
+    case value:SendBlock =>
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           val foundBlock = blocks.knownIfPresent((value.block.slot,value.block.id))
@@ -116,13 +114,12 @@ trait Receive extends Members {
       if (useFencing) {
         chainUpdateLock = true
         while (chainUpdateLock) {
-          update
+          update()
         }
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
-    case BootstrapJob => {
+    case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
       if (holders.contains(tinePool(bootStrapJob)._5)) {
         buildTine((bootStrapJob,tinePool(bootStrapJob)))
@@ -132,12 +129,11 @@ trait Receive extends Members {
         bootStrapJob = -1
         bootStrapLock = false
       }
-    }
 
     /**
       * Block passing for tinepool functionality, returned blocks are added to block database
       **/
-    case value:ReturnBlocks => {
+    case value:ReturnBlocks =>
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           def blockToId(b:Block):SlotId = (b.slot,b.id)
@@ -171,16 +167,15 @@ trait Receive extends Members {
       if (useFencing) {
         chainUpdateLock = true
         while (chainUpdateLock) {
-          update
+          update()
         }
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
     /**
       * Block requesting for tinepool functionality, parent ids that are not found are requested from peers
       **/
-    case value:RequestBlock => {
+    case value:RequestBlock =>
       if (!actorStalled) {
         if (inbox.keySet.contains(value.mac.sid)) {
           if (holderIndex == SharedData.printingHolder && printFlag) {
@@ -189,12 +184,11 @@ trait Receive extends Members {
           if (verifyMac(hash((List(value.id),0,value.job),serializer),value.mac)) {
             val ref = inbox(value.mac.sid)._1
             blocks.getIfPresent(value.id) match {
-              case Some(returnedBlock:Block) => {
+              case Some(returnedBlock:Block) =>
                 send(selfWrapper,ref,ReturnBlocks(List(returnedBlock),signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
                 if (holderIndex == SharedData.printingHolder && printFlag) {
                   println("Holder " + holderIndex.toString + " Returned Block")
                 }
-              }
               case None =>
             }
           } else {println("error: request block invalid mac")}
@@ -203,17 +197,16 @@ trait Receive extends Members {
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
     /**
       * Block requesting for tinepool functionality, parent ids are requested with increasing depth of chain up to a finite number of attempts
       * this message is sent as a result of a tine in tinepool becoming long enough to trigger bootstrapping mode,
       * Spins up a provider to search database for blocks
       **/
-    case value:RequestTine => {
+    case value:RequestTine =>
       if (!actorStalled) {
         tineProvider match {
-          case None => {
+          case None =>
             if (inbox.keySet.contains(value.mac.sid)) {
               val request:Request = (List(value.id),value.depth,value.job)
               if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
@@ -228,23 +221,20 @@ trait Receive extends Members {
                 }
               } else {println("error: chain request mac invalid")}
             } else {println("error: invalid sid")}
-          }
           case _ =>
         }
       }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
-    case RequestTineProvider.Done => {
+    case RequestTineProvider.Done =>
       tineProvider = None
-    }
 
     /**
       * Gossip protocol greeting message for populating list of gossipers
       **/
-    case value:Hello => {
+    case value:Hello =>
       if (!actorStalled) {
         if (gossipers.length < numGossipers + gOff) {
           if (verifyMac(hash(value.ref,serializer),value.mac)) {
@@ -258,75 +248,67 @@ trait Receive extends Members {
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
     /**
       * Validates diffused keys from other holders and stores in inbox
       **/
-    case value:DiffuseData => {
+    case value:DiffuseData =>
       if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
         inbox += (value.mac.sid->(value.ref,value.pks))
         value.ref ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       }
-    }
 
 
     /************************************************** From Local *******************************************************/
 
     /**issue a transaction generated by the coordinator and send it to the list of gossipers*/
-    case value:IssueTx => {
+    case value:IssueTx =>
       if (!actorStalled) {
         inbox.toSeq.find(_._2._1 == value.ref) match {
-          case Some(data:(Sid,(ActorRefWrapper,PublicKeys))) => {
+          case Some(data:(Sid,(ActorRefWrapper,PublicKeys))) =>
             val pks = data._2._2
             val pkw = ByteArrayWrapper(pks._1 ++ pks._2 ++ pks._3)
             wallet.issueTx((pkw,value.delta),keys.sk_sig,sig,rng,serializer) match {
-              case Some(trans:Transaction) => {
+              case Some(trans:Transaction) =>
                 walletStorage.store(wallet,serializer)
                 txCounter += 1
                 memPool += (trans.sid->(trans,0))
                 send(selfWrapper,gossipers, SendTx(trans))
-              }
               case _ =>
             }
-          }
           case None =>
         }
       }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
-    case value:IssueTxToAddress => {
+    case value:IssueTxToAddress =>
       if (!actorStalled) {
         wallet.issueTx((value.recip,value.delta),keys.sk_sig,sig,rng,serializer) match {
-          case Some(trans:Transaction) => {
+          case Some(trans:Transaction) =>
             walletStorage.store(wallet,serializer)
             txCounter += 1
             memPool += (trans.sid->(trans,0))
             send(selfWrapper,gossipers, SendTx(trans))
-          }
           case _ =>
         }
       }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
-    }
 
     /**sends holder information for populating inbox*/
-    case Diffuse => {
+    case Diffuse =>
       holders.filterNot(_ == selfWrapper).foreach(
         _ ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       )
       context.system.scheduler.scheduleOnce(10*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
-    }
 
     /**allocation and vars of simulation*/
-    case Initialize(gs,inputPassword) => {
+    case Initialize(gs,inputPassword) =>
       globalSlot = gs
-      println("Holder "+holderIndex.toString+s" starting on global slot ${globalSlot}")
+      println("Holder "+holderIndex.toString+s" starting on global slot $globalSlot")
       inputPassword match {
         case Some(pw) => password = pw
         case None if password == "" => password = s"password_holder_$holderIndex"
@@ -334,7 +316,8 @@ trait Receive extends Members {
       }
       salt = fch.hash(uuid)
       derivedKey = KeyFile.getDerivedKey(password,salt)
-      def generateNewKeys:Unit = {
+
+      def generateNewKeys():Unit = {
         println("Generating new keyfile...")
         val rngSeed:Random = new Random
         rngSeed.setSeed(BigInt(seed).toLong)
@@ -354,42 +337,37 @@ trait Receive extends Members {
           seed3
         ))
       }
+
       keyFile match {
         case None => Try{KeyFile.restore(s"$storageDir/keys/")} match {
-          case Success(Some(restoredFile:KeyFile)) => {
+          case Success(Some(restoredFile:KeyFile)) =>
             println("Reading Keyfile")
             keyFile = Some(restoredFile)
-          }
-          case Success(None) => {
-            generateNewKeys
-          }
-          case Failure(exception) => {
+          case Success(None) => generateNewKeys()
+          case Failure(exception) =>
             exception.printStackTrace()
-            generateNewKeys
-          }
+            generateNewKeys()
         }
         case _ =>
       }
       keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
       wallet = walletStorage.restore(serializer,keys.pkw)
       chainStorage.restore(localChainId,serializer) match {
-        case newChain:Tine if newChain.isEmpty => {
+        case newChain:Tine if newChain.isEmpty =>
           localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
           updateLocalState(localState, (0,genBlockHash)) match {
             case Some(value:State) => localState = value
-            case _ => {
+            case _ =>
               SharedData.throwError(holderIndex)
               println("error: invalid genesis block")
-            }
           }
           eta = eta_from_genesis(localChain, 0)
           println("Adding genesis state to history")
           history.add((0,genBlockHash),localState,eta)
           stakingState = getStakingState(currentEpoch,localChain)
           alphaCache match {
-            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
               loadingCache.invalidateAll()
-            }
             case None => alphaCache = Some(
               CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
                 new CacheLoader[ByteArrayWrapper,Ratio] {
@@ -398,9 +376,8 @@ trait Receive extends Members {
               )
             )
           }
-          updateWallet
-        }
-        case newChain:Tine if !newChain.isEmpty => {
+          updateWallet()
+        case newChain:Tine if !newChain.isEmpty =>
           localChain = newChain
           val lastId = localChain.last
           localSlot = localChain.last._1
@@ -410,9 +387,8 @@ trait Receive extends Members {
           eta = loadState._2
           stakingState = getStakingState(currentEpoch,localChain)
           alphaCache match {
-            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
               loadingCache.invalidateAll()
-            }
             case None => alphaCache = Some(
               CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
                 new CacheLoader[ByteArrayWrapper,Ratio] {
@@ -421,16 +397,14 @@ trait Receive extends Members {
               )
             )
           }
-        }
       }
       keys.alpha = alphaCache.get.get(keys.pkw)
       assert(genBlockHash == hash(genesisBlock.get.blockHeader.get,serializer))
       println("Valid Genesis Block")
       sender() ! "done"
-    }
 
     /**starts the timer that repeats the update command*/
-    case Run => {
+    case Run =>
       if (holderIndex == SharedData.printingHolder && useGui) Try{
         val win = SharedData.prosomoWindow.get
         win.pendingTxField.get.enabled = true
@@ -439,28 +413,24 @@ trait Receive extends Members {
       if (!useFencing) {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        context.system.scheduler.scheduleOnce(slotT*((refreshInterval * rng.nextDouble).toInt).millis,self,Refresh)(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(slotT* (refreshInterval * rng.nextDouble).toInt.millis,self,Refresh)(context.system.dispatcher,self)
         context.system.scheduler.scheduleOnce(5*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
       }
-    }
 
-    case Refresh => {
+    case Refresh =>
       blocks.refresh
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
       context.system.scheduler.scheduleOnce(slotT*refreshInterval.millis,self,Refresh)(context.system.dispatcher,self)
-    }
 
-    case GetTime => {
+    case GetTime =>
       coordinatorRef ! GetTime
-    }
 
     /**sets the initial time*/
-    case value:SetClock => {
+    case value:SetClock =>
       t0 = value.t0
       sender() ! "done"
-    }
 
     /**sets the slot from coordinator time*/
     case value:GetTime => if (!actorStalled) {
@@ -469,7 +439,7 @@ trait Receive extends Members {
     }
 
     /**accepts list of other holders from coordinator */
-    case HoldersFromLocal(list:List[ActorRefWrapper]) => {
+    case HoldersFromLocal(list:List[ActorRefWrapper]) =>
       holders = list
       if (useGossipProtocol) {
         gossipers = List()
@@ -478,12 +448,11 @@ trait Receive extends Members {
         gossipers = gossipSet(holderId,holders)
       }
       sender() ! "done"
-    }
 
     case NewGossipers => gossipers = gossipSet(holderId,holders)
 
     /**accepts genesis block from coordinator */
-    case gb:GenBlock => {
+    case gb:GenBlock =>
       genBlockHash = hash(gb.b.prosomoHeader,serializer)
       println("Holder "+holderIndex.toString+" got genesis block "+Base58.encode(genBlockHash.data))
       assert(genBlockHash == gb.b.id)
@@ -493,16 +462,14 @@ trait Receive extends Members {
         blocks.add(gb.b)
       }
       sender() ! "done"
-    }
 
     /**accepts coordinator ref*/
-    case CoordRef(ref) => {
+    case CoordRef(ref) =>
       coordinatorRef = ref
       sender() ! "done"
-    }
 
     /**sets new list of holders resets gossipers*/
-    case Party(list,clear) => {
+    case Party(list,clear) =>
       holders = list
       if (useGossipProtocol) {
         gossipers = List()
@@ -512,32 +479,27 @@ trait Receive extends Members {
       }
       if (clear) inbox = Map()
       sender() ! "done"
-    }
 
     /************************************* Research and Testing ******************************************/
 
-    case RequestGossipers => {
+    case RequestGossipers =>
       sender() ! GetGossipers(gossipers)
-    }
 
-    case RequestState => {
+    case RequestState =>
       sender() ! GetState(stakingState)
-    }
 
-    case RequestBlockTree => {
+    case RequestBlockTree =>
       sender() ! GetBlockTree(blocks,0)
-    }
 
 
     /**when stalled actor will do nothing when messages are received*/
-    case StallActor => {
+    case StallActor =>
       if (!actorStalled) {actorStalled = true}
       else {actorStalled = false}
       sender() ! "done"
-    }
 
     /**prints inbox */
-    case Inbox => {
+    case Inbox =>
       var i = 0
       println("Holder "+holderIndex.toString+" sid:"+Base58.encode(sessionId.data)+", Inbox:")
       for (entry <- inbox) {
@@ -549,16 +511,14 @@ trait Receive extends Members {
       println("Gossipers:")
       gossipers.foreach(r=>println(r.actorPath.toString))
       sender() ! "done"
-    }
 
-    case GetBalance => {
+    case GetBalance =>
       val netAvailable = wallet.getConfirmedBalance
       val netTotal = wallet.getPendingBalance
       println(s"Holder $holderIndex available balance: $netAvailable , total balance: $netTotal")
-    }
 
     /**prints stats */
-    case Verify => {
+    case Verify =>
       val trueChain = verifyChain(localChain, genBlockHash)
       println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString + ", Valid chain = "
@@ -580,18 +540,16 @@ trait Receive extends Members {
         println("e:" + Base58.encode(eta_from_genesis(localChain, currentEpoch)) + "\n")
       }
       sender() ! "done"
-    }
 
     /**prints stats */
-    case Status => {
+    case Status =>
       println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
         + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString+", MemPool Size = "+memPool.size+" Num Gossipers = "+gossipers.length.toString)
       var chainBytes:Array[Byte] = Array()
       for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
-          case Some(b:BlockHeader) => {
+          case Some(b:BlockHeader) =>
             chainBytes ++= fch.hash(serializer.getBytes(b))
-          }
           case _ =>
         }
       }
@@ -610,7 +568,6 @@ trait Receive extends Members {
             txCount+=1
           } else {
             duplicatesFound = true
-            val dupIndex = allTx.indexOf(trans.sid)
           }
         }
       }
@@ -621,12 +578,11 @@ trait Receive extends Members {
       println(s"Transactions on chain: $holderTxCount/$txCount Duplicates: $duplicatesFound")
       println("Chain hash: " + Base58.encode(fch.hash(chainBytes))+"\n")
       sender() ! "done"
-    }
 
     /**writes data point to file*/
     case value:WriteFile => if (!actorStalled) {
       value.fw match {
-        case fileWriter: BufferedWriter => {
+        case fileWriter: BufferedWriter =>
           val fileString = (
             holderIndex.toString + " "
               + globalSlot.toString + " "
@@ -636,24 +592,23 @@ trait Receive extends Members {
               + "\n"
             )
           fileWriter.write(fileString)
-        }
         case _ => println("error: data file writer not initialized")
       }
     }
 
 
-    case value:GetSlot => {
+    case value:GetSlot =>
       if (!actorStalled) {
         if (roundBlock == 0) globalSlot += 1
         assert(globalSlot == value.s)
         while (roundBlock == 0) {
-          update
+          roundBlock = roundBlock
+          update()
         }
       } else {
         if (useFencing) {routerRef ! Flag(selfWrapper,"updateSlot")}
       }
       sender() ! "done"
-    }
 
     case "endStep" => if (useFencing) {
       roundBlock = 0
@@ -664,16 +619,15 @@ trait Receive extends Members {
       routerRef ! Flag(selfWrapper,"passData")
     }
 
-    case value:Adversary => {
+    case value:Adversary =>
       value.s match {
-        case "" => {
+        case "" =>
           if (adversary) {
             adversary=false
           } else {
             adversary=true
           }
-        }
-        case "covert" => {
+        case "covert" =>
           if (covert) {
             adversary=false
             covert=false
@@ -681,8 +635,7 @@ trait Receive extends Members {
             adversary=true
             covert=true
           }
-        }
-        case "nas" => {
+        case "nas" =>
           if (forgeAll) {
             adversary = false
             forgeAll = false
@@ -690,25 +643,14 @@ trait Receive extends Members {
             adversary = true
             forgeAll = true
           }
-        }
-        case _ => "error: Adversary command unknown"
+        case _ => println("error: Adversary command unknown")
       }
       sender() ! "done"
-    }
 
 
     case unknown:Any => if (!actorStalled) {
-      print("received unknown message ")
-      if (sender() == coordinatorRef) {
-        print("from coordinator")
-      }
-      if (sender() == routerRef) {
-        print("from router")
-      }
-      if (holders.contains(sender())) {
-        print("from holder "+holders.indexOf(sender()).toString)
-      }
-      println(": "+unknown.getClass.toString)
+      print("Error: received unknown message ")
+      println(unknown.getClass.toString)
     }
   }
 }

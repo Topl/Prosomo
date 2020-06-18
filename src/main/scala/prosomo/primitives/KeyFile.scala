@@ -48,7 +48,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       iv: Array[Byte]
       ) = sig_info
     val derivedKey = getDerivedKey(password, salt)
-    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "Error: MAC does not match. Try again")
+    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText).deep == mac.deep, "Error: MAC does not match. Try again")
     val (decrypted, _) = getAESResult(derivedKey, iv, cipherText, encrypt = false)
     require(pubKeyBytes_sig sameElements sig.getPkFromSk(decrypted), "Error: PublicKey in file is invalid")
     decrypted
@@ -63,7 +63,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       iv: Array[Byte]
       ) = vrf_info
     val derivedKey = getDerivedKey(password, salt)
-    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText) sameElements mac, "Error: MAC does not match. Try again")
+    require(Keccak256(derivedKey.slice(16, 32) ++ cipherText).deep == mac.deep, "Error: MAC does not match. Try again")
     val (decrypted, _) = getAESResult(derivedKey, iv, cipherText, encrypt = false)
     require(pubKeyBytes_vrf sameElements vrf.getPkFromSk(decrypted), "Error: PublicKey in file is invalid")
     decrypted
@@ -100,11 +100,10 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     out.pk_vrf = vrf_info._1
     out.sk_kes = {getKesPrivateKey(password,serializer,kes)} match {
       case Success(value:MalkinKey) => value
-      case Failure(exception) => {
-        exception.printStackTrace
+      case Failure(exception) =>
+        exception.printStackTrace()
         SharedData.throwError
         new MalkinKey
-      }
     }
     out.pk_kes = kes_info._1
     out.publicKeys = (out.pk_sig,out.pk_vrf,out.pk_kes)
@@ -351,7 +350,12 @@ object KeyFile {
   }
 
   def readFile(filename:String): KeyFile = {
-    val jsonString:String = scala.io.Source.fromFile(filename).mkString
+    val jsonString:String = {
+      val src = scala.io.Source.fromFile(filename)
+      val out = src.mkString
+      src.close()
+      out
+    }
     parse(jsonString).right.get.as[KeyFile] match {
       case Right(f: KeyFile) => f
       case Left(e) => throw new Exception(s"Could not parse KeyFile: $e")
@@ -370,19 +374,17 @@ object KeyFile {
     var recoveredKey:Option[KeyFile] = None
     var files = getListOfFiles(s"$storageDir/")
 
-    while (files.length>0) {
+    while (files.nonEmpty) {
       Try{readFile(files.head.getPath)} match {
-        case Success(keyFile:KeyFile) => {
+        case Success(keyFile:KeyFile) =>
           recoveredKey match {
             case None => recoveredKey = Some(keyFile)
             case _ => deleteFile(files.head.getPath)
           }
           files = files.tail
-        }
-        case Failure(exception) => {
+        case Failure(_) =>
           deleteFile(files.head.getPath)
           files = files.tail
-        }
       }
     }
     recoveredKey

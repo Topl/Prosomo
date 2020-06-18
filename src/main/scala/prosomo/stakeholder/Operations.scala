@@ -12,7 +12,7 @@ trait Operations extends Members {
 
   /**
     * retrieve parent block id from block
-    * @param b
+    * @param b header that points to parent
     * @return parent id
     */
   def getParentId(b:BlockHeader): SlotId = {
@@ -60,9 +60,9 @@ trait Operations extends Members {
 
 
   /**
-    * retrieve a block header from database
-    * @param bid
-    * @return block if found, 0 otherwise
+    * Retrieve a block header from database
+    * @param bid slot id of header to find
+    * @return block if found or None
     */
   def getBlockHeader(bid:SlotId): Option[BlockHeader] = {
     if (bid._1 >= 0 && !bid._2.data.isEmpty) {
@@ -73,9 +73,9 @@ trait Operations extends Members {
   }
 
   /**
-    * retrieve parent block
-    * @param b
-    * @return parent block if found, 0 otherwise
+    * Retrieve parent block
+    * @param b header that points to parent
+    * @return parent block if found or None
     */
   def getParentBlockHeader(b:BlockHeader): Option[BlockHeader] = {
     if (b._10 >= 0 && !b._1.data.isEmpty) {
@@ -87,7 +87,7 @@ trait Operations extends Members {
 
   /**
     * retrieve parent block id
-    * @param bid
+    * @param bid header that points to parent id
     * @return parent id if found, 0 otherwise
     */
   def getParentId(bid:SlotId): Option[SlotId] = {

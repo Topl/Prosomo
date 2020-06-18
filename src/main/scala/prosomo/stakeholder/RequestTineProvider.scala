@@ -26,7 +26,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   override val fch = new Fch
   rng.setSeed(0L)
 
-  def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any) = {
+  def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any): Unit = {
     if (useRouting && !useFencing) {
       if (ref.remote) {
         routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
@@ -45,7 +45,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   }
 
   override def receive: Receive = {
-    case Info(ref,startId,depth,holderRef,holderIndex,sessionId,holderSK,holderPK,job) => {
+    case Info(ref,startId,depth,holderRef,holderIndex,sessionId,holderSK,holderPK,job) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
       }
@@ -54,11 +54,10 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
       breakable{
         while (returnedIdList.length <= depth) {
           blockStorage.restore(id) match {
-            case Some(block:Block) => {
+            case Some(block:Block) =>
               returnedIdList ::= id
               send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
               id = block.parentSlotId
-            }
             case None => break
           }
           if (!useFencing) Thread.sleep(100)
@@ -68,7 +67,6 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
         println("Holder " + holderIndex.toString + " Returned Tine")
       }
       self ! PoisonPill
-    }
   }
 
   override def postStop(): Unit = {

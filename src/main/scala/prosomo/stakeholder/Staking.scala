@@ -64,7 +64,7 @@ trait Staking extends Members {
       case _ => m_f_range.length-1
     }
     thresholdCache match {
-      case None => {
+      case None =>
         thresholdCache = Some(CacheBuilder.newBuilder()
           .maximumSize(1000)
           .build[(Ratio,Slot),Ratio](
@@ -72,7 +72,6 @@ trait Staking extends Members {
             def load(id:(Ratio,Slot)):Ratio = {phi(id._1,m_f_range(id._2))}
           }
         ))
-      }
       case _ =>
     }
     thresholdCache.get.get((a,index))
@@ -113,11 +112,11 @@ trait Staking extends Members {
     var netStake:BigInt = 0
     var holderStake:BigInt = 0
     for (member <- ls.keySet) {
-      val (balance,activityIndex,txC) = ls(member)
+      val (balance,activityIndex, _) = ls(member)
       if (activityIndex) netStake += balance
     }
     if (ls.keySet.contains(holderKey)){
-      val (balance,activityIndex,txC) = ls(holderKey)
+      val (balance,activityIndex, _) = ls(holderKey)
       if (activityIndex) holderStake += balance
     }
     if (netStake > 0) {
@@ -137,11 +136,10 @@ trait Staking extends Members {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case Some(b:BlockHeader) => b._1.data
-        case _ => {
+        case _ =>
           println("error: ep 0 eta not recovered")
           SharedData.throwError(holderIndex)
           Array()
-        }
       }
     } else {
       var v: Array[Byte] = Array()
@@ -165,11 +163,10 @@ trait Staking extends Members {
     if(ep == 0) {
       getBlockHeader(c.get(0)) match {
         case Some(b:BlockHeader) => b._1.data
-        case _ => {
+        case _ =>
           println("error: ep 0 eta not recovered")
           SharedData.throwError(holderIndex)
           Array()
-        }
       }
     } else {
       var v: Array[Byte] = Array()

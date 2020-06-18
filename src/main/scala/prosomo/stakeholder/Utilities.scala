@@ -30,7 +30,6 @@ trait Utilities extends Members with Types {
   /**
     * utility for timing execution of methods
     * @param block any execution block
-    * @tparam R
     * @return
     */
   def timeFlag[R](block: => R): R = {

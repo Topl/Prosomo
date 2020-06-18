@@ -87,13 +87,13 @@ trait Members extends SimpleTypes with Actor with Timers {
 
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
-  def updateWallet:Unit
+  def updateWallet():Unit
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
-  def maxValidBG:Unit
+  def maxValidBG():Unit
   def validateChainIds(c:Tine):Boolean
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine):State
-  def update:Unit
+  def update():Unit
   def hash(input:ActorRefWrapper, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
   def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer):Hash
@@ -135,7 +135,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def sendAssertDone(holder:ActorRefWrapper, command: Any):Unit
   def getGossipers(holders:List[ActorRefWrapper]):Map[ActorRefWrapper,List[ActorRefWrapper]]
   def getStakingState(holder:ActorRefWrapper):State
-  def getBlockTree(holder:ActorRefWrapper):Unit
+  def blockTree(holder:ActorRefWrapper):Unit
   def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
@@ -144,7 +144,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyTransaction(t:Transaction):Boolean
   def updateLocalState(ls:State, c:Tine):Option[State]
   def updateLocalState(ls:State, id:SlotId):Option[State]
-  def trimMemPool:Unit
+  def trimMemPool():Unit
   def collectLedger(c:Tine):Unit
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet
   def timeFlag[R](block: => R):R

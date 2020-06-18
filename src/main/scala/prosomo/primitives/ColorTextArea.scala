@@ -91,7 +91,7 @@ class ColorTextArea extends TextArea {
     }
   }
 
-  def getANSIColor(ANSIColor: String) = {
+  def getANSIColor(ANSIColor: String): Color = {
     if (ANSIColor == "\u001B[30m") D_Black
     else if (ANSIColor == "\u001B[31m") D_Red
     else if (ANSIColor == "\u001B[32m") D_Green

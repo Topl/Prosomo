@@ -21,6 +21,7 @@ import scala.util.Try
   * Command line arguments are read in as either a *.conf file in the project directory or as a HOCON formatted string
   * E.g.  executing "./prosomo server.conf settings.conf input{params{mySetting=set}}" would read in the following order
   *     application.conf, server.conf, settings.conf, input{params{mySetting=set}}
+  * F_INIT functionality
   */
 
 object Parameters {
@@ -149,7 +150,7 @@ object Parameters {
   }
   //order of accuracy for convergent series
   val o_n:Int = config.getInt("params.o_n")
-  def maclaurin_coefficient(f:Ratio):Ratio = {
+  def log_one_minus(f:Ratio):Ratio = {
     //calculate log(1-f)
     var out = Ratio(0)
     for (n<- 1 to o_n) {
@@ -157,14 +158,14 @@ object Parameters {
     }
     out
   }
-  val m_f_root:Ratio = maclaurin_coefficient(Ratio(f_s,4))
+  val m_f_root:Ratio = log_one_minus(Ratio(f_s,4))
   val f_dynamic:Boolean = config.getBoolean("params.f_dynamic")
   val testStrategy:String = config.getString("params.testStrategy")
   val f_min:Ratio = Ratio(config.getDouble("params.f_min"),4)
   val f_max:Ratio = Ratio(config.getDouble("params.f_max"),4)
   val num_f:Int = config.getInt("params.num_f")
   val m_f_range:Array[Ratio] = (0 to num_f).toArray
-    .map(i => maclaurin_coefficient( Ratio(num_f-i,num_f)*f_min + Ratio(i,num_f)*f_max) )
+    .map(i => log_one_minus( Ratio(num_f-i,num_f)*f_min + Ratio(i,num_f)*f_max) )
   //(0 to num_f).toArray
   //  .map(i => println( (Ratio(num_f-i,num_f)*f_min + Ratio(i,num_f)*f_max).toBigDecimal.toString()) )
 

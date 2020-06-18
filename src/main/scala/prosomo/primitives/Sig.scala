@@ -8,7 +8,9 @@ import org.bouncycastle.math.ec.rfc8032.Ed25519
 /**
   * AMS 2020:
   * Ledger signing routine using Ed25519
-  * this is the only functionality needed for issuing transactions
+  * This is the only functionality needed for issuing transactions and tracking stake across accounts,
+  * Any account with a public field corresponding to a constant F_SIG public key is accessible with the corresponding F_SIG private key alone
+  * F_SIG functionality
   */
 
 class Sig {

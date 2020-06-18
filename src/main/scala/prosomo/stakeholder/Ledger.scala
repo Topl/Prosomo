@@ -27,7 +27,7 @@ trait Ledger extends Members {
     var isValid = true
     for (id <- c.ordered) {
       if (isValid) getBlockHeader(id) match {
-        case Some(b:BlockHeader) => {
+        case Some(b:BlockHeader) =>
           val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
           val cert:Cert = b._4
           val (pk_vrf,_,_,pk_sig,_,_) = cert
@@ -65,9 +65,8 @@ trait Ledger extends Members {
               for (trans <- blocks.get(id).get.blockBody.get) {
                 if (verifyTransaction(trans)) {
                   applyTransaction(trans, nls, pk_f, fee_r) match {
-                    case Some(value: State) => {
+                    case Some(value: State) =>
                       nls = value
-                    }
                     case _ => isValid = false
                   }
                 } else {
@@ -78,7 +77,6 @@ trait Ledger extends Members {
               isValid = false
             }
           }
-        }
         case _ =>
       }
       if (!isValid) {
@@ -97,7 +95,7 @@ trait Ledger extends Members {
     var nls:State = ls
     var isValid = true
     if (isValid) getBlockHeader(id) match {
-      case Some(b:BlockHeader) => {
+      case Some(b:BlockHeader) =>
         val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
         val cert:Cert = b._4
         val (pk_vrf,_,_,pk_sig,_,_) = cert
@@ -135,9 +133,8 @@ trait Ledger extends Members {
             for (trans <- blocks.get(id).get.blockBody.get) {
               if (verifyTransaction(trans)) {
                 applyTransaction(trans, nls, pk_f, fee_r) match {
-                  case Some(value:State) => {
+                  case Some(value:State) =>
                     nls = value
-                  }
                   case _ => isValid = false
                 }
               } else {
@@ -148,7 +145,6 @@ trait Ledger extends Members {
             isValid = false
           }
         }
-      }
       case _ =>
     }
     if (!isValid) {
@@ -162,7 +158,7 @@ trait Ledger extends Members {
     }
   }
 
-  def trimMemPool: Unit = {
+  def trimMemPool(): Unit = {
     val mp = memPool
     for (entry <- mp) {
       if (entry._2._2 < confirmationDepth) {
@@ -207,10 +203,9 @@ trait Ledger extends Members {
         val transactionCount:Int = transaction.nonce
         if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
           applyTransaction(transaction,ls, pkw,fee_r) match {
-            case Some(value:State) => {
+            case Some(value:State) =>
               ledger ::= entry._2._1
               ls = value
-            }
             case _ =>
           }
           if (ledger.length >= txPerBlock) break

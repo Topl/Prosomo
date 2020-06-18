@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
-import prosomo.components.{Block, Tine, Transaction}
+import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
 
 import scala.util.Try
@@ -13,22 +13,30 @@ import scala.util.control.Breaks.{break, breakable}
   * AMS 2020:
   * Primary consensus routines,
   * Implements the Maxvalid-BG chain selection rule specified in Ouroboros Genesis
-  * TinePool functionality is executed in these methods,
-  * When a common ancestor is not found for a block a request is made for the block id and sent to the network
-  * Stateful validation and ledger accumulation is executed here, Txs are filed into MemPool from every block encountered
+  *
+  * Tinepool functionality is executed in these methods,
+  * when a common ancestor is not found for a block a request is made for the block id and sent to the network.
+  *
+  * Stateful validation and ledger accumulation is executed here,
+  * Txs are filed into MemPool from every block encountered.
   */
 
 
 trait ChainSelection extends Members {
   import Parameters._
 
-  def updateWallet = Try{
+  def updateWallet():Unit = Try{
     var id = localChain.getLastActiveSlot(globalSlot)
     val bn:Int = getBlockHeader(id).get._9
     if (bn == 0) {
       wallet.update(history.get(id).get._1)
       if (holderIndex == SharedData.printingHolder) {
-        SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+        SharedData.walletInfo = (
+          wallet.getNumPending,
+          wallet.getConfirmedTxCounter,
+          wallet.getConfirmedBalance,
+          wallet.getPendingBalance
+        )
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
       }
@@ -37,22 +45,25 @@ trait ChainSelection extends Members {
         while (true) {
           id = getParentId(id).get
           getBlockHeader(id) match {
-            case Some(b:BlockHeader) => {
+            case Some(b:BlockHeader) =>
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
                 wallet.update(history.get(id).get._1)
                 if (holderIndex == SharedData.printingHolder) {
-                  SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+                  SharedData.walletInfo = (
+                    wallet.getNumPending,
+                    wallet.getConfirmedTxCounter,
+                    wallet.getConfirmedBalance,
+                    wallet.getPendingBalance
+                  )
                   SharedData.issueTxInfo = Some((keys.pkw,inbox))
                   SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
               }
-            }
-            case None => {
+            case None =>
               println("Error: invalid id in wallet")
               break
-            }
           }
         }
       }
@@ -62,25 +73,24 @@ trait ChainSelection extends Members {
       send(selfWrapper,gossipers, SendTx(trans))
     }
 
-    def collectStake:Unit = {
+    def collectStake():Unit = Try{
       for (entry<-wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
         if (wallet.isSameLedgerId(entry._1) && entry._2._1 > 0) {
           wallet.issueTx(entry._1,wallet.pkw,entry._2._1,keys.sk_sig,sig,rng,serializer) match {
-            case Some(trans:Transaction) => {
+            case Some(trans:Transaction) =>
               if (holderIndex == SharedData.printingHolder && printFlag)
                 println("Holder " + holderIndex.toString + " Reallocated Stake")
               txCounter += 1
               memPool += (trans.sid->(trans,0))
               send(selfWrapper,gossipers, SendTx(trans))
               wallet.reallocated += (entry._1->trans.nonce)
-            }
             case _ =>
           }
         }
       }
     }
 
-    collectStake
+    collectStake()
     walletStorage.store(wallet,serializer)
   }
 
@@ -96,9 +106,9 @@ trait ChainSelection extends Members {
     breakable{
       while(foundAncestor) {
         getParentId(tine.least) match {
-          case Some(parentId:SlotId) => {
+          case Some(parentId:SlotId) =>
             getBlockHeader(parentId) match {
-              case Some(pbh:BlockHeader) => {
+              case Some(pbh:BlockHeader) =>
                 tine = Tine(parentId,pbh._5) ++ tine
                 if (tine.least == localChain.get(tine.least._1)) {
                   prefix = tine.least._1
@@ -110,8 +120,7 @@ trait ChainSelection extends Members {
                   tine.remove(prefix)
                   break
                 }
-              }
-              case None => {
+              case None =>
                 if (counter>2*tineMaxTries) {
                   if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Tine")
                   tinePool -= job._1
@@ -142,13 +151,10 @@ trait ChainSelection extends Members {
                 }
                 if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
                 foundAncestor = false
-              }
             }
-          }
-          case None => {
+          case None =>
             if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
             foundAncestor = false
-          }
         }
       }
     }
@@ -166,40 +172,37 @@ trait ChainSelection extends Members {
   def updateTine(inputTine:Tine): Option[(Tine,Slot)] = {
     val headIdOpt:Option[SlotId] = Try{inputTine.last}.toOption
     headIdOpt match {
-      case Some(headId:SlotId) => {
+      case Some(headId:SlotId) =>
         if (headId == localChain.get(headId._1)) {
           None
         } else {
           var prefix = -1
           var tine:Tine = Tine(subChain(inputTine,headId._1,headId._1))
+          @scala.annotation.tailrec
           def loop(id:SlotId):Unit = {
             getParentId(id) match {
-              case Some(pid:SlotId) => {
+              case Some(pid:SlotId) =>
                 if (pid == localChain.get(pid._1)) {
                   prefix = pid._1
                 } else {
                   tine = tine ++ Tine(subChain(inputTine,pid._1,pid._1))
                   loop(pid)
                 }
-              }
-              case None => {
+              case None =>
                 println("Error: tineUpdate found no common prefix")
-              }
             }
           }
           loop(headId)
           Some((tine,prefix))
         }
-      }
-      case None => {
+      case None =>
         println("Error: invalid head id in updateTine")
         None
-      }
     }
   }
 
   /**main chain selection routine, maxvalid-bg*/
-  def maxValidBG = Try{
+  def maxValidBG(): Unit = Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
     val tine:Tine = Tine(tinePoolWithPrefix.last._1)
     val job:Int = tinePoolWithPrefix.last._3
@@ -223,7 +226,7 @@ trait ChainSelection extends Members {
 
     if (bestChain) {
       if (verifySubChain(tine,localChain.lastActiveSlot(prefix))) {
-        adoptTine
+        adoptTine()
         chainStorage.store(localChain,localChainId,serializer)
       } else {
         println("Error: invalid best chain")
@@ -231,10 +234,10 @@ trait ChainSelection extends Members {
         SharedData.throwError(holderIndex)
       }
     } else {
-      dropTine
+      dropTine()
     }
 
-    def adoptTine:Unit = {
+    def adoptTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println("Holder " + holderIndex.toString + " Tine Adopted")
       collectLedger(subChain(localChain,prefix+1,globalSlot))
@@ -250,9 +253,8 @@ trait ChainSelection extends Members {
           assert(id._1 == i)
           assert(
             getParentId(id) match {
-              case Some(pid:SlotId) => {
+              case Some(pid:SlotId) =>
                 localChain.getLastActiveSlot(i) == pid
-              }
               case _ => false
             }
           )
@@ -267,26 +269,23 @@ trait ChainSelection extends Members {
       }
       val lastSlot = localChain.lastActiveSlot(globalSlot)
       history.get(localChain.get(lastSlot)) match {
-        case Some(reorgState:(State,Eta)) => {
+        case Some(reorgState:(State,Eta)) =>
           localState = reorgState._1
           eta = reorgState._2
-        }
-        case _ => {
+        case _ =>
           println("Error: invalid state and eta on adopted tine")
           SharedData.throwError(holderIndex)
-        }
       }
       var epoch = lastSlot / epochLength
       for (slot <- lastSlot to globalSlot) {
         updateEpoch(slot,epoch,eta,localChain) match {
-          case result:(Int,Eta) if result._1 > epoch => {
+          case result:(Int,Eta) if result._1 > epoch =>
             epoch = result._1
             eta = result._2
             stakingState = getStakingState(epoch,localChain)
             alphaCache match {
-              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) => {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
                 loadingCache.invalidateAll()
-              }
               case None => alphaCache = Some(
                 CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
                   new CacheLoader[ByteArrayWrapper,Ratio] {
@@ -296,29 +295,27 @@ trait ChainSelection extends Members {
               )
             }
             keys.alpha = alphaCache.get.get(keys.pkw)
-          }
           case _ =>
         }
       }
       assert(currentEpoch == epoch)
-      updateWallet
-      trimMemPool
+      updateWallet()
+      trimMemPool()
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
       var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- tinePoolWithPrefix) {
         updateTine(entry._1) match {
-          case Some((newTine:Tine,prefix:Slot)) => {
+          case Some((newTine:Tine,prefix:Slot)) =>
             if (prefix > 0 && !newTine.isEmpty) {
               newCandidateTines = newCandidateTines ++ Array((newTine,prefix,entry._3))
             }
-          }
           case None =>
         }
       }
       tinePoolWithPrefix = newCandidateTines
     }
 
-    def dropTine:Unit = {
+    def dropTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println("Holder " + holderIndex.toString + " Tine Rejected")
       collectLedger(tine)
@@ -334,13 +331,11 @@ trait ChainSelection extends Members {
       }
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
-
     if (job == bootStrapJob) {
       bootStrapJob = -1
       bootStrapLock = false
       routerRef ! BootstrapJob(selfWrapper)
     }
-
   }
 
   def validateChainIds(c:Tine):Boolean = {
@@ -348,7 +343,7 @@ trait ChainSelection extends Members {
     var out = true
     for (id <- c.ordered.tail) {
       getParentId(id) match {
-        case Some(bid:SlotId) => {
+        case Some(bid:SlotId) =>
           if (bid == pid) {
             if (history.known(id)) {
               pid = id
@@ -362,15 +357,12 @@ trait ChainSelection extends Members {
             SharedData.throwError(holderIndex)
             out = false
           }
-        }
-        case _ => {
+        case _ =>
           println(s"Holder $holderIndex error: couldn't find parent in tine")
           SharedData.throwError(holderIndex)
           out = false
-        }
       }
     }
     out
   }
-
 }

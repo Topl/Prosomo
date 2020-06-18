@@ -5,6 +5,8 @@ import scorex.crypto.hash.{CryptographicHash32, Digest32}
 /**
   * AMS 2020:
   * Fast Crypto Hash as a class for actor system
+  * Primary hash algorithm system wide
+  * G_RO functionality
   */
 
 class Fch extends CryptographicHash32 {

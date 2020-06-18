@@ -47,7 +47,7 @@ class Stakeholder(
   with Validation
 {
   import Parameters.dataFileDir
-  implicit val routerRef:ActorRefWrapper = inputRef(0)
+  implicit val routerRef:ActorRefWrapper = inputRef.head
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = inputDataDir match {
@@ -71,14 +71,14 @@ class Stakeholder(
   val phase:Double = rng.nextDouble
   val selfWrapper:ActorRefWrapper = ActorRefWrapper(self)
   //stakeholder password, set at runtime, for research runs with deterministic entropy
-  var password = inputPassword match {
+  var password: String = inputPassword match {
     case Some(str)=>str
     case None => ""
   }
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
   var keyFile:Option[KeyFile] = inputKeyFile
-  var keyDir = inputKeyDir match {
+  var keyDir: String = inputKeyDir match {
     case None => storageDir+"/keys/"
     case Some(dir) => dir
   }
@@ -149,8 +149,8 @@ class Stakeholder(
 
 object Stakeholder {
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),None,None,None,None))
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),None,None,None,None))
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef],keyFile: KeyFile,dir:String,password:String,kdir:String): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0)))),Some(keyFile),Some(dir),Some(password),Some(kdir)))
+    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),Some(keyFile),Some(dir),Some(password),Some(kdir)))
 }
 

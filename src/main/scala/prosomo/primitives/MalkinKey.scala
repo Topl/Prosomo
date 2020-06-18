@@ -16,7 +16,7 @@ class MalkinKey {
   var offset:Int = 0
   val fch = new Fch
 
-  def update(kes:Kes,t:Int) = {
+  def update(kes:Kes,t:Int): Unit = {
     val updatedKey = kes.updateKey((L,Si,sig,pki,rp),t-offset)
     L = updatedKey._1
     Si = updatedKey._2
@@ -25,7 +25,7 @@ class MalkinKey {
     rp = updatedKey._5
   }
 
-  def update_fast(kes:Kes,t:Int) = {
+  def update_fast(kes:Kes,t:Int): Unit = {
     val updatedKey = kes.updateKeyFast((L,Si,sig,pki,rp),t-offset)
     L = updatedKey._1
     Si = updatedKey._2

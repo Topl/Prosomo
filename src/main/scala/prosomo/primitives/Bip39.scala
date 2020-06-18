@@ -103,7 +103,7 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
           Integer.parseInt(_, 2).toByte
         }
       ).map(toBinaryByte).toList
-      phraseBin.substring(entMap(pl)) == phraseHashBin(0).slice(0, chkMap(pl))
+      phraseBin.substring(entMap(pl)) == phraseHashBin.head.slice(0, chkMap(pl))
     } else {
       false
     }
@@ -129,8 +129,8 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
   def uuidSeedPhrase(inputUuid: String): (String,String) = {
     val seed = inputUuid.filterNot("-".toSet)
     val seedBytes: Array[Byte] = seed.grouped(2).toArray map {Integer.parseInt(_, 16).toByte}
-    val seedBin: Array[String] = seedBytes.map(toBinaryByte(_))
-    val seedHashBin: Array[String] = Sha256.hash(seedBytes).map(toBinaryByte(_))
+    val seedBin: Array[String] = seedBytes.map(toBinaryByte)
+    val seedHashBin: Array[String] = Sha256.hash(seedBytes).map(toBinaryByte)
     val phrase = (seedBin.mkString("") + seedHashBin(0).slice(0,endCSMap(seedBin.mkString("").length)))
       .grouped(indexLen).toArray.map(Integer.parseInt(_,2)).map(wordList(_)).mkString(" ")
     (seed,phrase)
@@ -140,9 +140,10 @@ case class Bip39 (phraseLanguage: String) extends ScorexLogging {
 object Bip39 {
   def apply(phraseLanguage: String): Bip39 = {
     val pt = new Bip39(phraseLanguage)
-    pt.verifyPhraseList match {
-      case true => pt
-      case false => new Bip39("")
+    if (pt.verifyPhraseList) {
+      pt
+    } else {
+      new Bip39("")
     }
   }
 }

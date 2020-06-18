@@ -81,38 +81,36 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     Try{
       UPnP.getValidGateway(settings.network)
     }.toOption match {
-      case None =>{
+      case None =>
         println("Error: UPNP device not found, exiting")
         runApp = false
         upnpFailed = true
         None
-      }
       case Some(plug) => plug
     }
   } else {
     None
   }
 
-  val newPort = scala.util.Random.nextInt(65535 - 49152) + 49152
+  val newPort: Int = scala.util.Random.nextInt(65535 - 49152) + 49152
 
   val externalSocketAddress: Option[InetSocketAddress] = if (settings.network.upnpEnabled) {
     Try{
       upnpGateway.get.addPort(newPort)
       upnpGateway.map(u => new InetSocketAddress(u.externalAddress, newPort))
     }.toOption match {
-      case None =>{
+      case None =>
         println("Error: UPNP port mapping failed, exiting")
         runApp = false
         upnpFailed = true
         None
-      }
       case Some(adr) => adr
     }
   } else {
     settings.network.declaredAddress
   }
 
-  val scorexContext = ScorexContext(
+  val scorexContext: ScorexContext = ScorexContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
     upnpGateway = upnpGateway,
@@ -120,7 +118,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, scorexContext)
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, scorexContext)
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, scorexContext)
   val swaggerConfig:String = ""
@@ -141,19 +139,18 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
       window.get.activePane.get.pages(2).enabled = true
       window.get.connectButton.get.text = "Connected"
       window.get.window.get.reactions += {
-        case event.WindowClosed(_) => {
+        case event.WindowClosed(_) =>
           this.stopAll()
           window.get.runApp = false
           runApp = false
           System.setOut(SharedData.oldOut)
-        }
       }
       window.get.cmdButton.get.reactions += {
         case event.ButtonClicked(_) =>
           coordinatorRef ! GuiCommand(window.get.cmdField.get.text)
       }
       window.get.sendTxButton.get.reactions += {
-        case scala.swing.event.ButtonClicked(_) => {
+        case scala.swing.event.ButtonClicked(_) =>
           SharedData.selfWrapper match {
             case Some(actorRefWrapper) =>
               Base58.decode(window.get.txWin.get.recipField.get.text).toOption match {
@@ -169,7 +166,6 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
           window.get.txWin.get.issueTxWindow.get.close()
           window.get.txWin = None
           window.get.issueTxButton.get.enabled = true
-        }
       }
       window.get.coordRef = coordinatorRef
     } else {
@@ -216,7 +212,7 @@ object Prosomo extends App {
     //shared reference to window so stakeholder can enable buttons when started
     SharedData.prosomoWindow = newWindow
     newWindow match {
-      case None => {
+      case None =>
         instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
         Try{
           instance.get.run()
@@ -225,8 +221,7 @@ object Prosomo extends App {
           }
           instance.get.stopAll()
         }
-      }
-      case Some(_) if newWindow.get.runApp => {
+      case Some(_) if newWindow.get.runApp =>
         instance = Try{new Prosomo(newWindow.get.windowConfig,Some(newWindow.get))}.toOption
         Try{
           instance.get.run()
@@ -234,12 +229,11 @@ object Prosomo extends App {
           while (newWindow.get.runApp) {
             newWindow.get.refreshOutput
             i+=1
-            if (i%100==0) {i=0;newWindow.get.refreshPeerList;newWindow.get.refreshWallet}
+            if (i%100==0) {i=0;newWindow.get.refreshPeerList;newWindow.get.refreshWallet()}
             Thread.sleep(10)
           }
           instance.get.stopAll()
         } orElse Try{println("Error: instance terminated")}
-      }
       case _ =>
     }
   } else {

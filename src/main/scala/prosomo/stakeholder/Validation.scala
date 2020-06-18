@@ -38,22 +38,20 @@ trait Validation extends Members with Types {
     val headerVer = verifyBlockHeader(header)
     val ledgerVer = if (header._3 == 0) {
       b.genesisSet match {
-        case Some(txs:GenesisSet) => {
+        case Some(txs:GenesisSet) =>
           if (txs.nonEmpty) {
-            hashGen(txs,serializer) == header._2.dataHash && txs.map(
-              _ match {case input:(Array[Byte], ByteArrayWrapper, BigInt,Mac) => {
-                verifyMac(hashGenEntry((input._1,input._2,input._3),serializer),input._4)
-              }}
-            ).reduceLeft(_ && _)
+            hashGen(txs,serializer) == header._2.dataHash && txs.map {
+              input: (Array[Byte], ByteArrayWrapper, BigInt, Mac) =>
+              verifyMac(hashGenEntry((input._1, input._2, input._3), serializer), input._4)
+            }.reduceLeft(_ && _)
           } else {
             false
           }
-        }
-        case _ => {println("Error: tx set match in block verify");false}
+        case _ => println("Error: tx set match in block verify"); false
       }
     } else {
       b.blockBody match {
-        case Some(txs:TransactionSet) => {
+        case Some(txs:TransactionSet) =>
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
               val (out1,out2) = (hash(txs,serializer) == header._2.dataHash , txs.map(verifyTransaction).reduceLeft(_ && _))
@@ -69,8 +67,7 @@ trait Validation extends Members with Types {
             println("Error: txs length greater than tx/block")
             false
           }
-        }
-        case _ => {println("Error: tx set match in block verify");false}
+        case _ => println("Error: tx set match in block verify"); false
       }
     }
     headerVer && b.id == hash(header,serializer) && ledgerVer
@@ -100,9 +97,9 @@ trait Validation extends Members with Types {
 
     for (id <- c.ordered.tail) {
       getBlockHeader(id) match {
-        case Some(b:BlockHeader) => {
+        case Some(b:BlockHeader) =>
           getParentBlockHeader(b) match {
-            case Some(pb:BlockHeader) => {
+            case Some(pb:BlockHeader) =>
               bool &&= getParentId(b) == pid
               if (getParentId(b) != pid) {
                 println("Holder "+holderIndex.toString+" pid mismatch")
@@ -110,29 +107,27 @@ trait Validation extends Members with Types {
               }
               compareBlocks(pb,b)
               pid = id
-            }
             case _ => bool &&= false
           }
-        }
         case _ =>
       }
     }
 
-    def compareBlocks(parent: BlockHeader, block: BlockHeader) = {
+    def compareBlocks(parent: BlockHeader, block: BlockHeader): Unit = {
       val (h0, _, slot, cert, rho, pi, _, pk_kes, bn, ps) = block
       val (pk_vrf, y, pi_y, pk_sig, tr_c,_) = cert
       while(i<=slot) {
         if (i/epochLength > ep) {
           ep = i/epochLength
           eta_Ep = eta_from_tine(c, ep, eta_Ep)
-          val toUpdate:State = if(ep == 0 || ep == 1) {Map()} else {staking_state_tine}
-          val epochChain = subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)
+          val toUpdate:State = if(ep == 0 || ep == 1) {Map()} else staking_state_tine
+          val epochChain =
+            subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)
           updateLocalState(toUpdate,epochChain) match {
             case Some(value:State) =>  staking_state_tine = value
-            case _ => {
+            case _ =>
               println("Error: encountered invalid ledger in local chain")
               bool &&= false
-            }
           }
         }
         i+=1
@@ -192,7 +187,7 @@ trait Validation extends Members with Types {
     val candidateTine = subChain(localChain, 0, prefix) ++ tine
 
     history.get(candidateTine.getLastActiveSlot(prefix)) match {
-      case Some(value:(State,Eta)) => {
+      case Some(value:(State,Eta)) =>
         val ep_prefix = prefix/epochLength
         val eta_prefix = value._2
         val ls_prefix = value._1
@@ -209,21 +204,20 @@ trait Validation extends Members with Types {
             gcCounter += 1
             if (gcCounter%100==0) System.gc()
             updateLocalState(ls,id) match {
-              case Some(newState:State) => {
+              case Some(newState:State) =>
                 getBlockHeader(id) match {
-                  case Some(block:BlockHeader) => {
+                  case Some(block:BlockHeader) =>
                     getParentBlockHeader(block) match {
-                      case Some(parent:BlockHeader) => {
+                      case Some(parent:BlockHeader) =>
                         if (getParentId(block) == pid) {
                           val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
                           val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert
                           while(currentSlot<=slot) {
                             updateEpoch(currentSlot,ep,eta_tine,candidateTine) match {
-                              case result:(Int,Eta) if result._1 > ep => {
+                              case result:(Int,Eta) if result._1 > ep =>
                                 ep = result._1
                                 eta_tine = result._2
                                 staking_state_tine = getStakingState(ep,candidateTine)
-                              }
                               case _ =>
                             }
                             currentSlot+=1
@@ -237,16 +231,19 @@ trait Validation extends Members with Types {
                           val test = testStrategy match {
                             case "vrf" => y
                             case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
-                            case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(bn))
+                            case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer
+                              .getBytes(bn))
                           }
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)
                               && parent._3 == ps
                               && parent._9+1 == bn
-                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"), pi)
+                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer
+                              .getBytes("NONCE"), pi)
                               && vrf.vrfProofToHash(pi).deep == rho.deep
-                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"), pi_y)
+                              && vrf.vrfVerify(pk_vrf, eta_tine ++ serializer.getBytes(slot) ++ serializer
+                              .getBytes("TEST"), pi_y)
                               && vrf.vrfProofToHash(pi_y).deep == y.deep
                               && tr_Ep == tr_c
                               && compare(test, tr_Ep)
@@ -263,9 +260,11 @@ trait Validation extends Members with Types {
                               , verifyBlockHeader(block) //2
                               , parent._3 == ps //3
                               , parent._9+1 == bn //4
-                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("NONCE"),pi) //5
+                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer
+                                .getBytes("NONCE"),pi) //5
                               , vrf.vrfProofToHash(pi).deep == rho.deep //6
-                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer.getBytes("TEST"),pi_y) //7
+                              , vrf.vrfVerify(pk_vrf,eta_tine++serializer.getBytes(slot)++serializer
+                                .getBytes("TEST"),pi_y) //7
                               , vrf.vrfProofToHash(pi_y).deep == y.deep //8
                               , tr_Ep == tr_c //9
                               , compare(test, tr_Ep) //10
@@ -281,36 +280,28 @@ trait Validation extends Members with Types {
                           isValid &&= false
                           break()
                         }
-                      }
-                      case _ => {
+                      case _ =>
                         println("Error: could not recover parent header")
                         println("block id:"+Base58.encode(id._2.data))
                         println("parentId:"+Base58.encode(block._1.data))
                         isValid &&= false
                         break()
-                      }
                     }
-                  }
-                  case _ => {
+                  case _ =>
                     println("Error: encountered invalid header in tine")
                     isValid &&= false
                     break()
-                  }
                 }
-              }
-              case _ => {
+              case _ =>
                 println("Error: encountered invalid ledger in tine")
                 isValid &&= false
                 break()
-              }
             }
           }
         }
-      }
-      case _ => {
+      case _ =>
         println("Error: could not recover prefix state")
         isValid &&= false
-      }
     }
 
     if(!isValid) SharedData.throwError(holderIndex)

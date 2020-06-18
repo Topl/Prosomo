@@ -14,7 +14,8 @@ import scala.math.BigInt
   *
   * Provides forward secure signatures that cannot be reforged with a leaked private key that has been updated
   * Number of time steps is determined by logl argument upon key generation, practically unbounded for logl = 7
-  * Sum compostion is based on underlying Ed25519 signing routine provided by Bouncy Castle
+  * Sum compostion is based on underlying Ed25519 signing routine provided by Bouncy Castle,
+  * F_KES functionality
   */
 
 class Kes {

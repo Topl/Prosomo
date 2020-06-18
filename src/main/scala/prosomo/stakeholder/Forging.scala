@@ -13,7 +13,7 @@ import scala.util.Try
   * AMS 2020:
   * Forging routines for the genesis block and all other blocks,
   * Implements the Staking Procedure described in Ouroboros Genesis,
-  * Newly forged blocks are immediately broadcast to network and placed first in line in the local tinepool,
+  * Newly forged blocks are immediately broadcast to network and placed first in line in tinePoolWithPrefix,
   * Forging is not allowed on tines with gaps longer than the slot window since these tines would never be adopted,
   * Forging is prohibited during bootstrapping to prevent futile blocks being broadcast during long tine recoveries
   */
@@ -29,9 +29,10 @@ trait Forging extends Members with Types {
     assert(pb._3 != slot)
     val ps:Slot = pb._3
 
-    def testThenForge(test:Rho,thr:Ratio) = if (compare(test, thr)) {
+    def testThenForge(test:Rho,thr:Ratio): Unit = if (compare(test, thr)) {
       def metaInfo:String = {
-        "forger_index:"+holderIndex.toString+",adversarial:"+adversary.toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
+        "forger_index:"+holderIndex.toString+",adversarial:"+adversary
+          .toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
       }
       val bn:Int = pb._9 + 1
       val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
@@ -40,14 +41,24 @@ trait Forging extends Members with Types {
       val h: Hash = hash(pb,serializer)
       val ledger:Mac = signMac(hash(txs,serializer), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
       val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,metaInfo)
-      val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(kes,h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
+      val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(
+        kes,
+        h.data
+          ++serializer.getBytes(ledger)
+          ++serializer.getBytes(slot)
+          ++serializer.getBytes(cert)
+          ++rho
+          ++pi
+          ++serializer.getBytes(bn)
+          ++serializer.getBytes(ps)
+      )
       val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
       if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
       val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
-        case Some(forgedState:State) => {
+        case Some(forgedState:State) =>
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(selfWrapper,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
           history.add((slot,block.id),forgedState,eta)
@@ -55,11 +66,9 @@ trait Forging extends Members with Types {
           val jobNumber = tineCounter
           tineCounter += 1
           tinePoolWithPrefix = tinePoolWithPrefix ++ Array((Tine((slot,block.id),rho),slot-1,jobNumber))
-        }
-        case _ => {
+        case _ =>
           SharedData.throwError(holderIndex)
           println("error: invalid ledger in forged block")
-        }
       }
     }
 
@@ -89,9 +98,9 @@ trait Forging extends Members with Types {
     def genEntry(index:Int) = {
       val initStake = {
         val out = stakeDistribution match {
-          case "random" => {initStakeMax*rng.nextDouble}
-          case "exp" => {initStakeMax*math.exp(-stakeScale*index.toDouble)}
-          case "flat" => {initStakeMax}
+          case "random" => initStakeMax*rng.nextDouble
+          case "exp" => initStakeMax*math.exp(-stakeScale*index.toDouble)
+          case "flat" => initStakeMax
         }
         if (initStakeMax > initStakeMin && out > initStakeMin) {
           out
@@ -104,7 +113,16 @@ trait Forging extends Members with Types {
         }
       }
       val pkw = holderKeys(index)
-      (genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt,signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer), ByteArrayWrapper(fch.hash(coordId)),sk_sig,pk_sig))
+      (
+        genesisBytes.data,
+        pkw,
+        BigDecimal(initStake)
+          .setScale(0, BigDecimal.RoundingMode.HALF_UP)
+          .toBigInt,
+        signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake)
+          .setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer),
+          ByteArrayWrapper(fch.hash(coordId)),sk_sig,pk_sig)
+      )
     }
     val bn:Int = 0
     val ps:Slot = -1
@@ -115,9 +133,22 @@ trait Forging extends Members with Types {
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
     val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
-    val ledger:Mac = signMac(hashGen(genesisEntries,serializer), ByteArrayWrapper(fch.hash("coordId")),sk_sig,pk_sig)
+    val ledger:Mac = signMac(
+      hashGen(genesisEntries,serializer),
+      ByteArrayWrapper(fch.hash("coordId")),
+      sk_sig,
+      pk_sig
+    )
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
-    val sig:MalkinSignature = sk_kes.sign(kes, h.data++serializer.getBytes(ledger)++serializer.getBytes(slot)++serializer.getBytes(cert)++rho++pi++serializer.getBytes(bn)++serializer.getBytes(ps))
+    val sig:MalkinSignature = sk_kes.sign(
+      kes,
+      h.data
+        ++serializer.getBytes(ledger)
+        ++serializer.getBytes(slot)
+        ++serializer.getBytes(cert)
+        ++rho++pi++serializer.getBytes(bn)
+        ++serializer.getBytes(ps)
+    )
     val genesisHeader:BlockHeader = (h,ledger,slot,cert,rho,pi,sig,pk_kes,bn,ps)
     println("Genesis Id:"+Base58.encode(hash(genesisHeader,serializer).data))
     Block(hash(genesisHeader,serializer),Some(genesisHeader),None,Some(genesisEntries))

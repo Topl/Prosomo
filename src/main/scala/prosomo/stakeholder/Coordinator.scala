@@ -1,15 +1,17 @@
 package prosomo.stakeholder
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter, IOException}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
+import com.google.common.cache.LoadingCache
 import io.circe.Json
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.{Prosomo, components}
 import prosomo.cases._
+import prosomo.components
+import prosomo.components.Serializer.DeserializeGenesisBlock
 import prosomo.components._
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
@@ -19,10 +21,6 @@ import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
 import scala.util.{Random, Try}
-import java.io.IOException
-
-import com.google.common.cache.LoadingCache
-import prosomo.components.Serializer.DeserializeGenesisBlock
 
 
 /**
@@ -32,6 +30,7 @@ import prosomo.components.Serializer.DeserializeGenesisBlock
   * Acts as local interface for GUI, the global clock, and any global functionality, e.g. the genesis block,
   * Has consensus members for research oriented tests and commands
   * Acts as local interface, Should only communicate with Router and Stakeholders
+  * F_INIT and G_CLOCK functionalities
   */
 
 class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
@@ -48,14 +47,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     with Validation
 {
   import Parameters._
-  implicit val routerRef:ActorRefWrapper = inputRef(0)
-  override val holderIndex = -1
+  implicit val routerRef:ActorRefWrapper = inputRef.head
+  override val holderIndex: Slot = -1
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = "coordinator"
   var localChain:Tine = new Tine
   val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
-  //val chainHistory:SlotHistoryStorage = new SlotHistoryStorage(storageDir)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -97,7 +95,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var t0:Long = 0
   var t1:Long = 0
   var localSlot = 0
-  var currentEpoch = -1
+  var currentEpoch: Slot = -1
   var updating = false
   var actorStalled = false
   var coordinatorRef:ActorRefWrapper = _
@@ -112,7 +110,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
 
-  val genBlockKey = ByteArrayWrapper(fch.hash("GENESIS"))
+  val genBlockKey: Sid = ByteArrayWrapper(fch.hash("GENESIS"))
 
   val coordId:String = Base58.encode(inputSeed)
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
@@ -139,7 +137,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var holdersToIssueRandomly:List[ActorRefWrapper] = List()
   var genesisBlock:Option[Block] = None
 
-  getTimeInfo
+  syncGlobalClock()
   self ! NewDataFile
   self ! Populate
   println("*****************************************************************")
@@ -156,7 +154,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     System.currentTimeMillis()+localClockOffset
   }
 
-  def getTimeInfo = {
+  def syncGlobalClock(): Unit = {
     val timeDataFile = new File(s"$storageDir/time/timeInfo")
     val timeGenesis : Option[Array[String]] = Try{
       scala.io.Source.fromResource("time/t0").getLines.toArray
@@ -178,7 +176,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case None => Try{
         println("Coordinator loading time data information...")
         val lines = readFile(timeDataFile)
-        val t0in:Long = lines(0).toLong
+        val t0in:Long = lines.head.toLong
         val tw:Long = lines(1).toLong
         val tpin:Long = lines(2).toLong
         val offset =  System.currentTimeMillis()-tw
@@ -189,7 +187,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     globalSlot = ((globalTime - t0) / slotT).toInt
   }
 
-  def writeTimeInfo = {
+  def writeTimeInfo(): Unit = {
     val file = new File(s"$storageDir/time/timeInfo")
     file.getParentFile.mkdirs
     val bw = new BufferedWriter(new FileWriter(file))
@@ -198,12 +196,12 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     bw.close()
   }
 
-  def startHolder(i:Int) =
+  def startHolder(i:Int): ActorRefWrapper =
     ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
 
   def populate: Receive = {
     /**populates the holder list with stakeholder actor refs, the F_init functionality */
-    case Populate => {
+    case Populate =>
       sendAssertDone(routerRef,CoordRef(selfWrapper))
       sendAssertDone(routerRef,Register)
       println(s"Epoch Length = $epochLength")
@@ -220,24 +218,21 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
       sendAssertDone(routerRef,HoldersFromLocal(holders))
       self ! Register
-    }
   }
 
   def receiveRemoteHolders: Receive = {
-    case HoldersFromRemote(remoteHolders:List[ActorRefWrapper]) => {
+    case HoldersFromRemote(remoteHolders:List[ActorRefWrapper]) =>
       holders = remoteHolders
       holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromLocal(holders)))
-    }
   }
 
   def restoreOrGenerateGenBlock: Receive = {
-    case Register => {
+    case Register =>
       blocks.restore((0,genBlockKey)) match {
-        case Some(b:Block) => {
+        case Some(b:Block) =>
           genesisBlock = Some(Block(hash(b.prosomoHeader,serializer),b.blockHeader,b.blockBody,b.genesisSet))
           verifyBlock(genesisBlock.get)
           println("Recovered Genesis Block")
-        }
         case None => Try{
           println("Reading genesis block from resources...")
           import scala.io.Source
@@ -251,10 +246,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               println("error: genesis block is corrupted")
               System.exit(0)
           }
-        }.orElse(Try{forge})
+        }.orElse(Try{forge()})
       }
-      setupLocal
-    }
+      setupLocal()
   }
 
   def pkFromIndex(index:Int):PublicKeyW = {
@@ -279,7 +273,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     Keys.seedKeysSecure(seed1,seed2,seed3,sig,vrf,kes,0).get.pkw
   }
 
-  def forge:Unit = {
+  def forge():Unit = {
     println("Forge Genesis Block")
     val holderKeys = List.range(0,numGenesisHolders).map(i =>i-> pkFromIndex(i)).toMap
     forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
@@ -292,7 +286,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     bw.close()
   }
 
-  def setupLocal:Unit = {
+  def setupLocal():Unit = {
     if (holderIndexMin > -1 && holderIndexMax > -1) {
       SharedData.printingHolder = holderIndexMin
     }
@@ -307,7 +301,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def run:Receive = {
     /**sends start command to each stakeholder*/
-    case Run => {
+    case Run =>
       println("Starting")
       sendAssertDone(holders.filterNot(_.remote),Initialize(0,None))
       println("Run")
@@ -318,24 +312,22 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         holder ! Run
       }
       if (!useFencing) timers.startPeriodicTimer(TimerKey, ReadCommand, commandUpdateTime)
-    }
   }
 
   def giveTime:Receive = {
     /**returns offset time to stakeholder that issues GetTime to coordinator*/
-    case GetTime => {
+    case GetTime =>
       if (!actorStalled) {
         t1 = globalTime-tp
         sender() ! GetTime(t1)
       } else {
         sender() ! GetTime(tp)
       }
-    }
   }
 
   def dataFile:Receive = {
     /**coordinator creates a file writer object that is passed to stakeholders if data is being written*/
-    case NewDataFile => {
+    case NewDataFile =>
       if(dataOutFlag) {
         val dataPath = Path(dataFileDir)
         Try(dataPath.createDirectory())
@@ -351,15 +343,14 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             +" \n"
           )
         fileWriter match {
-          case fw: BufferedWriter => {fw.write(fileString)}
+          case fw: BufferedWriter => fw.write(fileString)
           case _ => println("error: file writer not initialized")
         }
       }
-    }
   }
 
   def nextSlot:Receive = {
-    case NextSlot => {
+    case NextSlot =>
       if (!actorPaused && !actorStalled) {
         if (roundDone) {
           t += 1
@@ -367,14 +358,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           routerRef ! NextSlot
         }
       }
-    }
   }
 
   /**randomly picks two holders and creates a transaction between the two*/
-  def issueRandTx:Unit = {
-    for (i <- 0 to txProbability.floor.toInt) if (holders.length > 1) {
+  def issueRandTx():Unit = {
+    for (_ <- 0 to txProbability.floor.toInt) if (holders.length > 1) {
       Try{rng.shuffle(holdersToIssueRandomly).head}.toOption match {
-        case Some(holder1:ActorRefWrapper) => {
+        case Some(holder1:ActorRefWrapper) =>
           val r = rng.nextDouble
           if (r<txProbability%1.0) {
             val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
@@ -383,7 +373,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             holder1 ! IssueTx(holder2,delta)
             transactionCounter += 1
           }
-        }
         case None =>
       }
     }
@@ -398,22 +387,16 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def command(sl:List[String]):Unit = {
     for (s<-sl.reverse){
       s.trim match {
-
-        case "status_all" => {
+        case "status_all" =>
           SharedData.txCounter = 0
           sendAssertDone(holders.filterNot(_.remote),Status)
           println("Total Transactions: "+SharedData.txCounter)
           println("Total Attempts to Issue Txs:"+transactionCounter.toString)
           SharedData.txCounter = 0
-        }
-
         case "fence_step" => sendAssertDone(routerRef,"fence_step")
-
         case "verify_all" => sendAssertDone(holders.filterNot(_.remote),Verify)
-
         case "stall" => sendAssertDone(holders.filterNot(_.remote),StallActor)
-
-        case "pause" => {
+        case "pause" =>
           if (!actorPaused) {
             actorPaused = true
             if (!actorStalled) {
@@ -427,25 +410,20 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               tp = globalTime-tp
             }
           }
-        }
-
         case "inbox" => sendAssertDone(holders.filterNot(_.remote),Inbox)
-
         case "randtx" => if (!transactionFlag) {transactionFlag = true} else {transactionFlag = false}
-
         case "write" => fileWriter match {
           case fw:BufferedWriter => fw.flush()
           case _ => println("File writer not initialized")
         }
-
-        case "graph" => {
+        case "graph" =>
           println("Writing network graph matrix...")
           gossipersMap = getGossipers(holders.filterNot(_.remote))
           val dateString = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString.replace(":", "-")
           val uid = uuid
           graphWriter = new BufferedWriter(new FileWriter(s"$dataFileDir/ouroboros-graph-$uid-$dateString.graph"))
           graphWriter match {
-            case fw:BufferedWriter => {
+            case fw:BufferedWriter =>
               var line:String = ""
               for (holder<-holders.filterNot(_.remote)) {
                 line = ""
@@ -462,28 +440,20 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 fw.write(line+"\n")
               }
               fw.flush()
-            }
             case _ =>
           }
           graphWriter match {
-            case fw:BufferedWriter => {
+            case fw:BufferedWriter =>
               fw.close()
-            }
             case _ =>
           }
-        }
-
-        case "tree_all" => {
+        case "tree_all" =>
           for (holder<-holders.filterNot(_.remote)) {
             printTree(holder)
           }
-        }
-
-        case "tree" => {
-         printTree(holders.filterNot(_.remote)(SharedData.printingHolder))
-        }
-
-        case "kill" => {
+        case "tree" =>
+          printTree(holders.filterNot(_.remote)(SharedData.printingHolder))
+        case "kill" =>
           SharedData.killFlag = true
           timers.cancelAll
           fileWriter match {
@@ -492,50 +462,46 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           }
           Thread.sleep(2*slotT*delta_s)
           context.system.terminate
-        }
 
-        case "split" => {
+        case "split" =>
           parties = List()
           val (holders1,holders2) = rng.shuffle(holders).splitAt(rng.nextInt(holders.length-2)+1)
           println("Splitting Party into groups of "+holders1.length.toString+" and "+holders2.length.toString)
-          sendAssertDone(holders1,Party(holders1,true))
-          sendAssertDone(holders2,Party(holders2,true))
+          sendAssertDone(holders1,Party(holders1,clear = true))
+          sendAssertDone(holders2,Party(holders2,clear = true))
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
           gossipersMap = getGossipers(holders)
-        }
 
-        case "bridge" => {
+        case "bridge" =>
           parties = List()
           val (holders1,holders2) = rng.shuffle(holders).splitAt(rng.nextInt(holders.length-3)+2)
           println("Bridging Party into groups of "+holders1.length.toString+" and "+holders2.length.toString)
           val commonRef = holders1.head
-          sendAssertDone(holders,Party(List(),true))
-          sendAssertDone(List(commonRef),Party(holders,false))
-          sendAssertDone(holders1.tail,Party(holders1,false))
-          sendAssertDone(holders2,Party(commonRef::holders2,false))
+          sendAssertDone(holders,Party(List(),clear = true))
+          sendAssertDone(List(commonRef),Party(holders,clear = false))
+          sendAssertDone(holders1.tail,Party(holders1,clear = false))
+          sendAssertDone(holders2,Party(commonRef::holders2,clear = false))
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
           gossipersMap = getGossipers(holders)
-        }
 
-        case "join" => {
+        case "join" =>
           parties = List()
           println("Joining Parties")
-          sendAssertDone(holders.filterNot(_.remote),Party(holders,true))
+          sendAssertDone(holders.filterNot(_.remote),Party(holders,clear = true))
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders
           gossipersMap = getGossipers(holders.filterNot(_.remote))
-        }
 
-        case "new_holder" => {
+        case "new_holder" =>
           println("Bootstrapping new holder...")
           val i = holders.length
           val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
           holders.find(newHolder.path == _.path) match {
-            case None => {
+            case None =>
               holders ::= newHolder
               sendAssertDone(newHolder,HoldersFromLocal(holders))
               sendAssertDone(newHolder,CoordRef(selfWrapper))
@@ -547,12 +513,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
               newHolder ! Run
               holders.filterNot(_.remote).foreach(_ ! Diffuse)
-            }
             case _ => newHolder ! PoisonPill
           }
-        }
 
-        case value:String => {
+        case value:String =>
           val arg0 = "print_"
           if (value.slice(0,arg0.length) == arg0) {
             val index:Int = value.drop(arg0.length).toInt
@@ -603,8 +567,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             parties = List()
 
             println(s"Splitting Stake to $alpha1 and $alpha2 with $numh1 and $numh2 holders")
-            sendAssertDone(holders1,Party(holders1,true))
-            sendAssertDone(holders2,Party(holders2,true))
+            sendAssertDone(holders1,Party(holders1,clear = true))
+            sendAssertDone(holders2,Party(holders2,clear = true))
             holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
@@ -646,10 +610,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
             println(s"Bridging Stake to $alpha1 and $alpha2 with $numh1 and $numh2 holders")
             val commonRef = holders1.head
-            sendAssertDone(holders,Party(List(),true))
-            sendAssertDone(List(commonRef),Party(holders,false))
-            sendAssertDone(holders1.tail,Party(holders1,false))
-            sendAssertDone(holders2,Party(commonRef::holders2,false))
+            sendAssertDone(holders,Party(List(),clear = true))
+            sendAssertDone(List(commonRef),Party(holders,clear = false))
+            sendAssertDone(holders1.tail,Party(holders1,clear = false))
+            sendAssertDone(holders2,Party(commonRef::holders2,clear = false))
             holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
@@ -712,7 +676,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             val i = data.toInt
             val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(Base58.encode(inputSeed)+i.toString),i,inputRef.map(_.actorRef)), "Holder_" + i.toString))
             holders.find(newHolder.path == _.path) match {
-              case None => {
+              case None =>
                 holders ::= newHolder
                 sendAssertDone(newHolder,HoldersFromLocal(holders))
                 sendAssertDone(newHolder,CoordRef(selfWrapper))
@@ -724,18 +688,16 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
                 newHolder ! Run
                 holders.filterNot(_.remote).foreach(_ ! Diffuse)
-              }
               case _ => newHolder ! PoisonPill
             }
 
           }
-        }
         case _ =>
       }
     }
   }
 
-  def readCommand:Unit = {
+  def readCommand():Unit = {
     if (!useFencing) {
       if (!actorStalled) {
         t1 = globalTime-tp
@@ -745,7 +707,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
     }
     if (t>globalSlot) {
-      writeTimeInfo
+      writeTimeInfo()
       globalSlot = t
       SharedData.globalSlot = globalSlot
       SharedData.diskAccess = false
@@ -761,10 +723,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         for (line<-cmdList) {
           val com = line.trim.split(" ")
           com(0) match {
-            case s:String => {
-              if (com.length == 2){
+            case s:String =>
+              if (com.length == 2) {
                 Try{com(1).toInt}.toOption match {
-                  case Some(i:Int) => {
+                  case Some(i:Int) =>
                     if (cmdQueue.keySet.contains(i)) {
                       val nl = s::cmdQueue(i)
                       cmdQueue -= i
@@ -772,7 +734,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                     } else {
                       cmdQueue += (i->List(s))
                     }
-                  }
                   case None =>
                 }
               } else {
@@ -784,7 +745,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                   cmdQueue += (t->List(s))
                 }
               }
-            }
             case _ =>
           }
         }
@@ -814,7 +774,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }
 
     if (!actorStalled && transactionFlag && !useFencing && t>1 && !SharedData.errorFlag) {
-      issueRandTx
+      issueRandTx()
     }
 
     if (SharedData.killFlag) {
@@ -837,7 +797,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
     }
     if (t>globalSlot) {
-      writeTimeInfo
+      writeTimeInfo()
       globalSlot = t
       SharedData.diskAccess = false
     }
@@ -846,10 +806,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     for (line<-cmdList) {
       val com = line.trim.split(" ")
       com(0) match {
-        case s:String => {
+        case s:String =>
           if (com.length == 2){
             Try{com(1).toInt}.toOption match {
-              case Some(i:Int) => {
+              case Some(i:Int) =>
                 if (cmdQueue.keySet.contains(i)) {
                   val nl = s::cmdQueue(i)
                   cmdQueue -= i
@@ -857,7 +817,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 } else {
                   cmdQueue += (i->List(s))
                 }
-              }
               case None =>
             }
           } else {
@@ -869,7 +828,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               cmdQueue += (t->List(s))
             }
           }
-        }
         case _ =>
       }
     }
@@ -893,21 +851,16 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         tn = ((t1 - t0) / slotT).toInt
       }
     }
-    getBlockTree(holder)
+    blockTree(holder)
     val positionData:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) = getPositionData(routerRef)
     val dateString = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString.replace(":", "-")
     val uid = uuid
     val holderIndex = holders.indexOf(holder)
     graphWriter = new BufferedWriter(new FileWriter(s"$dataFileDir/ouroboros-holder-$holderIndex-$uid-$dateString.tree"))
-    val configString = {
-      import Prosomo.input
-      if (input.length > 0) { input.head.stripSuffix(".conf")+".conf"} else {""}
-    }
     graphWriter match {
-      case fw:BufferedWriter => {
+      case fw:BufferedWriter =>
         val json:Json = Map(
           "info" -> Map(
-            "config"-> configString.asJson,
             "numHolders"-> numGenesisHolders.asJson,
             "slotT" -> slotT.asJson,
             "delay_ms_km" -> delay_ms_km.asJson,
@@ -945,75 +898,73 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             "inputSeed" -> Base58.encode(inputSeed).asJson
           ).asJson,
           "position" -> Map(
-            "delay" -> positionData._2.map{
-              case value: ((ActorRefWrapper,ActorRefWrapper),Long) => {
-                Array(holders.indexOf(value._1._1).asJson,holders.indexOf(value._1._2).asJson,value._2.asJson)
+            "delay" -> positionData._2.map {
+              value: ((ActorRefWrapper, ActorRefWrapper), Long) => {
+                Array(holders.indexOf(value._1._1).asJson, holders.indexOf(value._1._2).asJson, value._2.asJson)
               }
             }.asJson,
-            "coordinates" -> positionData._1.map{
-              case value:(ActorRefWrapper,(Double,Double)) => {
-                Map(holders.indexOf(value._1).toString -> Array(value._2._1.asJson,value._2._2.asJson)).asJson
-              }
+            "coordinates" -> positionData._1.map {
+              value: (ActorRefWrapper, (Double, Double)) =>
+                Map(holders.indexOf(value._1).toString -> Array(value._2._1.asJson, value._2._2.asJson)).asJson
             }.asJson
           ).asJson,
-          "data" -> (0 to tn).toArray.map{
-            case i:Int => Map(
-              "slot" -> i.asJson
-//              "blocks" -> blocks.slotBlocks(i).map{
-//                case value:(ByteArrayWrapper,BlockHeader) => {
-//                  val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
-//                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
-//                  val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
-//                  Map(
-//                    "forger"-> Base58.encode(pk_f.data).asJson,
-//                    "id" -> Base58.encode(value._1.data).asJson,
-//                    "bn" -> bn.asJson,
-//                    "bs" -> bs.asJson,
-//                    "pid" -> Base58.encode(pid.data).asJson,
-//                    "ps" -> ps.asJson,
-//                    "nonce" -> Base58.encode(vrfNonce).asJson,
-//                    "npi" -> Base58.encode(noncePi).asJson,
-//                    "y" -> Base58.encode(y).asJson,
-//                    "ypi" -> Base58.encode(ypi).asJson,
-//                    "thr" -> thr.toString.asJson,
-//                    "info" -> info.asJson,
-//                    "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
-//                    "ledger" -> {
-//
-//                    }.asJson
-//                  ).asJson
-//                }
-//              }.asJson
-//              ,
-//              "history" -> chainHistory.get(i,serializer).map{
-//                case value:BlockId => Map(
-//                  "id" -> Base58.encode(value.data).asJson
-//                ).asJson
-//              }.asJson
-            ).asJson
+          "data" -> (0 to tn).toArray.map {
+            i: Int =>
+              Map(
+                "slot" -> i.asJson
+                //              "blocks" -> blocks.slotBlocks(i).map{
+                //                case value:(ByteArrayWrapper,BlockHeader) => {
+                //                  val (pid:Hash,_,bs:Slot,cert:Cert,vrfNonce:Rho,noncePi:Pi,kesSig:KesSignature,pk_kes:PublicKey,bn:Int,ps:Slot) = value._2
+                //                  val (pk_vrf:PublicKey,y:Rho,ypi:Pi,pk_sig:PublicKey,thr:Ratio,info:String) = cert
+                //                  val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+                //                  Map(
+                //                    "forger"-> Base58.encode(pk_f.data).asJson,
+                //                    "id" -> Base58.encode(value._1.data).asJson,
+                //                    "bn" -> bn.asJson,
+                //                    "bs" -> bs.asJson,
+                //                    "pid" -> Base58.encode(pid.data).asJson,
+                //                    "ps" -> ps.asJson,
+                //                    "nonce" -> Base58.encode(vrfNonce).asJson,
+                //                    "npi" -> Base58.encode(noncePi).asJson,
+                //                    "y" -> Base58.encode(y).asJson,
+                //                    "ypi" -> Base58.encode(ypi).asJson,
+                //                    "thr" -> thr.toString.asJson,
+                //                    "info" -> info.asJson,
+                //                    "sig" -> Array(Base58.encode(kesSig._1).asJson,Base58.encode(kesSig._2).asJson,Base58.encode(kesSig._3).asJson).asJson,
+                //                    "ledger" -> {
+                //
+                //                    }.asJson
+                //                  ).asJson
+                //                }
+                //              }.asJson
+                //              ,
+                //              "history" -> chainHistory.get(i,serializer).map{
+                //                case value:BlockId => Map(
+                //                  "id" -> Base58.encode(value.data).asJson
+                //                ).asJson
+                //              }.asJson
+              ).asJson
           }.asJson
         ).asJson
         fw.write(json.toString)
         fw.flush()
-      }
       case _ =>
     }
     graphWriter match {
-      case fw:BufferedWriter => {
+      case fw:BufferedWriter =>
         fw.close()
-      }
       case _ =>
     }
   }
 
   def newHolderFromUI:Receive = {
-    case NewHolderFromUI(kf,ddir,pwd,name,kdir) => {
+    case NewHolderFromUI(kf,ddir,pwd,name,kdir) =>
       val i = holders.filterNot(_.remote).size
       println(s"Bootstrapping Holder $i...")
       SharedData.printingHolder = i
       val newHolder = ActorRefWrapper(context.actorOf(Stakeholder.props(fch.hash(uuid),i,inputRef.map(_.actorRef),kf,ddir,pwd,kdir), name))
       holders.find(newHolder.path == _.path) match {
-        case None => {
+        case None =>
           holders ::= newHolder
           sendAssertDone(newHolder,HoldersFromLocal(holders))
           sendAssertDone(newHolder,CoordRef(selfWrapper))
@@ -1025,10 +976,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           newHolder ! Run
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           println("Forging started.")
-        }
         case _ => newHolder ! PoisonPill
       }
-    }
   }
 
   override def receive:Receive = giveTime orElse
@@ -1042,28 +991,24 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**tells actors to print their inbox */
     case Inbox => sendAssertDone(holders.filterNot(_.remote),Inbox)
     /**passes fileWriter to actor who requests it with WriteFile*/
-    case WriteFile => {sender() ! WriteFile(fileWriter)}
+    case WriteFile => sender() ! WriteFile(fileWriter)
     /**closes the writer object to make sure data is written from buffer*/
     case CloseDataFile => if(dataOutFlag) {fileWriter match {
       case fw:BufferedWriter => fw.close()
       case _ => println("error: file writer close on non writer object")}}
-    case EndStep => {readCommand;roundDone = true}
+    case EndStep => readCommand(); roundDone = true
+
     /**command interpretation from config and cmd script*/
-    case ReadCommand => readCommand
+    case ReadCommand => readCommand()
     case GuiCommand(s) => readCommand(s)
-    case unknown:Any => if (!actorStalled) {print("received unknown message ")
-      if (sender() == routerRef) {
-        print("from router")
-      }
-      if (holders.contains(sender())) {
-        print("from holder "+holders.indexOf(sender()).toString)
-      }
-      println(": "+unknown.getClass.toString+" "+unknown.toString)
+    case unknown:Any => if (!actorStalled) {
+      print("Error: Coordinator received unknown message ")
+      println(unknown.getClass.toString+" "+unknown.toString)
     }
   }
 }
 
 object Coordinator {
   def props(inputSeed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Coordinator(inputSeed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref(0))))))
+    Props(new Coordinator(inputSeed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head)))))
 }
