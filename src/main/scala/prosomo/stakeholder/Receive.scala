@@ -441,6 +441,9 @@ trait Receive extends Members {
     /**accepts list of other holders from coordinator */
     case HoldersFromLocal(list:List[ActorRefWrapper]) =>
       holders = list
+      for (info<-inbox) {
+        if (!holders.contains(info._2._1)) inbox -= info._1
+      }
       if (useGossipProtocol) {
         gossipers = List()
         numHello = 0
@@ -471,6 +474,9 @@ trait Receive extends Members {
     /**sets new list of holders resets gossipers*/
     case Party(list,clear) =>
       holders = list
+      for (info<-inbox) {
+        if (!holders.contains(info._2._1)) inbox -= info._1
+      }
       if (useGossipProtocol) {
         gossipers = List()
         numHello = 0

@@ -217,7 +217,7 @@ trait Update extends Members {
         SharedData.activeStake = {
           var out = 0.0
           for (info<-inbox) {
-            out += relativeStake(ByteArrayWrapper(info._2._2._1++info._2._2._2++info._2._2._3),stakingState).toDouble
+            if (holders.contains(info._2._1)) out += relativeStake(ByteArrayWrapper(info._2._2._1++info._2._2._2++info._2._2._3),stakingState).toDouble
           }
           out += relativeStake(keys.pkw,stakingState).toDouble
           out
