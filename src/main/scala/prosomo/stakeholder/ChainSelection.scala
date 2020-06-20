@@ -5,6 +5,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
+import scorex.util.encode.Base58
 
 import scala.util.Try
 import scala.util.control.Breaks.{break, breakable}
@@ -162,7 +163,7 @@ trait ChainSelection extends Members {
     if (foundAncestor) {
       if (tine.largestGap < slotWindow) {
         if (holderIndex == SharedData.printingHolder && printFlag)
-          println("Holder " + holderIndex.toString + " Tine Completed")
+          println(s"Tine length = ${tine.length} Common prefix slot = $prefix")
         tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
       }
       tinePool -= job._1
@@ -210,6 +211,13 @@ trait ChainSelection extends Members {
     val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
     val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
 
+    if (holderIndex == SharedData.printingHolder) {
+      val headId = localChain.getLastActiveSlot(globalSlot)
+      val head = getBlockHeader(headId)
+      println(Console.CYAN + "Previous head: " + s" block ${head.get._9} "
+        + Base58.encode(headId._2.data) + Console.RESET)
+    }
+
     assert(!tine.isEmpty)
 
     if (job == bootStrapJob) {
@@ -239,7 +247,7 @@ trait ChainSelection extends Members {
 
     def adoptTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
-        println("Holder " + holderIndex.toString + " Tine Adopted")
+        println(s"Tine Adopted  $bnt  >  $bnl")
       collectLedger(subChain(localChain,prefix+1,globalSlot))
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
@@ -317,7 +325,7 @@ trait ChainSelection extends Members {
 
     def dropTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
-        println("Holder " + holderIndex.toString + " Tine Rejected")
+        println(s"Tine Rejected $bnt  <= $bnl")
       collectLedger(tine)
       for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
         if (id._1 > -1) {
@@ -335,6 +343,13 @@ trait ChainSelection extends Members {
       bootStrapJob = -1
       bootStrapLock = false
       routerRef ! BootstrapJob(selfWrapper)
+    }
+
+    if (holderIndex == SharedData.printingHolder) {
+      val headId = localChain.getLastActiveSlot(globalSlot)
+      val head = getBlockHeader(headId)
+      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
+        + Base58.encode(headId._2.data) + Console.RESET)
     }
   }
 

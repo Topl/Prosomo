@@ -50,7 +50,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     .maximumSize(cacheSize)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
       def load(id:SlotId):(State,Eta) = {
-        SharedData.throwDiskWarning(s"Load State ${Base58.encode(id._2.data)}")
+        SharedData.throwDiskWarning(s"state database ${Base58.encode(id._2.data)}")
         (
           stateStoreCache.get(id._1/one_third_epoch).get(id._2).get match {
             case bytes:ByteArrayWrapper => {

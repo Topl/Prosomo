@@ -40,35 +40,21 @@ trait Update extends Members {
     * Used in the staking procedure, the previous epoch is ep-1,
     * This staking distribution is sampled form the state at the beginning of the previous epoch or the genesis block,
     * This staking state results from all modifiers applied from the epoch leading into the previous epoch, i.e. ep-2,
-    * The routine gets the last active slot starting at the dawn slot of the previous epoch,
-    *
-    * Note AMS 2020: the current implementation may include a block forged in ep-1 in the dawn slot,
-    * i.e. the 1st slot of ep-1
-    * As far as I can see, this presents no security vulnerability since any block in the dawn slot contains modifiers
-    * only from the past epoch.
-    * The dawn slot block would have been forged with epoch parameters in ep-1 that are already
-    * well established from ep-2 and cannot be altered by any
-    * present modifier or malicious tine assuming honest majority.
-    *
-    * The difference between this implementation and taking the staking distribution
-    * from the dusk (last) slot of ep-2 is described above.
-    * The reasoning behind this implementation is that the stake distribution is sampled from
-    * the 1st slot (slot=0) of epoch 0 initially,
-    * so if we keep sampling from the dawn slot of each epoch during updates the interval between
-    * stake distributions is constant throughout the entire protocol.
+    * The routine gets the last active slot starting just below the dawn slot of the previous epoch, and returns
+    * the state with that block applied.
     *
     * @param ep epoch number corresponding to the returned staking distribution
     * @param chain tine containing the block ids of at least the previous epoch
     * @return the staking distribution to be used in epoch number ep
     */
   def getStakingState(ep:Int, chain:Tine):State = if (ep > 1) {
-    val eps:Slot = (ep-1)*epochLength
-    history.get(chain.getLastActiveSlot(eps)) match {
+    val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
+    history.get(chain.getLastActiveSlot(stakeDistributionSlot)) match {
       case Some(value:(State,Eta)) =>
         value._1
       case _ =>
-        val thisSlot = lastActiveSlot(chain,eps)
-        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(eps)._2.data))
+        val thisSlot = lastActiveSlot(chain,stakeDistributionSlot)
+        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot)._2.data))
         chain.print
         SharedData.throwError(holderIndex)
         Map()
@@ -86,7 +72,7 @@ trait Update extends Members {
 
 
   /*********************************************************************************************************************
-    * The main update procedure that carries out consensus and forges, by default carried out 100 times a second
+    * The main update procedure that carries out consensus and forges, by default carried out up to 100 times a second
     *
     * localSlot is used to keep track of epoch updates,
     * it updates to globalSlot in a while loop and triggers updateEpoch,
@@ -155,9 +141,6 @@ trait Update extends Members {
           if (keyTime < globalSlot) {
             keys.sk_kes.update_fast(kes, globalSlot)
           }
-
-          if (holderIndex == SharedData.printingHolder) println(Console.CYAN + "Slot = " + localSlot.toString + " on block "
-            + Base58.encode(localChain.getLastActiveSlot(localSlot)._2.data) + Console.RESET)
           if (!useFencing) {
             forgeBlock(keys)
           }
@@ -196,7 +179,7 @@ trait Update extends Members {
           }
         case _ =>
       }
-      if (holderIndex == SharedData.printingHolder && useGui) {
+      if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)

@@ -84,7 +84,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   def restore(id:SlotId):Option[Block] = Try{
     val key = id._2
-    SharedData.throwDiskWarning(s"Restore block ${Base58.encode(key.data)}")
+    SharedData.throwDiskWarning(s"block database ${Base58.encode(key.data)}")
     headerStoreCache.get(id._1/one_third_epoch).get(key) match {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeBlockHeader)

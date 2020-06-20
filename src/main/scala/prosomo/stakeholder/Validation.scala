@@ -120,9 +120,12 @@ trait Validation extends Members with Types {
         if (i/epochLength > ep) {
           ep = i/epochLength
           eta_Ep = eta_from_tine(c, ep, eta_Ep)
-          val toUpdate:State = if(ep == 0 || ep == 1) {Map()} else staking_state_tine
-          val epochChain =
-            subChain(c,(i/epochLength)*epochLength-2*epochLength+1,(i/epochLength)*epochLength-epochLength)
+          val toUpdate:State = if(ep == 0 || ep == 1 || ep == 2) {Map()} else staking_state_tine
+          val epochChain = if(ep == 0 || ep == 1) {
+            subChain(c,0,0)
+          } else {
+            subChain(c,(ep-2)*epochLength,(ep-1)*epochLength-1)
+          }
           updateLocalState(toUpdate,epochChain) match {
             case Some(value:State) =>  staking_state_tine = value
             case _ =>
@@ -183,7 +186,6 @@ trait Validation extends Members with Types {
     */
   def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
-    var gcCounter = 0
     val candidateTine = subChain(localChain, 0, prefix) ++ tine
 
     history.get(candidateTine.getLastActiveSlot(prefix)) match {
@@ -201,8 +203,6 @@ trait Validation extends Members with Types {
         var pid:SlotId = candidateTine.getLastActiveSlot(prefix)
         breakable{
           for (id <- tine.ordered) {
-            gcCounter += 1
-            if (gcCounter%100==0) System.gc()
             updateLocalState(ls,id) match {
               case Some(newState:State) =>
                 getBlockHeader(id) match {
