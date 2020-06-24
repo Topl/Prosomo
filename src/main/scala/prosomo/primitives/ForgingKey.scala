@@ -3,11 +3,15 @@ import com.google.common.primitives.Ints
 
 /**
   * AMS 2020:
-  * MalkinKey is a private key of the MMM construction with a specified time step offset
-  * the offset is constrained by the public key and signatures include the offset
+  * Forging Key is a private key of the MMM construction with a specified time step offset
+  * the offset is constrained by the public key and signatures include the offset,
+  * The VRF private key and this KES private key are required to test and forge respectively,
+  * The age of keys may be enforced in header validation where the offset can be compared
+  * to the slot of the header since signatures include the offset
+  *
   */
 
-class MalkinKey {
+class ForgingKey {
   var L:Tree[Array[Byte]] = Leaf(Array())
   var Si:Tree[Array[Byte]] = Leaf(Array())
   var sig:Array[Byte] = Array()
@@ -49,10 +53,10 @@ class MalkinKey {
   }
 }
 
-object MalkinKey {
-  def apply(kes:Kes,seed:Array[Byte],t:Int):MalkinKey = {
+object ForgingKey {
+  def apply(kes:Kes,seed:Array[Byte],t:Int):ForgingKey = {
     val keyData = kes.generateKey(seed)
-    val newKey = new MalkinKey
+    val newKey = new ForgingKey
     newKey.L = keyData._1
     newKey.Si = keyData._2
     newKey.sig = keyData._3
@@ -61,8 +65,8 @@ object MalkinKey {
     newKey.offset = t
     newKey
   }
-  def apply(L:Tree[Array[Byte]],Si:Tree[Array[Byte]],sig:Array[Byte],pki:Array[Byte],rp:Array[Byte],offset:Int):MalkinKey = {
-    val newKey = new MalkinKey
+  def apply(L:Tree[Array[Byte]],Si:Tree[Array[Byte]],sig:Array[Byte],pki:Array[Byte],rp:Array[Byte],offset:Int):ForgingKey = {
+    val newKey = new ForgingKey
     newKey.L = L
     newKey.Si = Si
     newKey.sig = sig

@@ -38,7 +38,7 @@ trait ChainSelection extends Members {
           wallet.getConfirmedBalance,
           wallet.getPendingBalance
         )
-        SharedData.issueTxInfo = Some((keys.pkw,inbox))
+        SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
         SharedData.selfWrapper = Some(selfWrapper)
       }
     } else {
@@ -57,7 +57,7 @@ trait ChainSelection extends Members {
                     wallet.getConfirmedBalance,
                     wallet.getPendingBalance
                   )
-                  SharedData.issueTxInfo = Some((keys.pkw,inbox))
+                  SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
                   SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
@@ -101,7 +101,7 @@ trait ChainSelection extends Members {
     var tine:Tine = Tine(entry._1)
     var counter:Int = entry._2
     val previousLen:Int = entry._3
-    val totalTries:Int = entry._4
+    var totalTries:Int = entry._4
     val ref:ActorRefWrapper = entry._5
     var prefix:Slot = 0
     breakable{
@@ -122,33 +122,26 @@ trait ChainSelection extends Members {
                   break
                 }
               case None =>
-                if (counter>2*tineMaxTries) {
-                  if (holderIndex == SharedData.printingHolder && printFlag) println("Holder " + holderIndex.toString + " Dropping Tine")
-                  tinePool -= job._1
-                } else {
-                  tinePool -= job._1
-                  val tineLength = getActiveSlots(tine)
-                  tinePool += (job._1 -> (tine,counter,tineLength,totalTries+1,ref))
-                  if (totalTries > tineMaxTries || tineLength>tineMaxDepth) {
-                    bootStrapLock = true
-                    bootStrapJob = job._1
-                    if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
-                    )
-                    val depth:Int = if (tineLength < tineMaxDepth) {
-                      tineLength
-                    } else {
-                      tineMaxDepth
-                    }
-                    val request:Request = (List(parentId),depth,job._1)
-                    send(selfWrapper,ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                val tineLength = getActiveSlots(tine)
+                if (tineLength>tineMaxDepth && job._1 >= 0) {
+                  bootStrapLock = true
+                  bootStrapJob = job._1
+                  if (holderIndex == SharedData.printingHolder && printFlag) println(
+                    "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
+                  )
+                  val depth:Int = if (tineLength < tineMaxDepth) {
+                    tineLength
                   } else {
-                    if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
-                    )
-                    val request:Request = (List(parentId),0,job._1)
-                    send(selfWrapper,ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                    tineMaxDepth
                   }
+                  val request:Request = (List(parentId),depth,job._1)
+                  send(selfWrapper,ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                } else {
+                  if (holderIndex == SharedData.printingHolder && printFlag) println(
+                    "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
+                  )
+                  val request:Request = (List(parentId),0,job._1)
+                  send(selfWrapper,ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
                 }
                 if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
                 foundAncestor = false
@@ -167,6 +160,10 @@ trait ChainSelection extends Members {
         tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
       }
       tinePool -= job._1
+    } else {
+      totalTries += 1
+      tinePool -= job._1
+      tinePool += (job._1 -> (tine,counter,tine.length,totalTries,ref))
     }
   }
 
@@ -220,7 +217,7 @@ trait ChainSelection extends Members {
 
     assert(!tine.isEmpty)
 
-    if (job == bootStrapJob) {
+    if (job == bootStrapJob && bootStrapJob >= 0) {
       routerRef ! BootstrapJob(selfWrapper)
     }
 
@@ -339,7 +336,8 @@ trait ChainSelection extends Members {
       }
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
-    if (job == bootStrapJob) {
+
+    if (job == bootStrapJob && job >= 0) {
       bootStrapJob = -1
       bootStrapLock = false
       routerRef ! BootstrapJob(selfWrapper)

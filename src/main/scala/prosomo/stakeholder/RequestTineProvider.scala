@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
 import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks}
-import prosomo.components.{Block, Serializer}
+import prosomo.components.{Block, Serializer, Tine}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Fch, Mac, SharedData, Sig, SimpleTypes, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
@@ -45,24 +45,42 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   }
 
   override def receive: Receive = {
-    case Info(ref,startId,depth,holderRef,holderIndex,sessionId,holderSK,holderPK,job) =>
+    case Info(ref,startId,depth,holderRef,holderIndex,sessionId,holderSK,holderPK,job,tine) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
       }
       var returnedIdList:List[SlotId] = List()
       var id:SlotId = startId
-      breakable{
-        while (returnedIdList.length <= depth) {
-          blockStorage.restore(id) match {
-            case Some(block:Block) =>
-              returnedIdList ::= id
-              send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
-              id = block.parentSlotId
-            case None => break
+      if (job < 0) {
+        // job -1 means fetch info from hello message
+        breakable{
+          for (id <- tine.get.ordered) {
+            blockStorage.restore(id) match {
+              case Some(block:Block) =>
+                returnedIdList ::= id
+                send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
+              case None => break
+            }
+            if (!useFencing) Thread.sleep(100)
           }
-          if (!useFencing) Thread.sleep(100)
+          // job -2 means end of fetch info
+          if (job == -2) send(holderRef,ref,ReturnBlocks(List(),signMac(hash((List(),0,job),serializer),sessionId,holderSK,holderPK),job))
+        }
+      } else {
+        breakable{
+          while (returnedIdList.length <= depth) {
+            blockStorage.restore(id) match {
+              case Some(block:Block) =>
+                returnedIdList ::= id
+                send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
+                id = block.parentSlotId
+              case None => break
+            }
+            if (!useFencing) Thread.sleep(100)
+          }
         }
       }
+
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Returned Tine")
       }
@@ -84,7 +102,8 @@ object RequestTineProvider extends SimpleTypes {
     sessionId:Sid,
     holderSK:PrivateKey,
     holderPK:PublicKey,
-    job:Int
+    job:Int,
+    tine:Option[Tine]
   )
   case object Done
   def props(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper):Props = Props(new RequestTineProvider(blockStorage))

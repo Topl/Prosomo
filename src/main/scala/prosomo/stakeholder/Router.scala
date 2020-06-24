@@ -372,7 +372,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    Hello(s,msg._3)
+                    Hello(s,msg._3,msg._4)
                   )(context.system.dispatcher,self)
                 case None => println("error: Hello message not parsed")
               }
@@ -538,7 +538,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           val content:DiffuseDataType = (c.ref.toString,r.toString,c.pks,c.mac)
           sendToNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
         case c:Hello =>
-          val content:HelloDataType = (c.ref.toString,r.toString,c.mac)
+          val content:HelloDataType = (c.ref.toString,r.toString,c.slot,c.mac)
           sendToNetwork[HelloDataType,HelloSpec.type](HelloSpec,content,r)
         case c:RequestBlock =>
           val content:RequestBlockType = (s.toString,r.toString,c.id,c.mac,c.job)

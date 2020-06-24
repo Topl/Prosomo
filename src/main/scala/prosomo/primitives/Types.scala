@@ -21,8 +21,8 @@ trait Types extends SimpleTypes {
     digest.digest()
   }
 
-  def hash(input:ActorRefWrapper, serializer: Serializer): Hash = {
-    hash(input.path.toString,serializer)
+  def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash = {
+    hash(input.path.toString+slot.toString,serializer)
   }
 
   def hash(input:Slot,serializer: Serializer): Hash = {

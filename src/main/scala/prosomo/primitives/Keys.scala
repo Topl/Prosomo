@@ -13,7 +13,7 @@ class Keys extends Types {
   var pk_vrf:PublicKey = Array()
   var sk_sig:PrivateKey = Array()
   var pk_sig:PublicKey = Array()
-  var sk_kes:MalkinKey = _
+  var sk_kes:ForgingKey = _
   var pk_kes:PublicKey = Array()
   var publicKeys:PublicKeys = (Array(),Array(),Array())
   var pkw:PublicKeyW = ByteArrayWrapper(Array())
@@ -26,7 +26,7 @@ class Keys extends Types {
     pk_vrf = vrf.vrfKeypair(seed)._2
     sk_sig = sig.createKeyPair(fch.hash(seed))._1
     pk_sig = sig.createKeyPair(fch.hash(seed))._2
-    sk_kes = MalkinKey(kes,fch.hash(fch.hash(seed)),t)
+    sk_kes = ForgingKey(kes,fch.hash(fch.hash(seed)),t)
     pk_kes = sk_kes.getPublic(kes)
     publicKeys = (pk_sig,pk_vrf,pk_kes)
     pkw = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
@@ -42,7 +42,7 @@ object Keys {
     newKeys.pk_vrf = vrf.vrfKeypair(seed)._2
     newKeys.sk_sig = sig.createKeyPair(fch.hash(seed))._1
     newKeys.pk_sig = sig.createKeyPair(fch.hash(seed))._2
-    newKeys.sk_kes = MalkinKey(kes,fch.hash(fch.hash(seed)),t)
+    newKeys.sk_kes = ForgingKey(kes,fch.hash(fch.hash(seed)),t)
     newKeys.pk_kes = newKeys.sk_kes.getPublic(kes)
     newKeys.publicKeys = (newKeys.pk_sig,newKeys.pk_vrf,newKeys.pk_kes)
     newKeys.pkw = ByteArrayWrapper(newKeys.pk_sig++newKeys.pk_vrf++newKeys.pk_kes)
@@ -64,7 +64,7 @@ object Keys {
     out.pk_sig = sig.createKeyPair(seed1)._2
     out.sk_vrf = vrf.vrfKeypair(seed2)._1
     out.pk_vrf = vrf.vrfKeypair(seed2)._2
-    out.sk_kes = MalkinKey(kes,fch.hash(fch.hash(seed3)),t)
+    out.sk_kes = ForgingKey(kes,fch.hash(fch.hash(seed3)),t)
     out.pk_kes = out.sk_kes.getPublic(kes)
     out.publicKeys = (out.pk_sig,out.pk_vrf,out.pk_kes)
     out.pkw = ByteArrayWrapper(out.pk_sig++out.pk_vrf++out.pk_kes)

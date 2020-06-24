@@ -710,7 +710,7 @@ class Kes {
     exp(tl)-1+ti
   }
 
-  def getKeyTimeStep(key: MalkinKey): Int = {
+  def getKeyTimeStep(key: ForgingKey): Int = {
     val L = key.L
     val Si = key.Si
     val tl = sumGetKeyTimeStep(L)

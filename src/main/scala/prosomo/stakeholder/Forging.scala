@@ -4,7 +4,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
-import prosomo.primitives.{Keys, Mac, MalkinKey, Ratio, SharedData, Types}
+import prosomo.primitives.{Keys, Mac, ForgingKey, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 import scala.math.BigInt
 import scala.util.Try
@@ -93,7 +93,7 @@ trait Forging extends Members with Types {
                     pk_kes:PublicKey,
                     sk_sig:PublicKey,
                     sk_vrf:PublicKey,
-                    sk_kes:MalkinKey
+                    sk_kes:ForgingKey
                    ): Block = {
     def genEntry(index:Int) = {
       val initStake = {

@@ -53,7 +53,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var gossipers: List[ActorRefWrapper]
   var gOff:Int
   var numHello:Int
-  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)]
+  var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]
   var blocksForged:Int
   var globalSlot:Slot
   var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)]
@@ -85,6 +85,7 @@ trait Members extends SimpleTypes with Actor with Timers {
 
   case object TimerKey
 
+  def completeInboxEntries(inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]):Map[Sid,(ActorRefWrapper,PublicKeys)]
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet():Unit
@@ -94,7 +95,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine):State
   def update():Unit
-  def hash(input:ActorRefWrapper, serializer: Serializer): Hash
+  def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
   def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer):Hash
   def hashGenEntry(input:(Array[Byte], ByteArrayWrapper, BigInt),serializer: Serializer):Hash

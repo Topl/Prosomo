@@ -23,7 +23,8 @@ trait Validation extends Members with Types {
     */
   def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
-    kes.verify(sig._5, hash.data++serializer.getBytes(ledger)
+    kes.verify(sig._5, hash.data
+      ++serializer.getBytes(ledger)
         ++serializer.getBytes(slot)
         ++serializer.getBytes(cert)
         ++rho++pi++serializer.getBytes(bn)

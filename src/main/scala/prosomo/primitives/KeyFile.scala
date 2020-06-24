@@ -69,7 +69,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     decrypted
   }
 
-  def getKesPrivateKey(password: String,serializer:Serializer,kes:Kes): Try[MalkinKey] = Try {
+  def getKesPrivateKey(password: String,serializer:Serializer,kes:Kes): Try[ForgingKey] = Try {
     val kes_sk_MK = {
       val (
         pubKeyBytes_kes: Array[Byte],
@@ -85,7 +85,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       val numBytes = byteStream.getInt
       val decryptedMK = serializer.fromBytes(
         new ByteStream(byteStream.get(numBytes),DeserializeMalkinKey)
-      ) match {case mk:MalkinKey => mk}
+      ) match {case mk:ForgingKey => mk}
       require(pubKeyBytes_kes sameElements decryptedMK.getPublic(kes), "Error: PublicKey in file is invalid")
       decryptedMK
     }
@@ -99,11 +99,11 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
     out.sk_vrf = getVrfPrivateKey(password,vrf).get
     out.pk_vrf = vrf_info._1
     out.sk_kes = {getKesPrivateKey(password,serializer,kes)} match {
-      case Success(value:MalkinKey) => value
+      case Success(value:ForgingKey) => value
       case Failure(exception) =>
         exception.printStackTrace()
         SharedData.throwError
-        new MalkinKey
+        new ForgingKey
     }
     out.pk_kes = kes_info._1
     out.publicKeys = (out.pk_sig,out.pk_vrf,out.pk_kes)
@@ -315,7 +315,7 @@ object KeyFile {
 
   def update(
               keyFile:KeyFile,
-              malkinKey: MalkinKey,
+              malkinKey: ForgingKey,
               password:String,
               defaultKeyDir: String,
               serializer: Serializer,

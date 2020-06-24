@@ -41,7 +41,7 @@ trait Receive extends Members {
       * Newly encountered Txs are sent to gossipers
       **/
     case value:SendTx =>
-      if (!actorStalled) {
+      if (!actorStalled) Try{
         if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
           if (localState(value.transaction.sender)._3 <= value.transaction.nonce) {
             if (verifyTransaction(value.transaction)) {
@@ -65,7 +65,7 @@ trait Receive extends Members {
       * when bootstrapping new blocks are added to database but do not enter tinepool
       **/
     case value:SendBlock =>
-      if (!actorStalled) {
+      if (!actorStalled) Try{
         if (inbox.keySet.contains(value.mac.sid)) {
           val foundBlock = blocks.knownIfPresent((value.block.slot,value.block.id))
           if (!foundBlock) {
@@ -101,7 +101,7 @@ trait Receive extends Members {
                       }
                     }
                     val jobNumber = tineCounter
-                    tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1))
+                    tinePool += (jobNumber -> (Tine(newId,bRho),0,0,0,inbox(value.mac.sid)._1.get))
                     buildTine((jobNumber,tinePool(jobNumber)))
                     tineCounter += 1
                   }
@@ -121,7 +121,19 @@ trait Receive extends Members {
 
     case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
-      if (holders.contains(tinePool(bootStrapJob)._5)) {
+      if (bootStrapLock && bootStrapJob == -1) {
+        send(
+          selfWrapper,
+          gossipers.head,
+          Hello(selfWrapper,
+            localChain.getLastActiveSlot(globalSlot)._1+1,
+            signMac(
+              hash(selfWrapper,globalSlot,serializer),
+              sessionId,
+              keys.sk_sig, keys.pk_sig)
+          )
+        )
+      } else if (holders.contains(tinePool(bootStrapJob)._5)) {
         buildTine((bootStrapJob,tinePool(bootStrapJob)))
       } else {
         println(s"Holder $holderIndex Lost Connection with Tine Provider")
@@ -134,7 +146,7 @@ trait Receive extends Members {
       * Block passing for tinepool functionality, returned blocks are added to block database
       **/
     case value:ReturnBlocks =>
-      if (!actorStalled) {
+      if (!actorStalled) Try{
         if (inbox.keySet.contains(value.mac.sid)) {
           def blockToId(b:Block):SlotId = (b.slot,b.id)
           if (verifyMac(hash((value.blocks.map(block => blockToId(block)),0,value.job),serializer),value.mac)) {
@@ -146,7 +158,7 @@ trait Receive extends Members {
                   }
                   blocks.add(block)
                 } else {println("error: invalid returned block")}
-                if (tinePool.keySet.contains(value.job)) {
+                if (value.job >= 0 && tinePool.keySet.contains(value.job)) {
                   if (bootStrapLock) {
                     if (value.job == bootStrapJob) {
                       bootStrapMessage match {
@@ -158,6 +170,22 @@ trait Receive extends Members {
                   } else {
                     buildTine((value.job,tinePool(value.job)))
                   }
+                } else if (value.job == -1 && bootStrapLock) {
+                  val b = block.prosomoHeader
+                  val bHash = hash(b,serializer)
+                  val bSlot = b._3
+                  val bRho = b._5
+                  if (!tinePool.keySet.contains(-1) && !tinePoolWithPrefix.map(_._3).contains(-1)) {
+                    tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,inbox(value.mac.sid)._1.get))
+                    buildTine((-1,tinePool(-1)))
+                  }
+                  bootStrapMessage match {
+                    case scheduledMessage:Cancellable => scheduledMessage.cancel
+                    case null =>
+                  }
+                  bootStrapMessage = context.system.scheduler.scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+                } else if (value.job == -2) {
+                  bootStrapLock = false
                 }
               }
             }
@@ -176,13 +204,13 @@ trait Receive extends Members {
       * Block requesting for tinepool functionality, parent ids that are not found are requested from peers
       **/
     case value:RequestBlock =>
-      if (!actorStalled) {
+      if (!actorStalled) Try{
         if (inbox.keySet.contains(value.mac.sid)) {
           if (holderIndex == SharedData.printingHolder && printFlag) {
             println("Holder " + holderIndex.toString + " Was Requested Block")
           }
           if (verifyMac(hash((List(value.id),0,value.job),serializer),value.mac)) {
-            val ref = inbox(value.mac.sid)._1
+            val ref = inbox(value.mac.sid)._1.get
             blocks.getIfPresent(value.id) match {
               case Some(returnedBlock:Block) =>
                 send(selfWrapper,ref,ReturnBlocks(List(returnedBlock),signMac(hash((List(value.id),0,value.job),serializer),sessionId,keys.sk_sig,keys.pk_sig),value.job))
@@ -204,19 +232,19 @@ trait Receive extends Members {
       * Spins up a provider to search database for blocks
       **/
     case value:RequestTine =>
-      if (!actorStalled) {
+      if (!actorStalled) Try{
         tineProvider match {
           case None =>
             if (inbox.keySet.contains(value.mac.sid)) {
               val request:Request = (List(value.id),value.depth,value.job)
               if (verifyMac(hash(request,serializer),value.mac) && value.depth <= tineMaxDepth) {
-                val refToSend = inbox(value.mac.sid)._1
+                val refToSend = inbox(value.mac.sid)._1.get
                 val startId:SlotId = value.id
                 val depth:Int = value.depth
                 tineProvider = Try{ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))}.toOption
                 tineProvider match {
                   case Some(ref:ActorRefWrapper) =>
-                    ref ! RequestTineProvider.Info(refToSend,startId,depth,selfWrapper,holderIndex,sessionId,keys.sk_sig,keys.pk_sig,value.job)
+                    ref ! RequestTineProvider.Info(refToSend,startId,depth,selfWrapper,holderIndex,sessionId,keys.sk_sig,keys.pk_sig,value.job,None)
                   case None => println("error: tine provider not initialized")
                 }
               } else {println("error: chain request mac invalid")}
@@ -232,17 +260,34 @@ trait Receive extends Members {
       tineProvider = None
 
     /**
-      * Gossip protocol greeting message for populating list of gossipers
+      * Greeting message for bootstrapping nodes, contains the last known slot, triggers tine recovery up to current head
       **/
     case value:Hello =>
-      if (!actorStalled) {
-        if (gossipers.length < numGossipers + gOff) {
-          if (verifyMac(hash(value.ref,serializer),value.mac)) {
-            if (!gossipers.contains(value.ref) && inbox.keySet.contains(value.mac.sid)) {
-              if (inbox(value.mac.sid)._1 == value.ref) gossipers = gossipers ++ List(value.ref)
-              send(selfWrapper,value.ref,Hello(selfWrapper,signMac(hash(selfWrapper,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
-            }
-          }
+      if (!actorStalled) Try{
+        tineProvider match {
+          case None =>
+            if (inbox.keySet.contains(value.mac.sid) && verifyMac(hash(value.ref,value.slot,serializer),value.mac)) {
+              val refToSend = inbox(value.mac.sid)._1.get
+              val startId:SlotId = localChain.getLastActiveSlot(value.slot)
+              val depth:Int = tineMaxDepth
+              tineProvider = Try{ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))}.toOption
+              tineProvider match {
+                case Some(ref:ActorRefWrapper) =>
+                  ref ! RequestTineProvider.Info(
+                    refToSend,
+                    startId,
+                    depth,
+                    selfWrapper,
+                    holderIndex,
+                    sessionId,
+                    keys.sk_sig,
+                    keys.pk_sig,
+                    if (globalSlot > value.slot+tineMaxDepth) {-1} else {-2},
+                    Some(subChain(localChain,value.slot,value.slot+tineMaxDepth)))
+                case None => println("error: tine provider not initialized")
+              }
+            } else {println("error: invalid sid")}
+          case _ =>
         }
       }
       if (useFencing) {
@@ -254,7 +299,7 @@ trait Receive extends Members {
       **/
     case value:DiffuseData =>
       if (verifyMac(hash((value.ref,value.pks),serializer),value.mac) && !inbox.keySet.contains(value.mac.sid)) {
-        inbox += (value.mac.sid->(value.ref,value.pks))
+        inbox += (value.mac.sid->(Some(value.ref),Some(value.pks)))
         value.ref ! DiffuseData(selfWrapper,keys.publicKeys,signMac(hash((selfWrapper,keys.publicKeys),serializer), sessionId, keys.sk_sig, keys.pk_sig))
       }
 
@@ -263,18 +308,21 @@ trait Receive extends Members {
 
     /**issue a transaction generated by the coordinator and send it to the list of gossipers*/
     case value:IssueTx =>
-      if (!actorStalled) {
-        inbox.toSeq.find(_._2._1 == value.ref) match {
-          case Some(data:(Sid,(ActorRefWrapper,PublicKeys))) =>
-            val pks = data._2._2
-            val pkw = ByteArrayWrapper(pks._1 ++ pks._2 ++ pks._3)
-            wallet.issueTx((pkw,value.delta),keys.sk_sig,sig,rng,serializer) match {
-              case Some(trans:Transaction) =>
-                walletStorage.store(wallet,serializer)
-                txCounter += 1
-                memPool += (trans.sid->(trans,0))
-                send(selfWrapper,gossipers, SendTx(trans))
-              case _ =>
+      if (!actorStalled) Try{
+        inbox.toSeq.find(_._2._1.get == value.ref) match {
+          case Some(data:(Sid,(Option[ActorRefWrapper],Option[PublicKeys]))) =>
+            data._2._2 match {
+              case Some(pks) =>
+                val pkw = ByteArrayWrapper(pks._1 ++ pks._2 ++ pks._3)
+                wallet.issueTx((pkw,value.delta),keys.sk_sig,sig,rng,serializer) match {
+                  case Some(trans:Transaction) =>
+                    walletStorage.store(wallet,serializer)
+                    txCounter += 1
+                    memPool += (trans.sid->(trans,0))
+                    send(selfWrapper,gossipers, SendTx(trans))
+                  case _ =>
+                }
+              case None =>
             }
           case None =>
         }
@@ -416,6 +464,8 @@ trait Receive extends Members {
         context.system.scheduler.scheduleOnce(slotT* (refreshInterval * rng.nextDouble).toInt.millis,self,Refresh)(context.system.dispatcher,self)
         context.system.scheduler.scheduleOnce(5*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
       }
+      self ! BootstrapJob
+
 
     case Refresh =>
       blocks.refresh
@@ -444,12 +494,7 @@ trait Receive extends Members {
       for (info<-inbox) {
         if (!holders.contains(info._2._1)) inbox -= info._1
       }
-      if (useGossipProtocol) {
-        gossipers = List()
-        numHello = 0
-      } else {
-        gossipers = gossipSet(holderId,holders)
-      }
+      gossipers = gossipSet(holderId,holders)
       sender() ! "done"
 
     case NewGossipers => gossipers = gossipSet(holderId,holders)
@@ -477,12 +522,7 @@ trait Receive extends Members {
       for (info<-inbox) {
         if (!holders.contains(info._2._1)) inbox -= info._1
       }
-      if (useGossipProtocol) {
-        gossipers = List()
-        numHello = 0
-      } else {
-        gossipers = gossipSet(holderId,holders)
-      }
+      gossipers = gossipSet(holderId,holders)
       if (clear) inbox = Map()
       sender() ! "done"
 

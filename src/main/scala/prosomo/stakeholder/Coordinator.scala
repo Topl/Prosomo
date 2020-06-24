@@ -83,7 +83,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var gossipers: List[ActorRefWrapper] = List()
   var gOff = 0
   var numHello = 0
-  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
+  var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])] = Map()
   var blocksForged = 0
   var globalSlot = 0
   var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
@@ -117,7 +117,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val eta0:Eta = fch.hash(Base58.encode(inputSeed)+"ETA")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
-  val sk_kes:MalkinKey = MalkinKey(kes,seed,0)
+  val sk_kes:ForgingKey = ForgingKey(kes,seed,0)
   val pk_kes:PublicKey = sk_kes.getPublic(kes)
 
   var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
@@ -877,7 +877,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             "forgerReward" -> forgerReward.asJson,
             "transactionFee" -> transactionFee.asJson,
             "numGossipers" -> numGossipers.asJson,
-            "useGossipProtocol" -> useGossipProtocol.asJson,
             "tineMaxTries" -> tineMaxTries.asJson,
             "tineMaxDepth" -> tineMaxDepth.asJson,
             "dataOutInterval" -> dataOutInterval.asJson,

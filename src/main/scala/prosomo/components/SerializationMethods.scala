@@ -51,7 +51,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getBytes(chain:Tine):Array[Byte] = sChain(chain)
   def getBytes(wallet:Wallet):Array[Byte] = sWallet(wallet)
-  def getBytes(malkinKey:MalkinKey):Array[Byte] = sMalkinKey(malkinKey)
+  def getBytes(malkinKey:ForgingKey):Array[Byte] = sMalkinKey(malkinKey)
   def getBytes(block:Block):Array[Byte] = sBlock(block)
   def getDiffuseBytes(msg:DiffuseDataType):Array[Byte] = sDiffuse(msg)
   def getHelloBytes(msg:HelloDataType):Array[Byte] = sHello(msg)
@@ -160,7 +160,8 @@ trait SerializationMethods extends SimpleTypes {
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
-      sMac(msg._3)
+      Ints.toByteArray(msg._3),
+      sMac(msg._4)
     )
   }
 
@@ -171,10 +172,11 @@ trait SerializationMethods extends SimpleTypes {
     val strLen2 = stream.getInt
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
+    val slot = stream.getInt
     val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
     val mac = dMac(macBytes)
     assert(stream.empty)
-    (str,str2,mac)
+    (str,str2,slot,mac)
   }
 
   private def sRequestTine(msg: RequestTineType):Array[Byte] = {
@@ -673,7 +675,7 @@ trait SerializationMethods extends SimpleTypes {
     Tine(out)
   }
 
-  private def sMalkinKey(key: MalkinKey):Array[Byte] = {
+  private def sMalkinKey(key: ForgingKey):Array[Byte] = {
     Bytes.concat(
       sTree(key.L),
       sTree(key.Si),
@@ -685,7 +687,7 @@ trait SerializationMethods extends SimpleTypes {
     )
   }
 
-  private def dMalkinKey(stream:ByteStream):MalkinKey = {
+  private def dMalkinKey(stream:ByteStream):ForgingKey = {
     val out1len = stream.getInt
     val out1Bytes = new ByteStream(stream.get(out1len),stream.caseObject)
     val out1 = dTree(out1Bytes)
@@ -698,35 +700,28 @@ trait SerializationMethods extends SimpleTypes {
     val out5 = stream.get(hash_length)
     val out6 = stream.getInt
     assert(stream.empty)
-    MalkinKey(out1,out2,out3,out4,out5,out6)
+    ForgingKey(out1,out2,out3,out4,out5,out6)
   }
 
   private def sTree(tree:Tree[Array[Byte]]):Array[Byte] = {
     def treeToBytes(t:Tree[Array[Byte]]):Array[Byte] = {
       t match {
-        case n:Node[Array[Byte]] => {
+        case n:Node[Array[Byte]] =>
           n.l match {
-            case Empty => {
+            case Empty =>
               n.r match {
-                case ll:Leaf[Array[Byte]] => {
+                case ll:Leaf[Array[Byte]] =>
                   Ints.toByteArray(2) ++ n.v ++ Ints.toByteArray(0) ++ ll.v
-                }
-                case nn:Node[Array[Byte]] => {
+                case nn:Node[Array[Byte]] =>
                   Ints.toByteArray(2) ++ n.v ++ treeToBytes(nn)
-                }
               }
-            }
-            case ll:Leaf[Array[Byte]] => {
+            case ll:Leaf[Array[Byte]] =>
               Ints.toByteArray(1) ++ n.v ++ Ints.toByteArray(0) ++ ll.v
-            }
-            case nn:Node[Array[Byte]] => {
+            case nn:Node[Array[Byte]] =>
               Ints.toByteArray(1) ++ n.v ++ treeToBytes(nn)
-            }
           }
-        }
-        case l:Leaf[Array[Byte]] => {
+        case l:Leaf[Array[Byte]] =>
           Ints.toByteArray(0) ++ l.v
-        }
       }
     }
     val output = treeToBytes(tree)
@@ -736,18 +731,15 @@ trait SerializationMethods extends SimpleTypes {
   private def dTree(stream:ByteStream):Tree[Array[Byte]] = {
     def buildTree:Tree[Array[Byte]] = {
       stream.getInt match {
-        case 0 => {
+        case 0 =>
           val bytes:Array[Byte] = stream.get(sig_length)
           Leaf(bytes)
-        }
-        case 1 => {
+        case 1 =>
           val bytes:Array[Byte] = stream.get(hash_length+sig_length)
           Node(bytes,buildTree,Empty)
-        }
-        case 2 => {
+        case 2 =>
           val bytes:Array[Byte] = stream.get(hash_length+sig_length)
           Node(bytes,Empty,buildTree)
-        }
       }
     }
     val out = buildTree
@@ -782,7 +774,7 @@ trait SerializationMethods extends SimpleTypes {
     val bodyLen = stream.getInt
     val bodyBytes = new ByteStream(stream.get(bodyLen),stream.caseObject)
     stream.caseObject match {
-      case DeserializeBlock => {
+      case DeserializeBlock =>
         val body = {
           if (!bodyBytes.empty)  {
             Some(dTransactionSet(bodyBytes))
@@ -792,18 +784,16 @@ trait SerializationMethods extends SimpleTypes {
         }
         assert(stream.empty)
         Block(id,header,body,None)
-      }
-      case DeserializeGenesisBlock => {
+      case DeserializeGenesisBlock =>
         assert(stream.empty)
         Block(id,header,None,Some(dGenesisSet(bodyBytes)))
-      }
     }
   }
 
   private def sTxMap(txs:Map[Sid,Transaction]):Array[Byte] = {
     def mapBytes(entry:(Sid,Transaction)):Array[Byte] = getBytes(entry._1) ++ getBytes(entry._2)
     val output = Bytes.concat(
-      txs.toSeq.map(mapBytes(_)):_*
+      txs.toSeq.map(mapBytes):_*
     )
     val total = Ints.toByteArray(txs.keySet.size) ++ output
     Ints.toByteArray(total.length) ++ total

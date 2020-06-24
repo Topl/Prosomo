@@ -15,7 +15,7 @@ import scala.util.Try
   */
 
 trait Update extends Members {
-  import Parameters.{printFlag,epochLength,useGossipProtocol,numGossipers,dataOutInterval,dataOutFlag,useFencing}
+  import Parameters.{printFlag,epochLength,dataOutInterval,dataOutFlag,useFencing}
 
   /**
     * Epoch update routine, called every time currentEpoch increments, calculates the new epoch nonce
@@ -70,7 +70,6 @@ trait Update extends Members {
     }
   }
 
-
   /*********************************************************************************************************************
     * The main update procedure that carries out consensus and forges, by default carried out up to 100 times a second
     *
@@ -88,7 +87,7 @@ trait Update extends Members {
     * The new key is saved to disk, the keys already on disk are made old keys, and the old old key file is erased,
     * leaving only new key and old key on disk.
     *
-    * Gossipers are requested and updated if there are less than the desired number of gossipers
+    * Gossipers are refreshed
     *
     * Chain selection according to MaxValid-BG occurs on the last element of tinePoolWithPrefix
     *
@@ -137,7 +136,6 @@ trait Update extends Members {
         }
         if (globalSlot == localSlot && updating) {
           val keyTime = keys.sk_kes.time(kes)
-
           if (keyTime < globalSlot) {
             keys.sk_kes.update_fast(kes, globalSlot)
           }
@@ -145,19 +143,7 @@ trait Update extends Members {
             forgeBlock(keys)
           }
           keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
-          if (useGossipProtocol) {
-            val newOff = (numGossipers*math.sin(2.0*math.Pi*(globalSlot.toDouble/100.0+phase))/2.0).toInt
-            if (newOff != gOff) {
-              if (gOff < newOff) numHello = 0
-              gOff = newOff
-            }
-            if (gossipers.length < numGossipers + gOff && numHello < 1) {
-              send(selfWrapper,rng.shuffle(holders.filter(_!=selfWrapper)),Hello(selfWrapper,signMac(hash(selfWrapper,serializer), sessionId, keys.sk_sig, keys.pk_sig)))
-              numHello += 1
-            } else if (gossipers.length > numGossipers + gOff) {
-              gossipers = rng.shuffle(gossipers).take(numGossipers + gOff)
-            }
-          }
+          gossipers = gossipSet(holderId,holders)
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
@@ -181,7 +167,7 @@ trait Update extends Members {
       }
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
-        SharedData.issueTxInfo = Some((keys.pkw,inbox))
+        SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
         SharedData.selfWrapper = Some(selfWrapper)
         SharedData.blockTime = {
           val head = localChain.getLastActiveSlot(globalSlot)
@@ -200,28 +186,35 @@ trait Update extends Members {
         SharedData.activeStake = {
           var out = 0.0
           for (info<-inbox) {
-            if (holders.contains(info._2._1)) out += relativeStake(ByteArrayWrapper(info._2._2._1++info._2._2._2++info._2._2._3),stakingState).toDouble
+            info._2._2 match {
+              case Some(pks) => out += relativeStake(ByteArrayWrapper(pks._1++pks._2++pks._3),stakingState).toDouble
+              case None =>
+            }
           }
           out += relativeStake(keys.pkw,stakingState).toDouble
           out
         }
         for (holder<-holders) {
-          inbox.toList.find(info=>info._2._1==holder) match {
+          inbox.toList.find(info=>info._2._1.contains(holder)) match {
             case Some(inboxInfo) => Try{
-              val hpk:PublicKeyW = ByteArrayWrapper(inboxInfo._2._2._1++inboxInfo._2._2._2++inboxInfo._2._2._3)
-              val str = holder.actorPath.toString
-              wallet.confirmedState.get(hpk) match {
-                case Some(st) =>
-                  val ha = relativeStake(hpk,wallet.confirmedState).toDouble
-                  SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
-                  SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
-                case None =>
-              }
-              stakingState.get(hpk) match {
-                case Some(st) =>
-                  val ha = relativeStake(hpk,stakingState).toDouble
-                  SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
-                  SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
+              inboxInfo._2._2 match {
+                case Some(hpks:PublicKeys) =>
+                  val hpk:PublicKeyW = ByteArrayWrapper(hpks._1++hpks._2++hpks._3)
+                  val str = holder.actorPath.toString
+                  wallet.confirmedState.get(hpk) match {
+                    case Some(st) =>
+                      val ha = relativeStake(hpk,wallet.confirmedState).toDouble
+                      SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
+                      SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
+                    case None =>
+                  }
+                  stakingState.get(hpk) match {
+                    case Some(st) =>
+                      val ha = relativeStake(hpk,stakingState).toDouble
+                      SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
+                      SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
+                    case None =>
+                  }
                 case None =>
               }
             }
