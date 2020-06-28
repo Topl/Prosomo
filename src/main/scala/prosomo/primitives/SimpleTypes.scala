@@ -7,25 +7,26 @@ import scala.math.BigInt
 /**
   * AMS 2020:
   * Shared types trait referenced project wide,
-  * you will need this if you want to interact with any consensus components
+  * You will likely need to include this if you want to interact with any consensus components
   */
 
 trait SimpleTypes {
-  val pk_length = 32
-  val pkw_length = pk_length*3
-  val sig_length = 64
-  val hash_length = 32
-  val eta_length = 32
-  val int_length = 4
-  val long_length = 8
-  val sid_length = 32
-  val pi_length = 80
-  val rho_length = 64
-  val id_length = hash_length
-  val mac_length = 2*hash_length + sig_length + pk_length
-  val slot_length = int_length
-  val bn_length = int_length
-  val sk_length = 32
+
+  val pk_length: Int = 32
+  val pkw_length: Int = pk_length*3
+  val sig_length: Int = 64
+  val hash_length: Int = 32
+  val eta_length: Int = 32
+  val int_length: Int = 4
+  val long_length: Int = 8
+  val sid_length: Int = 32
+  val pi_length: Int = 80
+  val rho_length: Int = 64
+  val id_length: Int = hash_length
+  val mac_length: Int = hash_length + long_length
+  val slot_length: Int = int_length
+  val bn_length: Int = int_length
+  val sk_length: Int = 32
 
   type Hash = ByteArrayWrapper
   type Eta = Array[Byte]
@@ -43,10 +44,11 @@ trait SimpleTypes {
   type SlotId = (Slot,BlockId)
   type Cert = (PublicKey,Rho,Pi,PublicKey,Ratio,String)
   type TransactionSet = Seq[Transaction]
-  type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt,Mac)]
+  type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt)]
   type MalkinSignature = (Array[Byte],Array[Byte],Array[Byte],Int,Array[Byte])
-  type BlockHeader = (Hash,Mac,Slot,Cert,Rho,Pi,MalkinSignature,PublicKey,BlockNumber,Slot)
+  type BlockHeader = (Hash,Hash,Slot,Cert,Rho,Pi,MalkinSignature,PublicKey,BlockNumber,Slot)
   type Request = (List[SlotId],Int,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
   type MemPool = Map[Sid,(Transaction,Int)]
+
 }

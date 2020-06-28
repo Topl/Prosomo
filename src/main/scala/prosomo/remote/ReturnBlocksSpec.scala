@@ -3,9 +3,9 @@ package prosomo.remote
 import scorex.core.network.message.Message.MessageCode
 import scorex.core.network.message.MessageSpecV1
 import scorex.util.serialization.{Reader, Writer}
-import prosomo.components.{Block, SerializationMethods}
+import prosomo.components.SerializationMethods
 import prosomo.components.Serializer.DeserializeReturnBlocks
-import prosomo.primitives.{ByteStream, Mac}
+import prosomo.primitives.ByteStream
 import prosomo.remote.SpecTypes.{ReturnBlocksType,returnBlocksCode}
 
 /**

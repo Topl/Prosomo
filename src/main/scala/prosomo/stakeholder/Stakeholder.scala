@@ -90,8 +90,6 @@ class Stakeholder(
   var diffuseSent = false
   //list of all or some of the stakeholders, including self, that the stakeholder is aware of
   var holders: List[ActorRefWrapper] = List()
-  //list of stakeholders that all new blocks and transactions are sent to
-  var gossipers: List[ActorRefWrapper] = List()
   //gossipers offset
   var gOff = 0
   //number of tries to issue hello in slots

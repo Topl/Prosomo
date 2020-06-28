@@ -1,7 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Fch, Ratio, Sig, Types}
+import prosomo.primitives.{Fch, Sig, Types}
 import prosomo.stakeholder.Transactions
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
@@ -27,7 +27,7 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
   var reallocated:Map[PublicKeyW,Int] = Map()
   val fch:Fch = new Fch
 
-  def addTx(transaction: Transaction) = {
+  def addTx(transaction: Transaction): Unit = {
     if (transaction.sender == pkw) {
       if (!pendingTxsOut.keySet.contains(transaction.sid)) {
         pendingTxsOut += (transaction.sid -> transaction)
@@ -35,7 +35,7 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     }
   }
 
-  def removeTx(transaction: Transaction) = {
+  def removeTx(transaction: Transaction): Unit = {
     if (transaction.sender == pkw) {
       if (pendingTxsOut.keySet.contains(transaction.sid)) {
         pendingTxsOut -= transaction.sid
@@ -83,7 +83,7 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     }
   }
 
-  def update(state:State) = {
+  def update(state:State): Unit = {
     issueState = state
     confirmedState = state
     for (entry <- pendingTxsOut) {
@@ -94,24 +94,21 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     for (entry <- sortPendingTx) {
       val trans = entry._2
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) => {
+        case Some(value:State) =>
           issueState = value
-        }
-        case _ => {
+        case _ =>
           pendingTxsOut = Map()
-        }
       }
     }
     for (entry<-reallocated.keySet) {
       confirmedState.get(entry) match {
         case None => reallocated -= entry
-        case Some(info) => {
+        case Some(info) =>
           if (info._3 > reallocated(entry) && info._1 > 0) {
             reallocated -= entry
           } else if (info._1 == 0) {
             reallocated -= entry
           }
-        }
       }
     }
   }
@@ -126,29 +123,27 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     out
   }
 
-  def add(ledger:TransactionSet) = {
+  def add(ledger:TransactionSet): Unit = {
     for (entry <- ledger) {
       entry match {
-        case transaction: Transaction => {
+        case transaction: Transaction =>
           addTx(transaction)
-        }
         case _ =>
       }
     }
   }
 
-  def remove(ledger:TransactionSet) = {
+  def remove(ledger:TransactionSet): Unit = {
     for (entry <- ledger) {
       entry match {
-        case transaction: Transaction => {
+        case transaction: Transaction =>
           removeTx(transaction)
-        }
         case _ =>
       }
     }
   }
 
-  def sortPendingTx = {
+  def sortPendingTx: ListMap[Sid, Transaction] = {
     ListMap(pendingTxsOut.toSeq.sortWith(_._2.nonce < _._2.nonce): _*)
   }
 
@@ -176,14 +171,12 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
       val txC = issueState(pkw)._3
       val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) => {
+        case Some(value:State) =>
           issueState = value
           pendingTxsOut += (trans.sid->trans)
           Some(trans)
-        }
-        case _ => {
+        case _ =>
           None
-        }
       }
     } else {
       None
@@ -195,16 +188,14 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
       val txC = issueState(sender)._3
       val trans:Transaction = signTransaction(sk_sig,sender,recip,delta,txC,sig,rng,serializer)
       applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) => {
+        case Some(value:State) =>
           if (sender == pkw) {
             issueState = value
             pendingTxsOut += (trans.sid->trans)
           }
           Some(trans)
-        }
-        case _ => {
+        case _ =>
           None
-        }
       }
     } else {
       None

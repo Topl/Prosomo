@@ -4,7 +4,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
 import prosomo.primitives.Parameters._
-import prosomo.primitives.{Keys, Mac, ForgingKey, Ratio, SharedData, Types}
+import prosomo.primitives.{Keys, ForgingKey, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 import scala.math.BigInt
 import scala.util.Try
@@ -39,7 +39,7 @@ trait Forging extends Members with Types {
       val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"))
       val rho: Rho = vrf.vrfProofToHash(pi)
       val h: Hash = hash(pb,serializer)
-      val ledger:Mac = signMac(hash(txs,serializer), sessionId, forgerKeys.sk_sig, forgerKeys.pk_sig)
+      val ledger:Hash = hash(txs,serializer)
       val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,metaInfo)
       val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(
         kes,
@@ -52,15 +52,15 @@ trait Forging extends Members with Types {
           ++serializer.getBytes(bn)
           ++serializer.getBytes(ps)
       )
-      val b = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
+      val b:BlockHeader = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
-      if (printFlag) {println(s"Holder $holderIndex forged block $bn with id:${Base58.encode(hb.data)} with ${txs.length} txs")}
+      if (printFlag) {println(s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs")}
       val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
         case Some(forgedState:State) =>
           assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
-          send(selfWrapper,gossipers, SendBlock(block,signMac(block.id, sessionId, keys.sk_sig, keys.pk_sig)))
+          send(selfWrapper,gossipSet(selfWrapper,holders), SendBlock(block,selfWrapper))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter
@@ -87,15 +87,13 @@ trait Forging extends Members with Types {
 
   def forgeGenBlock(eta0:Eta,
                     holderKeys:Map[Int,PublicKeyW],
-                    coordId:String,
                     pk_sig:PublicKey,
                     pk_vrf:PublicKey,
                     pk_kes:PublicKey,
-                    sk_sig:PublicKey,
                     sk_vrf:PublicKey,
                     sk_kes:ForgingKey
                    ): Block = {
-    def genEntry(index:Int) = {
+    def genEntry(index:Int): (Array[Byte], PublicKeyW, BigInt) = {
       val initStake = {
         val out = stakeDistribution match {
           case "random" => initStakeMax*rng.nextDouble
@@ -118,10 +116,7 @@ trait Forging extends Members with Types {
         pkw,
         BigDecimal(initStake)
           .setScale(0, BigDecimal.RoundingMode.HALF_UP)
-          .toBigInt,
-        signMac(hashGenEntry((genesisBytes.data, pkw, BigDecimal(initStake)
-          .setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt), serializer),
-          ByteArrayWrapper(fch.hash(coordId)),sk_sig,pk_sig)
+          .toBigInt
       )
     }
     val bn:Int = 0
@@ -133,12 +128,7 @@ trait Forging extends Members with Types {
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
     val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
-    val ledger:Mac = signMac(
-      hashGen(genesisEntries,serializer),
-      ByteArrayWrapper(fch.hash("coordId")),
-      sk_sig,
-      pk_sig
-    )
+    val ledger:Hash = hashGen(genesisEntries,serializer)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:MalkinSignature = sk_kes.sign(
       kes,

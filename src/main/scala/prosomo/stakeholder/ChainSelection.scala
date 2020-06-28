@@ -71,7 +71,7 @@ trait ChainSelection extends Members {
     }
     for (trans:Transaction <- wallet.getPending(localState)) {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(selfWrapper,gossipers, SendTx(trans))
+      send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
     }
 
     def collectStake():Unit = Try{
@@ -83,7 +83,7 @@ trait ChainSelection extends Members {
                 println("Holder " + holderIndex.toString + " Reallocated Stake")
               txCounter += 1
               memPool += (trans.sid->(trans,0))
-              send(selfWrapper,gossipers, SendTx(trans))
+              send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
               wallet.reallocated += (entry._1->trans.nonce)
             case _ =>
           }
@@ -134,14 +134,12 @@ trait ChainSelection extends Members {
                   } else {
                     tineMaxDepth
                   }
-                  val request:Request = (List(parentId),depth,job._1)
-                  send(selfWrapper,ref, RequestTine(parentId,depth,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                  send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
                 } else {
                   if (holderIndex == SharedData.printingHolder && printFlag) println(
                     "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
                   )
-                  val request:Request = (List(parentId),0,job._1)
-                  send(selfWrapper,ref, RequestBlock(parentId,signMac(hash(request,serializer),sessionId,keys.sk_sig,keys.pk_sig),job._1))
+                  send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
                 }
                 if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
                 foundAncestor = false

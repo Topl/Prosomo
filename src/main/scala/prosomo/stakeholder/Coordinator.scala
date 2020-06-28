@@ -80,7 +80,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var memPool:MemPool = Map()
   var diffuseSent = false
   var holders: List[ActorRefWrapper] = List()
-  var gossipers: List[ActorRefWrapper] = List()
   var gOff = 0
   var numHello = 0
   var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])] = Map()
@@ -130,7 +129,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   var fileWriter:Any = 0
   var graphWriter:Any = 0
-  var gossipersMap:Map[ActorRefWrapper,List[ActorRefWrapper]] = Map()
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
   var networkDelayList: List[Double] = List(0.0)
@@ -276,7 +274,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def forge():Unit = {
     println("Forge Genesis Block")
     val holderKeys = List.range(0,numGenesisHolders).map(i =>i-> pkFromIndex(i)).toMap
-    forgeGenBlock(eta0,holderKeys,coordId,pk_sig,pk_vrf,pk_kes,sk_sig,sk_vrf,sk_kes) match {
+    forgeGenBlock(eta0,holderKeys,pk_sig,pk_vrf,pk_kes,sk_vrf,sk_kes) match {
       case newBlock:Block => genesisBlock = Some(newBlock)
     }
     blocks.store(genBlockKey,genesisBlock.get)
@@ -416,37 +414,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           case fw:BufferedWriter => fw.flush()
           case _ => println("File writer not initialized")
         }
-        case "graph" =>
-          println("Writing network graph matrix...")
-          gossipersMap = getGossipers(holders.filterNot(_.remote))
-          val dateString = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString.replace(":", "-")
-          val uid = uuid
-          graphWriter = new BufferedWriter(new FileWriter(s"$dataFileDir/ouroboros-graph-$uid-$dateString.graph"))
-          graphWriter match {
-            case fw:BufferedWriter =>
-              var line:String = ""
-              for (holder<-holders.filterNot(_.remote)) {
-                line = ""
-                for (ref<-holders.filterNot(_.remote)) {
-                  if (gossipersMap(holder).contains(ref)) {
-                    line = line + "1"
-                  } else {
-                    line = line + "0"
-                  }
-                  if (holders.filterNot(_.remote).indexOf(ref)!=holders.filterNot(_.remote).length-1) {
-                    line = line + " "
-                  }
-                }
-                fw.write(line+"\n")
-              }
-              fw.flush()
-            case _ =>
-          }
-          graphWriter match {
-            case fw:BufferedWriter =>
-              fw.close()
-            case _ =>
-          }
         case "tree_all" =>
           for (holder<-holders.filterNot(_.remote)) {
             printTree(holder)
@@ -472,7 +439,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
-          gossipersMap = getGossipers(holders)
 
         case "bridge" =>
           parties = List()
@@ -486,7 +452,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
-          gossipersMap = getGossipers(holders)
 
         case "join" =>
           parties = List()
@@ -494,7 +459,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           sendAssertDone(holders.filterNot(_.remote),Party(holders,clear = true))
           holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders
-          gossipersMap = getGossipers(holders.filterNot(_.remote))
 
         case "new_holder" =>
           println("Bootstrapping new holder...")
@@ -572,7 +536,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
-            gossipersMap = getGossipers(holders)
           }
 
           val arg3 = "bridge_stake_"
@@ -617,7 +580,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
-            gossipersMap = getGossipers(holders)
           }
 
           val arg4 = "issue_"

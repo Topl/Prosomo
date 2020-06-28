@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
-import prosomo.primitives.{Mac, Parameters, Ratio, SharedData, Types}
+import prosomo.primitives.{Parameters, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
@@ -30,8 +30,7 @@ trait Validation extends Members with Types {
         ++rho++pi++serializer.getBytes(bn)
         ++serializer.getBytes(ps),
       (sig._1,sig._2,sig._3), slot-sig._4) &&
-      pk_kes.deep == fch.hash(Ints.toByteArray(sig._4)++sig._5).deep &&
-      verifyMac(ledger.dataHash,ledger)
+      pk_kes.deep == fch.hash(Ints.toByteArray(sig._4)++sig._5).deep
   }
 
   def verifyBlock(b:Block): Boolean = {
@@ -41,10 +40,7 @@ trait Validation extends Members with Types {
       b.genesisSet match {
         case Some(txs:GenesisSet) =>
           if (txs.nonEmpty) {
-            hashGen(txs,serializer) == header._2.dataHash && txs.map {
-              input: (Array[Byte], ByteArrayWrapper, BigInt, Mac) =>
-              verifyMac(hashGenEntry((input._1, input._2, input._3), serializer), input._4)
-            }.reduceLeft(_ && _)
+            hashGen(txs,serializer) == header._2
           } else {
             false
           }
@@ -55,12 +51,12 @@ trait Validation extends Members with Types {
         case Some(txs:TransactionSet) =>
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
-              val (out1,out2) = (hash(txs,serializer) == header._2.dataHash , txs.map(verifyTransaction).reduceLeft(_ && _))
+              val (out1,out2) = (hash(txs,serializer) == header._2 , txs.map(verifyTransaction).reduceLeft(_ && _))
               if (!out1) println("Error: txs hash failed")
               if (!out2) println("Error: txs verify failed")
               out1 && out2
             } else {
-              val out = hash(txs,serializer) == header._2.dataHash
+              val out = hash(txs,serializer) == header._2
               if (!out) println("Error: empty txs failed hash")
               out
             }
@@ -110,7 +106,7 @@ trait Validation extends Members with Types {
               pid = id
             case _ => bool &&= false
           }
-        case _ =>
+        case _ => bool &&= false
       }
     }
 
@@ -310,9 +306,9 @@ trait Validation extends Members with Types {
       println(s"Prefix: $prefix")
       println(s"Epoch Prefix ${prefix/epochLength}")
       println("Local chain:")
-      localChain.print
+      localChain.print()
       println("Tine:")
-      tine.print
+      tine.print()
     }
     isValid
   }

@@ -1,7 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Mac, SimpleTypes}
+import prosomo.primitives.{SimpleTypes}
 import prosomo.primitives.Types.{BlockHeader,GenesisSet,TransactionSet}
 
 /**
@@ -22,7 +22,7 @@ case class Block(identifier:ByteArrayWrapper,
   }
   def prosomoHeader:BlockHeader = blockHeader.get
   def pid:BlockId = prosomoHeader._1
-  def ledger:Mac = prosomoHeader._2
+  def ledger:Hash = prosomoHeader._2
   def slot:Slot = prosomoHeader._3
   def certificate:Cert = prosomoHeader._4
   def nonce:Rho = prosomoHeader._5

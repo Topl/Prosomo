@@ -16,25 +16,28 @@ object SpecTypes {
    */
 
   //Diffuse message type for diffusing public keys, not used in Genesis, only for estimate of active stake
-  type DiffuseDataType = (String,String,PublicKeys,Mac)
+  type DiffuseDataType = (String,String,String,Sid,PublicKeys)
 
   //Hello message for bootstrapping peers, fetch information functionality
-  type HelloDataType = (String,String,Slot,Mac)
+  type HelloDataType = (String,String,Slot)
 
   //Tinepool request block
-  type RequestBlockType = (String,String,SlotId,Mac,Int)
+  type RequestBlockType = (String,String,SlotId,Int)
 
   //Tinepool request tine
-  type RequestTineType = (String,String,SlotId,Int,Mac,Int)
+  type RequestTineType = (String,String,SlotId,Int,Int)
 
   //Tinepool returned block
-  type ReturnBlocksType = (String,String,List[Block],Mac,Int)
+  type ReturnBlocksType = (String,String,List[Block],Int)
 
   //New blocks to be gossiped
-  type SendBlockType = (String,String,Block,Mac)
+  type SendBlockType = (String,String,Block)
 
   //New Txs to be gossiped
   type SendTxType = (String,String,Transaction)
+
+  //Establish session key and actor paths
+  type HoldersType = (List[String],PublicKey)
 
   //Flood: ingress -> if new entry then egress multicast
   val diffuseCode:Byte = 100:Byte

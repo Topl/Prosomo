@@ -4,7 +4,7 @@ import akka.actor.ActorPath
 import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
-import prosomo.primitives.{KeyFile, Mac}
+import prosomo.primitives.{KeyFile}
 
 import scala.math.BigInt
 
@@ -24,8 +24,6 @@ case object WriteFile
 case object StallActor
 case object ReadCommand
 case object Verify
-case object RequestGossipers
-case object NewGossipers
 case object RequestState
 case object RequestBlockTree
 case object Populate
@@ -39,13 +37,13 @@ case object Register
 case object BootstrapJob
 
 //signed messages between holders, messages from remote
-case class DiffuseData(ref:ActorRefWrapper, pks:PublicKeys, mac:Mac)
-case class Hello(ref:ActorRefWrapper,slot:Slot, mac:Mac)
-case class RequestBlock(id:SlotId,mac:Mac,job:Int)
-case class RequestTine(id:SlotId, depth:Int, mac:Mac, job:Int)
-case class ReturnBlocks(blocks:List[Block],mac:Mac,job:Int)
-case class SendBlock(block:Block,mac:Mac)
-case class SendTx(transaction:Transaction)
+case class DiffuseData(sid:Sid,ref:ActorRefWrapper,pks:PublicKeys,sender:ActorRefWrapper)
+case class Hello(slot:Slot,sender:ActorRefWrapper)
+case class RequestBlock(id:SlotId,job:Int,sender:ActorRefWrapper)
+case class RequestTine(id:SlotId, depth:Int,job:Int,sender:ActorRefWrapper)
+case class ReturnBlocks(blocks:List[Block],job:Int,sender:ActorRefWrapper)
+case class SendBlock(block:Block,sender:ActorRefWrapper)
+case class SendTx(transaction:Transaction,sender:ActorRefWrapper)
 
 //messages between coordinator/router and holders
 case class NewHolderFromUI(kf:KeyFile,dir:String,pswd:String,name:String,kdir:String)

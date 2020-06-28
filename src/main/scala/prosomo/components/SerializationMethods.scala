@@ -28,7 +28,8 @@ trait SerializationMethods extends SimpleTypes {
     RequestTineType,
     ReturnBlocksType,
     SendBlockType,
-    SendTxType
+    SendTxType,
+    HoldersType
   }
 
   def getBytes(bytes:Array[Byte]):Array[Byte] = bytes
@@ -45,7 +46,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(mac:Mac):Array[Byte] = sMac(mac)
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
-  def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt,Mac)):Array[Byte] = sGen(gen)
+  def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt)):Array[Byte] = sGen(gen)
   def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
@@ -60,7 +61,7 @@ trait SerializationMethods extends SimpleTypes {
   def getReturnBlocksBytes(msg:ReturnBlocksType):Array[Byte] = sReturnBlocks(msg)
   def getSendBlockBytes(msg:SendBlockType):Array[Byte] = sSendBlock(msg)
   def getSendTxBytes(msg:SendTxType):Array[Byte] = sSendTx(msg)
-  def getHoldersBytes(msg:List[String]):Array[Byte] = sHolders(msg)
+  def getHoldersBytes(msg:HoldersType):Array[Byte] = sHolders(msg)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 
   def fromBytes(input:ByteStream): Any = {
@@ -88,23 +89,24 @@ trait SerializationMethods extends SimpleTypes {
     }
   }
 
-  private def sHolders(msg:List[String]):Array[Byte] = {
-    val out = Bytes.concat(msg.map(sString):_*)
-    Ints.toByteArray(msg.length) ++ out
+  private def sHolders(msg:HoldersType):Array[Byte] = {
+    val out = Bytes.concat(msg._1.map(sString):_*)
+    Ints.toByteArray(msg._1.length) ++ out ++ getBytes(msg._2)
   }
 
-  private def dHolders(stream: ByteStream):List[String] = {
+  private def dHolders(stream: ByteStream):HoldersType = {
     val listLen = stream.getInt
-    var out:List[String] = List()
+    var out1:List[String] = List()
     var i = 0
     while (i < listLen) {
       val outLen = stream.getInt
       val outBytes = new ByteStream(stream.get(outLen),stream.caseObject)
-      out ::= dString(outBytes)
+      out1 ::= dString(outBytes)
       i += 1
     }
+    val out2 = stream.get(pk_length)
     assert(stream.empty)
-    out
+    (out1,out2)
   }
 
   private def sSendTx(msg:SendTxType): Array[Byte] = {
@@ -133,35 +135,37 @@ trait SerializationMethods extends SimpleTypes {
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
-      msg._3._1,
-      msg._3._2,
-      msg._3._3,
-      sMac(msg._4)
+      sString(msg._3),
+      getBytes(msg._4),
+      getBytes(msg._5._1),
+      getBytes(msg._5._2),
+      getBytes(msg._5._3)
     )
   }
 
   private def dDiffuse(stream:ByteStream):DiffuseDataType = {
-    val strLen = stream.getInt
-    val strBytes = new ByteStream(stream.get(strLen),stream.caseObject)
-    val str = dString(strBytes)
+    val strLen1 = stream.getInt
+    val strBytes1 = new ByteStream(stream.get(strLen1),stream.caseObject)
+    val str1 = dString(strBytes1)
     val strLen2 = stream.getInt
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
+    val strLen3 = stream.getInt
+    val strBytes3 = new ByteStream(stream.get(strLen3),stream.caseObject)
+    val str3 = dString(strBytes3)
+    val sid = ByteArrayWrapper(stream.get(hash_length))
     val pk1 = stream.get(pk_length)
     val pk2 = stream.get(pk_length)
     val pk3 = stream.get(pk_length)
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     assert(stream.empty)
-    (str,str2,(pk1,pk2,pk3),mac)
+    (str1,str2,str3,sid,(pk1,pk2,pk3))
   }
 
   private def sHello(msg: HelloDataType):Array[Byte] = {
     Bytes.concat(
       sString(msg._1),
       sString(msg._2),
-      Ints.toByteArray(msg._3),
-      sMac(msg._4)
+      Ints.toByteArray(msg._3)
     )
   }
 
@@ -173,10 +177,8 @@ trait SerializationMethods extends SimpleTypes {
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
     val slot = stream.getInt
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     assert(stream.empty)
-    (str,str2,slot,mac)
+    (str,str2,slot)
   }
 
   private def sRequestTine(msg: RequestTineType):Array[Byte] = {
@@ -185,26 +187,23 @@ trait SerializationMethods extends SimpleTypes {
       sString(msg._2),
       getBytes(msg._3),
       getBytes(msg._4),
-      sMac(msg._5),
-      getBytes(msg._6)
+      getBytes(msg._5)
     )
   }
 
   private def dRequestTine(stream: ByteStream):RequestTineType = {
-    val strLen = stream.getInt
-    val strBytes = new ByteStream(stream.get(strLen),stream.caseObject)
-    val str = dString(strBytes)
+    val strLen1 = stream.getInt
+    val strBytes1 = new ByteStream(stream.get(strLen1),stream.caseObject)
+    val str1 = dString(strBytes1)
     val strLen2 = stream.getInt
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
     val slot = stream.getInt
     val blockId = ByteArrayWrapper(stream.get(id_length))
     val depth = stream.getInt
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     val job = stream.getInt
     assert(stream.empty)
-    (str,str2,(slot,blockId),depth,mac,job)
+    (str1,str2,(slot,blockId),depth,job)
   }
 
   private def sRequestBlock(msg: RequestBlockType):Array[Byte] = {
@@ -212,25 +211,22 @@ trait SerializationMethods extends SimpleTypes {
       sString(msg._1),
       sString(msg._2),
       getBytes(msg._3),
-      sMac(msg._4),
-      getBytes(msg._5)
+      getBytes(msg._4)
     )
   }
 
   private def dRequestBlock(stream: ByteStream):RequestBlockType = {
-    val strLen = stream.getInt
-    val strBytes = new ByteStream(stream.get(strLen),stream.caseObject)
-    val str = dString(strBytes)
+    val strLen1 = stream.getInt
+    val strBytes1 = new ByteStream(stream.get(strLen1),stream.caseObject)
+    val str1 = dString(strBytes1)
     val strLen2 = stream.getInt
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
     val slot = stream.getInt
     val blockId = ByteArrayWrapper(stream.get(id_length))
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     val job = stream.getInt
     assert(stream.empty)
-    (str,str2,(slot,blockId),mac,job)
+    (str1,str2,(slot,blockId),job)
   }
 
   private def sReturnBlocks(msg: ReturnBlocksType):Array[Byte] = {
@@ -243,15 +239,14 @@ trait SerializationMethods extends SimpleTypes {
       sString(msg._2),
       getBytes(msg._3.length),
       Bytes.concat(msg._3.map(mapFunc):_*),
-      sMac(msg._4),
-      getBytes(msg._5)
+      getBytes(msg._4)
     )
   }
 
   private def dReturnBlocks(stream:ByteStream):ReturnBlocksType = {
-    val strLen = stream.getInt
-    val strBytes = new ByteStream(stream.get(strLen),stream.caseObject)
-    val str = dString(strBytes)
+    val strLen1 = stream.getInt
+    val strBytes1 = new ByteStream(stream.get(strLen1),stream.caseObject)
+    val str1 = dString(strBytes1)
     val strLen2 = stream.getInt
     val strBytes2 = new ByteStream(stream.get(strLen2),stream.caseObject)
     val str2 = dString(strBytes2)
@@ -264,12 +259,10 @@ trait SerializationMethods extends SimpleTypes {
       out = out ++ List(dBlock(outBytes))
       i += 1
     }
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     val job = stream.getInt
     assert(out.length == numBlocks)
     assert(stream.empty)
-    (str,str2,out,mac,job)
+    (str1,str2,out,job)
   }
 
   private def sSendBlock(msg:SendBlockType):Array[Byte] = {
@@ -278,8 +271,7 @@ trait SerializationMethods extends SimpleTypes {
       sString(msg._1),
       sString(msg._2),
       getBytes(blockBytes.length),
-      blockBytes,
-      sMac(msg._4)
+      blockBytes
     )
   }
 
@@ -293,10 +285,8 @@ trait SerializationMethods extends SimpleTypes {
     val outLen = stream.getInt
     val outBytes = new ByteStream(stream.get(outLen),DeserializeBlock)
     val out = dBlock(outBytes)
-    val macBytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val mac = dMac(macBytes)
     assert(stream.empty)
-    (str,str2,out,mac)
+    (str,str2,out)
   }
 
   private def sBoolean(bool:Boolean):Array[Byte] = {
@@ -388,10 +378,8 @@ trait SerializationMethods extends SimpleTypes {
 
   private def sMac(mac: Mac):Array[Byte] = {
     val output = Bytes.concat(
-      mac.dataHash.data,
-      mac.sid.data,
-      mac.signature,
-      mac.publicKey
+      mac.hash.data,
+      getBytes(mac.time)
     )
     output
   }
@@ -399,9 +387,7 @@ trait SerializationMethods extends SimpleTypes {
   private def dMac(stream:ByteStream):Mac = {
     val out = Mac(
       ByteArrayWrapper(stream.get(hash_length)),
-      ByteArrayWrapper(stream.get(hash_length)),
-      stream.get(sig_length),
-      stream.get(pk_length)
+      stream.getLong
     )
     assert(stream.empty)
     out
@@ -440,29 +426,25 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sGen(gen:(Array[Byte], ByteArrayWrapper, BigInt,Mac)):Array[Byte] = {
+  private def sGen(gen:(Array[Byte], ByteArrayWrapper, BigInt)):Array[Byte] = {
     val output = Bytes.concat(
       gen._1,
       gen._2.data,
-      sBigInt(gen._3),
-      sMac(gen._4)
+      sBigInt(gen._3)
     )
     Ints.toByteArray(output.length) ++ output
   }
 
-  private def dGen(stream: ByteStream):(Array[Byte], ByteArrayWrapper, BigInt,Mac) = {
+  private def dGen(stream: ByteStream):(Array[Byte], ByteArrayWrapper, BigInt) = {
     val out1 = stream.get(hash_length)
     val out2 = ByteArrayWrapper(stream.get(pkw_length))
     val out3len = stream.getInt
     val out3Bytes = new ByteStream(stream.get(out3len),stream.caseObject)
     val out3 = dBigInt(out3Bytes)
-    val out4Bytes = new ByteStream(stream.get(mac_length),stream.caseObject)
-    val out4 = dMac(out4Bytes)
     val out = (
       out1,
       out2,
-      out3,
-      out4
+      out3
     )
     assert(stream.empty)
     out
@@ -470,14 +452,14 @@ trait SerializationMethods extends SimpleTypes {
 
   private def sBlockHeader(bh:BlockHeader):Array[Byte] = {
     Bytes.concat(
-      bh._1.data,
+      getBytes(bh._1),
       getBytes(bh._2),
       getBytes(bh._3),
       getBytes(bh._4),
-      bh._5,
-      bh._6,
+      getBytes(bh._5),
+      getBytes(bh._6),
       getBytes(bh._7),
-      bh._8,
+      getBytes(bh._8),
       getBytes(bh._9),
       getBytes(bh._10)
     )
@@ -485,8 +467,7 @@ trait SerializationMethods extends SimpleTypes {
 
   private def dBlockHeader(stream:ByteStream):BlockHeader = {
     val out1 = ByteArrayWrapper(stream.get(hash_length))
-    val out2Bytes = new ByteStream(stream.get(mac_length),DeserializeMac)
-    val out2 = dMac(out2Bytes)
+    val out2 = ByteArrayWrapper(stream.get(hash_length))
     val out3 = stream.getInt
     val out4len = stream.getInt
     val out4Bytes = new ByteStream(stream.get(out4len),DeserializeBlockHeader)

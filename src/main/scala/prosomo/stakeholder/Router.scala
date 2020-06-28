@@ -4,10 +4,11 @@ import akka.actor.{Actor, ActorPath, Props, Timers}
 import akka.util.Timeout
 import prosomo.cases._
 import prosomo.components.Serializer
-import prosomo.primitives.{Distance, Fch, Parameters, SharedData, Types}
-import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
+import prosomo.primitives.{Distance, Fch, Parameters, SharedData, Types, Ecx}
+import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, HoldersType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.util.encode.Base58
+
 import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -37,6 +38,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var holders:List[ActorRefWrapper] = List()
   val rng = new Random(BigInt(seed).toLong)
   val fch = new Fch
+  val ecx = new Ecx
   var holdersPosition:Map[ActorRefWrapper,(Double,Double)] = Map()
   var distanceMap:Map[(ActorRefWrapper,ActorRefWrapper),Long] = Map()
   var holderMessages:Map[Slot,Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]]] = Map()
@@ -59,6 +61,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var connectedPeer:Set[ConnectedPeer] = Set()
   var bootStrapJobs:Set[ActorRefWrapper] = Set()
   implicit val routerRef: ActorRefWrapper = ActorRefWrapper.routerRef(self)
+
+  val sk_ecx:PrivateKey = ecx.generateSK
+  val pk_ecx:PublicKey = ecx.scalarMultBasePoint(sk_ecx)
 
   private case object ActorPathSendTimerKey
 
@@ -306,8 +311,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case Update => update
 
     case ActorPathSendTimerKey =>
-      if (!holders.forall(_.remote)) sendToNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
-      holders.filterNot(_.remote).foreach(_ ! NewGossipers)
+      if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
 
     case value:SetClock =>
       t0 = value.t0
@@ -348,7 +352,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         }
       case _ => None
     }
-
   }
 
   private def messageFromPeer: Receive = {
@@ -359,9 +362,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case msg:DiffuseDataType@unchecked =>
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    DiffuseData(s,msg._3,msg._4)
-                  )(context.system.dispatcher,self)
+                  Try{ActorPath.fromString(msg._3)} match {
+                    case Success(ref:ActorPath) =>
+                      if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                        DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
+                      )(context.system.dispatcher,self)
+                    case _ => None
+                  }
                 case None =>
               }
             case _ =>
@@ -372,7 +379,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    Hello(s,msg._3,msg._4)
+                    Hello(msg._3,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: Hello message not parsed")
               }
@@ -382,9 +389,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:RequestBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
-                case Some((_:ActorRefWrapper,r:ActorRefWrapper)) =>
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    RequestBlock(msg._3,msg._4,msg._5)
+                    RequestBlock(msg._3,msg._4,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: RequestBlock message not parsed")
               }
@@ -394,9 +401,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:RequestTineType@unchecked =>
               getRefs(msg._1,msg._2) match {
-                case Some((_:ActorRefWrapper,r:ActorRefWrapper)) =>
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    RequestTine(msg._3,msg._4,msg._5,msg._6)
+                    RequestTine(msg._3,msg._4,msg._5,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: RequestTine message not parsed")
               }
@@ -406,9 +413,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:ReturnBlocksType@unchecked =>
               getRefs(msg._1,msg._2) match {
-                case Some((_:ActorRefWrapper,r:ActorRefWrapper)) =>
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    ReturnBlocks(msg._3,msg._4,msg._5)
+                    ReturnBlocks(msg._3,msg._4,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: ReturnBlocks message not parsed")
               }
@@ -418,9 +425,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:SendBlockType@unchecked =>
               getRefs(msg._1,msg._2) match {
-                case Some((_:ActorRefWrapper,r:ActorRefWrapper)) =>
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    SendBlock(msg._3,msg._4)
+                    SendBlock(msg._3,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: SendBlock message not parsed")
               }
@@ -430,9 +437,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           data match {
             case msg:SendTxType@unchecked =>
               getRefs(msg._1,msg._2) match {
-                case Some((_:ActorRefWrapper,r:ActorRefWrapper)) =>
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    SendTx(msg._3)
+                    SendTx(msg._3,s)
                   )(context.system.dispatcher,self)
                 case None => println("error: SendTx message not parsed")
               }
@@ -440,9 +447,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         case HoldersFromRemoteSpec.messageCode =>
           data match {
-            case msg:List[String]@unchecked =>
-              var toDiffuse = false
-              for (string<-msg) {
+            case msg:HoldersType@unchecked =>
+              for (string<-msg._1) {
                 Try{ActorPath.fromString(string)}.toOption match {
                   case Some(newPath:ActorPath) =>
                     holders.find(_.path == newPath) match {
@@ -458,15 +464,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                         }
                         println("New holder "+newPath.toString)
                         coordinatorRef ! HoldersFromRemote(holders)
-                        toDiffuse = true
-                        if (!holders.forall(_.remote)) sendToNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+                        if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
                       case Some(actorRef:ActorRefWrapper) =>
                         if (pathToPeer(actorRef.path) != remote.peerInfo.get.peerSpec.agentName) {
                           if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path))) SharedData.guiPeerInfo -= pathToPeer(actorRef.path)
                           val key = actorRef.path
                           pathToPeer -= key
                           pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
-                          toDiffuse = true
                           SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
                             case Some(list:List[ActorRefWrapper]) =>
                               val newList = actorRef::list
@@ -474,14 +478,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                               SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
                             case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
                           }
-                          if (!holders.forall(_.remote)) sendToNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+                          if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
                           println("Updated Peer "+newPath.toString)
                         }
                     }
                   case None => println("error: could not parse actor path "+string)
                 }
               }
-              if (toDiffuse) holders.filterNot(_.remote).foreach(_ ! Diffuse)
             case _ => println("error: remote holders data not parsed")
           }
         case _ => println("error: message code did not match any specs")
@@ -519,7 +522,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       }
       if (!holders.forall(_.remote)) {
         timers.startPeriodicTimer(ActorPathSendTimerKey, ActorPathSendTimerKey, 10.seconds)
-        sendToNetwork[List[String],HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,holders.filterNot(_.remote).map(_.path.toString))
+        sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
       }
       sender() ! "done"
   }
@@ -535,22 +538,22 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       val s = sender.actorPath
       command match {
         case c:DiffuseData =>
-          val content:DiffuseDataType = (c.ref.toString,r.toString,c.pks,c.mac)
+          val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
           sendToNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
         case c:Hello =>
-          val content:HelloDataType = (c.ref.toString,r.toString,c.slot,c.mac)
+          val content:HelloDataType = (s.toString,r.toString,c.slot)
           sendToNetwork[HelloDataType,HelloSpec.type](HelloSpec,content,r)
         case c:RequestBlock =>
-          val content:RequestBlockType = (s.toString,r.toString,c.id,c.mac,c.job)
+          val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
           sendToNetwork[RequestBlockType,RequestBlockSpec.type](RequestBlockSpec,content,r)
         case c:RequestTine =>
-          val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.mac,c.job)
+          val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
           sendToNetwork[RequestTineType,RequestTineSpec.type](RequestTineSpec,content,r)
         case c:ReturnBlocks =>
-          val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.mac,c.job)
+          val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
           sendToNetwork[ReturnBlocksType,ReturnBlocksSpec.type](ReturnBlocksSpec,content,r)
         case c:SendBlock =>
-          val content:SendBlockType = (s.toString,r.toString,c.block,c.mac)
+          val content:SendBlockType = (s.toString,r.toString,c.block)
           sendToNetwork[SendBlockType,SendBlockSpec.type](SendBlockSpec,content,r)
         case c:SendTx =>
           val content:SendTxType = (s.toString,r.toString,c.transaction)

@@ -4,7 +4,7 @@ import akka.actor.{Actor, PoisonPill, Props, Timers}
 import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks}
 import prosomo.components.{Block, Serializer, Tine}
 import prosomo.history.BlockStorage
-import prosomo.primitives.{Fch, Mac, SharedData, Sig, SimpleTypes, Types}
+import prosomo.primitives.{Fch, SharedData, Sig, SimpleTypes, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
 
 import scala.math.BigInt
@@ -40,12 +40,16 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
     }
   }
 
-  def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey): Mac = {
-    Mac(data,id,sig.sign(sk_sig,data.data++id.data),pk_sig)
-  }
-
   override def receive: Receive = {
-    case Info(ref,startId,depth,holderRef,holderIndex,sessionId,holderSK,holderPK,job,tine) =>
+    case Info(
+    holderIndex:Int,
+    ref:ActorRefWrapper,
+    holderRef:ActorRefWrapper,
+    startId:SlotId,
+    depth:Int,
+    job:Int,
+    tine:Option[Tine]
+    ) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
       }
@@ -58,13 +62,13 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
             blockStorage.restore(id) match {
               case Some(block:Block) =>
                 returnedIdList ::= id
-                send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
+                send(holderRef,ref,ReturnBlocks(List(block),job,holderRef))
               case None => break
             }
             if (!useFencing) Thread.sleep(100)
           }
           // job -2 means end of fetch info
-          if (job == -2) send(holderRef,ref,ReturnBlocks(List(),signMac(hash((List(),0,job),serializer),sessionId,holderSK,holderPK),job))
+          if (job == -2) send(holderRef,ref,ReturnBlocks(List(),job,holderRef))
         }
       } else {
         breakable{
@@ -72,7 +76,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
             blockStorage.restore(id) match {
               case Some(block:Block) =>
                 returnedIdList ::= id
-                send(holderRef,ref,ReturnBlocks(List(block),signMac(hash((List(id),0,job),serializer),sessionId,holderSK,holderPK),job))
+                send(holderRef,ref,ReturnBlocks(List(block),job,holderRef))
                 id = block.parentSlotId
               case None => break
             }
@@ -80,7 +84,6 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
           }
         }
       }
-
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Returned Tine")
       }
@@ -94,14 +97,11 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
 
 object RequestTineProvider extends SimpleTypes {
   case class Info(
+    holderIndex:Int,
     ref:ActorRefWrapper,
+    holderRef:ActorRefWrapper,
     startId:SlotId,
     depth:Int,
-    holderRef:ActorRefWrapper,
-    holderIndex:Int,
-    sessionId:Sid,
-    holderSK:PrivateKey,
-    holderPK:PublicKey,
     job:Int,
     tine:Option[Tine]
   )

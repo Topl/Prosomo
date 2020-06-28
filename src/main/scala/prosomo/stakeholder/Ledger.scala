@@ -37,7 +37,7 @@ trait Ledger extends Members {
             val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
             if (genesisSet.isEmpty) isValid = false
             if (isValid) for (entry <- genesisSet) {
-              if (ByteArrayWrapper(entry._1) == genesisBytes && verifyMac(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
+              if (ByteArrayWrapper(entry._1) == genesisBytes) {
                 val delta = entry._3
                 val netStake:BigInt = 0
                 val newStake:BigInt = netStake + delta
@@ -105,7 +105,7 @@ trait Ledger extends Members {
           val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
           if (genesisSet.isEmpty) isValid = false
           if (isValid) for (entry <- genesisSet) {
-            if (ByteArrayWrapper(entry._1) == genesisBytes && verifyMac(hashGenEntry((entry._1,entry._2,entry._3),serializer),entry._4)) {
+            if (ByteArrayWrapper(entry._1) == genesisBytes) {
               val delta = entry._3
               val netStake:BigInt = 0
               val newStake:BigInt = netStake + delta

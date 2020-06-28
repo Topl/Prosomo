@@ -1,9 +1,10 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.SimpleTypes
+import prosomo.primitives.{SimpleTypes, Types}
 import scorex.util.encode.Base58
 import prosomo.primitives.Types._
+
 import scala.collection.immutable.ListMap
 
 /**
@@ -32,7 +33,7 @@ case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
     Array()
   }
 
-  def getData = data.toSeq
+  def getData: Seq[(Types.Slot, (Types.BlockId, Types.Rho))] = data.toSeq
 
   def getLastActiveSlot(slot:Slot):SlotId = get(lastActiveSlot(slot))
 
@@ -97,7 +98,7 @@ case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
     data.keySet.size
   }
 
-  def print:Unit = {
+  def print():Unit = {
     for (id<-this.ordered) {
       if (id._1 > -1) println("Slot:"+id._1.toString+" id:"+Base58.encode(id._2.data))
     }

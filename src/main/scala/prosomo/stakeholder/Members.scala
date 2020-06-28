@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorPath, Cancellable, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Mac, Ratio, Sig, SimpleTypes, Vrf}
+import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import scala.math.BigInt
@@ -50,7 +50,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   var memPool:MemPool
   var chainUpdateLock:Boolean
   var holders: List[ActorRefWrapper]
-  var gossipers: List[ActorRefWrapper]
   var gOff:Int
   var numHello:Int
   var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]
@@ -127,14 +126,12 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getNonce(id:SlotId):Option[Rho]
   def eta_from_genesis(c:Tine, ep:Int):Eta
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta):Eta
-  def signMac(data: Hash, id:Sid, sk_sig: PrivateKey, pk_sig: PublicKey):Mac
-  def verifyMac(input:Hash, mac:Mac):Boolean
-  def gossipSet(id:ActorPath,h:List[ActorRefWrapper]):List[ActorRefWrapper]
+  def gossipSet(self:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
+  def gossipSet(self:ActorRefWrapper,sender:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
   def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any):Unit
   def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any):Unit
   def sendAssertDone(holders:List[ActorRefWrapper], command: Any):Unit
   def sendAssertDone(holder:ActorRefWrapper, command: Any):Unit
-  def getGossipers(holders:List[ActorRefWrapper]):Map[ActorRefWrapper,List[ActorRefWrapper]]
   def getStakingState(holder:ActorRefWrapper):State
   def blockTree(holder:ActorRefWrapper):Unit
   def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])

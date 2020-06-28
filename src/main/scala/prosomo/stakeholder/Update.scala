@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{Flag, Hello, WriteFile}
+import prosomo.cases.{Flag, WriteFile}
 import prosomo.components.Tine
 import prosomo.primitives.Parameters.useGui
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
@@ -55,7 +55,7 @@ trait Update extends Members {
       case _ =>
         val thisSlot = lastActiveSlot(chain,stakeDistributionSlot)
         println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot)._2.data))
-        chain.print
+        chain.print()
         SharedData.throwError(holderIndex)
         Map()
     }
@@ -72,6 +72,8 @@ trait Update extends Members {
 
   /*********************************************************************************************************************
     * The main update procedure that carries out consensus and forges, by default carried out up to 100 times a second
+    *
+    * This should execute the procedure given by LedgerMaintenance given in Ouroboros Genesis
     *
     * localSlot is used to keep track of epoch updates,
     * it updates to globalSlot in a while loop and triggers updateEpoch,
@@ -143,7 +145,6 @@ trait Update extends Members {
             forgeBlock(keys)
           }
           keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
-          gossipers = gossipSet(holderId,holders)
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
