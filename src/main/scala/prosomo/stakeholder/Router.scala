@@ -552,6 +552,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                     )(context.system.dispatcher,self)
                   } else {
                     println("Error: SendTx MAC failed")
+                    println(hmac == mac.hash, mac.time > pathToPeer(s.actorPath)._3)
+                    println(Base58.encode(hmac.data),Base58.encode(ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)))
+                    println(mac.time,pathToPeer(s.actorPath)._3)
                   }
                 }
                 case None => println("Error: SendTx paths not valid")
@@ -613,7 +616,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       HoldersFromRemoteSpec,
       (holders.filterNot(_.remote).map(_.path.toString),
         pk_ecx,
-        System.currentTimeMillis())
+        System.nanoTime())
     )
   }
 
@@ -665,7 +668,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       command match {
         case c:DiffuseData =>
           val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getDiffuseBytes(content),
@@ -674,7 +677,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,DiffuseDataType),DiffuseDataSpec.type](DiffuseDataSpec,(mac,content),r)
         case c:Hello =>
           val content:HelloDataType = (s.toString,r.toString,c.slot)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getHelloBytes(content),
@@ -683,7 +686,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,HelloDataType),HelloSpec.type](HelloSpec,(mac,content),r)
         case c:RequestBlock =>
           val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getRequestBlockBytes(content),
@@ -692,7 +695,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,RequestBlockType),RequestBlockSpec.type](RequestBlockSpec,(mac,content),r)
         case c:RequestTine =>
           val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getRequestTineBytes(content),
@@ -701,7 +704,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,RequestTineType),RequestTineSpec.type](RequestTineSpec,(mac,content),r)
         case c:ReturnBlocks =>
           val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getReturnBlocksBytes(content),
@@ -710,7 +713,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,ReturnBlocksType),ReturnBlocksSpec.type](ReturnBlocksSpec,(mac,content),r)
         case c:SendBlock =>
           val content:SendBlockType = (s.toString,r.toString,c.block)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getSendBlockBytes(content),
@@ -719,7 +722,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
           sendToNetwork[(Mac,SendBlockType),SendBlockSpec.type](SendBlockSpec,(mac,content),r)
         case c:SendTx =>
           val content:SendTxType = (s.toString,r.toString,c.transaction)
-          val msgTime = System.currentTimeMillis()
+          val msgTime = System.nanoTime()
           val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
             serializer.getBytes(msgTime),
             serializer.getSendTxBytes(content),
