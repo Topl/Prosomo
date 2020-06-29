@@ -132,11 +132,17 @@ trait Receive extends Members {
         } else {
           bootStrapLock = false
         }
-      } else if (holders.contains(tinePool(bootStrapJob)._5)) {
-        buildTine((bootStrapJob,tinePool(bootStrapJob)))
+      } else if (bootStrapLock && tinePool.keySet.contains(bootStrapJob)) {
+        if (holders.contains(tinePool(bootStrapJob)._5)) {
+          buildTine((bootStrapJob,tinePool(bootStrapJob)))
+        } else {
+          println(s"Holder $holderIndex Lost Connection with Tine Provider")
+          tinePool -= bootStrapJob
+          bootStrapJob = -1
+          bootStrapLock = false
+        }
       } else {
-        println(s"Holder $holderIndex Lost Connection with Tine Provider")
-        tinePool -= bootStrapJob
+        println(s"Holder $holderIndex Bootstrap Job not in Tinepool")
         bootStrapJob = -1
         bootStrapLock = false
       }
