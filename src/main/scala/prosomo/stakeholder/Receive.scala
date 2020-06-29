@@ -120,6 +120,7 @@ trait Receive extends Members {
     case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
       if (bootStrapLock && bootStrapJob == -1) {
+        println(s"Number of Gossipers: ${holders.size-1}")
         if (globalSlot > 1) {
           send(
             selfWrapper,
