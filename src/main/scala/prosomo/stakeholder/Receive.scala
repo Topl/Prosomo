@@ -271,8 +271,8 @@ trait Receive extends Members {
                   selfWrapper,
                   startId,
                   depth,
-                  if (globalSlot > value.slot+tineMaxDepth) {-1} else {-2},
-                  Some(subChain(localChain,value.slot,value.slot+tineMaxDepth))
+                  if (globalSlot > value.slot+slotWindow) {-1} else {-2},
+                  Some(subChain(localChain,value.slot,value.slot+slotWindow))
                 )
               case None => println("Error: tine provider not initialized")
             }

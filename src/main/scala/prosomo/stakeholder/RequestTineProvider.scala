@@ -50,13 +50,13 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
     job:Int,
     tine:Option[Tine]
     ) =>
-      //if (holderIndex == SharedData.printingHolder && printFlag) {
+      if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
-      //}
+      }
       var returnedIdList:List[SlotId] = List()
       var id:SlotId = startId
       if (job < 0) {
-        println(s"bootstrap job length: ${tine.get.length}")
+        println(s"Bootstrap job length: ${tine.get.length}")
         // job -1 means fetch info from hello message
         breakable{
           for (id <- tine.get.ordered) {
