@@ -37,7 +37,7 @@ object SpecTypes {
   type SendTxType = (String,String,Transaction)
 
   //Establish session key and actor paths
-  type HoldersType = (List[String],PublicKey)
+  type HoldersType = (List[String],PublicKey,Long)
 
   //Flood: ingress -> if new entry then egress multicast
   val diffuseCode:Byte = 100:Byte

@@ -71,7 +71,7 @@ trait Validation extends Members with Types {
   }
 
   /**
-    * Verify chain using key evolving signature, VRF proofs, and hash id
+    * Verify a complete tine by replaying every block from genesis
     * @param c chain to be verified
     * @param gh genesis block hash
     * @return true if chain is valid, false otherwise
@@ -177,7 +177,7 @@ trait Validation extends Members with Types {
   }
 
   /**
-    * Verify chain using key evolving signature, VRF proofs, and hash rule
+    * Verify a tine, final point of validation for tinepool functionality
     * @param tine chain to be verified
     * @return true if chain is valid, false otherwise
     */

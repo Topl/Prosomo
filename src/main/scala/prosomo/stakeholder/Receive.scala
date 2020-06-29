@@ -120,14 +120,15 @@ trait Receive extends Members {
     case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
       if (bootStrapLock && bootStrapJob == -1) {
-        send(
-          selfWrapper,
-          gossipSet(selfWrapper,holders).take(1),
-          Hello(
-            localChain.getLastActiveSlot(globalSlot)._1+1,
-            selfWrapper
+        if (globalSlot > 1) {
+          send(
+            selfWrapper,
+            gossipSet(selfWrapper,holders).take(1),
+            Hello(localChain.getLastActiveSlot(globalSlot)._1+1, selfWrapper)
           )
-        )
+        } else {
+          bootStrapLock = false
+        }
       } else if (holders.contains(tinePool(bootStrapJob)._5)) {
         buildTine((bootStrapJob,tinePool(bootStrapJob)))
       } else {

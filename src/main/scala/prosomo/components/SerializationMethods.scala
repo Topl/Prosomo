@@ -91,7 +91,7 @@ trait SerializationMethods extends SimpleTypes {
 
   private def sHolders(msg:HoldersType):Array[Byte] = {
     val out = Bytes.concat(msg._1.map(sString):_*)
-    Ints.toByteArray(msg._1.length) ++ out ++ getBytes(msg._2)
+    Ints.toByteArray(msg._1.length) ++ out ++ getBytes(msg._2) ++ getBytes(msg._3)
   }
 
   private def dHolders(stream: ByteStream):HoldersType = {
@@ -105,8 +105,9 @@ trait SerializationMethods extends SimpleTypes {
       i += 1
     }
     val out2 = stream.get(pk_length)
+    val out3 = stream.getLong
     assert(stream.empty)
-    (out1,out2)
+    (out1,out2,out3)
   }
 
   private def sSendTx(msg:SendTxType): Array[Byte] = {

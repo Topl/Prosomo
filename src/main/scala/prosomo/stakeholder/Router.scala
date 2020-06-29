@@ -1,10 +1,12 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, Props, Timers}
+import com.google.common.primitives.Bytes
 import akka.util.Timeout
+import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.components.Serializer
-import prosomo.primitives.{Distance, Fch, Parameters, SharedData, Types, Ecx}
+import prosomo.primitives.{Distance, Ecx, Fch, Mac, Parameters, SharedData, Types}
 import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, HoldersType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.util.encode.Base58
@@ -57,7 +59,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   var txRoundCounter = 0
   var maxDelay:Double = 0
   var transactionCounter:Int = 0
-  var pathToPeer:Map[ActorPath,String] = Map()
+  var pathToPeer:Map[ActorPath,(String,PublicKey,Long)] = Map()
   var connectedPeer:Set[ConnectedPeer] = Set()
   var bootStrapJobs:Set[ActorRefWrapper] = Set()
   implicit val routerRef: ActorRefWrapper = ActorRefWrapper.routerRef(self)
@@ -311,7 +313,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case Update => update
 
     case ActorPathSendTimerKey =>
-      if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
+      if (!holders.forall(_.remote)) holdersToNetwork()
 
     case value:SetClock =>
       t0 = value.t0
@@ -359,136 +361,260 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       spec.messageCode match {
         case DiffuseDataSpec.messageCode =>
           data match {
-            case msg:DiffuseDataType@unchecked =>
+            case value:(Mac,DiffuseDataType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
                 case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
                   Try{ActorPath.fromString(msg._3)} match {
-                    case Success(ref:ActorPath) =>
-                      if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                        DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
-                      )(context.system.dispatcher,self)
+                    case Success(ref:ActorPath) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                      val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                        serializer.getBytes(mac.time),
+                        serializer.getDiffuseBytes(msg),
+                        ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                      )))
+                      if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                        val peerInfo = pathToPeer(s.actorPath)
+                        pathToPeer -= s.actorPath
+                        pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                        context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                          DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
+                        )(context.system.dispatcher,self)
+                      } else {
+                        println("Error: Diffuse MAC failed")
+                      }
+                    }
                     case _ => None
                   }
-                case None =>
+                case None => println("Error: Diffuse message not parsed")
               }
-            case _ =>
+            }.orElse(Try{println("Error: Diffuse message not valid")})
+            case _ => println("Error: Diffuse message not parsed")
           }
         case HelloSpec.messageCode =>
           data match {
-            case msg:HelloDataType@unchecked =>
+            case value:(Mac,HelloDataType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    Hello(msg._3,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: Hello message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getHelloBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      Hello(msg._3,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: Hello MAC failed")
+                  }
+                }
+                case None => println("Error: Hello message not parsed")
               }
-            case _ => println("error: Hello message not parsed")
+            }.orElse(Try{println("Error: Hello message not valid")})
+            case _ => println("Error: Hello message not parsed")
           }
         case RequestBlockSpec.messageCode =>
           data match {
-            case msg:RequestBlockType@unchecked =>
+            case value:(Mac,RequestBlockType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    RequestBlock(msg._3,msg._4,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: RequestBlock message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getRequestBlockBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      RequestBlock(msg._3,msg._4,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: RequestBlock MAC failed")
+                  }
+                }
+                case None => println("Error: RequestBlock message not parsed")
               }
-            case _ => println("error: RequestBlock message not parsed")
+            }.orElse(Try{println("Error: RequestBlock message not valid")})
+            case _ => println("Error: RequestBlock message not parsed")
           }
         case RequestTineSpec.messageCode =>
           data match {
-            case msg:RequestTineType@unchecked =>
+            case value:(Mac,RequestTineType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    RequestTine(msg._3,msg._4,msg._5,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: RequestTine message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getRequestTineBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      RequestTine(msg._3,msg._4,msg._5,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: RequestTine MAC failed")
+                  }
+                }
+                case None => println("Error: RequestTine message not parsed")
               }
-            case _ => println("error: RequestTine message not parsed")
+            }.orElse(Try{println("Error: RequestTine message not valid")})
+            case _ => println("Error: RequestTine message not parsed")
           }
         case ReturnBlocksSpec.messageCode =>
           data match {
-            case msg:ReturnBlocksType@unchecked =>
+            case value:(Mac,ReturnBlocksType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    ReturnBlocks(msg._3,msg._4,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: ReturnBlocks message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getReturnBlocksBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      ReturnBlocks(msg._3,msg._4,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: ReturnBlocks MAC failed")
+                  }
+                }
+                case None => println("Error: ReturnBlocks message not parsed")
               }
-            case _ => println("error: ReturnBlocks message not parsed")
+            }.orElse(Try{println("Error: ReturnBlocks message not valid")})
+            case _ => println("Error: ReturnBlocks message not parsed")
           }
         case SendBlockSpec.messageCode =>
           data match {
-            case msg:SendBlockType@unchecked =>
+            case value:(Mac,SendBlockType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    SendBlock(msg._3,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: SendBlock message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getSendBlockBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      SendBlock(msg._3,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: SendBlock MAC failed")
+                  }
+                }
+                case None => println("Error: SendBlock message not parsed")
               }
-            case _ => println("error: SendBlock message not parsed")
+            }.orElse(Try{println("Error: SendBlock message not valid")})
+            case _ => println("Error: SendBlock message not parsed")
           }
         case SendTxSpec.messageCode =>
           data match {
-            case msg:SendTxType@unchecked =>
+            case value:(Mac,SendTxType)@unchecked => Try{
+              val mac = value._1
+              val msg = value._2
               getRefs(msg._1,msg._2) match {
-                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
-                  if (!r.remote && !bootStrapJobs.contains(r)) context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                    SendTx(msg._3,s)
-                  )(context.system.dispatcher,self)
-                case None => println("error: SendTx message not parsed")
+                case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                  val hmac = ByteArrayWrapper(fch.hash(Bytes.concat(
+                    serializer.getBytes(mac.time),
+                    serializer.getSendTxBytes(msg),
+                    ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)
+                  )))
+                  if (hmac == mac.hash && mac.time > pathToPeer(s.actorPath)._3) {
+                    val peerInfo = pathToPeer(s.actorPath)
+                    pathToPeer -= s.actorPath
+                    pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
+                    context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
+                      SendTx(msg._3,s)
+                    )(context.system.dispatcher,self)
+                  } else {
+                    println("Error: SendTx MAC failed")
+                  }
+                }
+                case None => println("Error: SendTx paths not valid")
               }
-            case _ => println("error: SendTx message not parsed")
+            }.orElse(Try{println("Error: SendTx message not valid")})
+            case _ => println("Error: SendTx message not parsed")
           }
         case HoldersFromRemoteSpec.messageCode =>
           data match {
-            case msg:HoldersType@unchecked =>
-              for (string<-msg._1) {
-                Try{ActorPath.fromString(string)}.toOption match {
-                  case Some(newPath:ActorPath) =>
-                    holders.find(_.path == newPath) match {
-                      case None =>
-                        holders ::= ActorRefWrapper(newPath)
-                        pathToPeer += (newPath -> remote.peerInfo.get.peerSpec.agentName)
+            case msg:HoldersType@unchecked => Try{for (string<-msg._1) {
+              Try{ActorPath.fromString(string)}.toOption match {
+                case Some(newPath:ActorPath) =>
+                  holders.find(_.path == newPath) match {
+                    case None =>
+                      holders ::= ActorRefWrapper(newPath)
+                      pathToPeer += (newPath -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
+                      SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                        case Some(list:List[ActorRefWrapper]) =>
+                          val newList = ActorRefWrapper(newPath)::list
+                          SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                          SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                        case None =>
+                          SharedData.guiPeerInfo +=
+                            (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
+                      }
+                      println("New holder "+newPath.toString)
+                      coordinatorRef ! HoldersFromRemote(holders)
+                      if (!holders.forall(_.remote)) holdersToNetwork()
+                    case Some(actorRef:ActorRefWrapper) =>
+                      if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
+                        if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path)._1))
+                          SharedData.guiPeerInfo -= pathToPeer(actorRef.path)._1
+                        val key = actorRef.path
+                        pathToPeer -= key
+                        pathToPeer += (key -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
                         SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
                           case Some(list:List[ActorRefWrapper]) =>
-                            val newList = ActorRefWrapper(newPath)::list
+                            val newList = actorRef::list
                             SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
                             SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                          case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
+                          case None =>
+                            SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
                         }
-                        println("New holder "+newPath.toString)
-                        coordinatorRef ! HoldersFromRemote(holders)
-                        if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
-                      case Some(actorRef:ActorRefWrapper) =>
-                        if (pathToPeer(actorRef.path) != remote.peerInfo.get.peerSpec.agentName) {
-                          if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path))) SharedData.guiPeerInfo -= pathToPeer(actorRef.path)
-                          val key = actorRef.path
-                          pathToPeer -= key
-                          pathToPeer += (key -> remote.peerInfo.get.peerSpec.agentName)
-                          SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
-                            case Some(list:List[ActorRefWrapper]) =>
-                              val newList = actorRef::list
-                              SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
-                              SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                            case None => SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
-                          }
-                          if (!holders.forall(_.remote)) sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
-                          println("Updated Peer "+newPath.toString)
-                        }
-                    }
-                  case None => println("error: could not parse actor path "+string)
-                }
+                        if (!holders.forall(_.remote)) holdersToNetwork()
+                        println("Updated Peer "+newPath.toString)
+                      }
+                  }
+                case None => println("Error: could not parse actor path "+string)
               }
-            case _ => println("error: remote holders data not parsed")
+            }}.orElse(Try{println("Error: remote holders data not parsed")})
+            case _ => println("Error: remote holders data not parsed")
           }
-        case _ => println("error: message code did not match any specs")
+        case _ => println("Error: message code did not match any specs")
       }
+  }
+
+  def holdersToNetwork():Unit = {
+    sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](
+      HoldersFromRemoteSpec,
+      (holders.filterNot(_.remote).map(_.path.toString),
+        pk_ecx,
+        System.currentTimeMillis())
+    )
   }
 
   private def holdersFromLocal: Receive = {
@@ -522,7 +648,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       }
       if (!holders.forall(_.remote)) {
         timers.startPeriodicTimer(ActorPathSendTimerKey, ActorPathSendTimerKey, 10.seconds)
-        sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](HoldersFromRemoteSpec,(holders.filterNot(_.remote).map(_.path.toString),pk_ecx))
+        holdersToNetwork()
       }
       sender() ! "done"
   }
@@ -539,25 +665,67 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       command match {
         case c:DiffuseData =>
           val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
-          sendToNetwork[DiffuseDataType,DiffuseDataSpec.type](DiffuseDataSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getDiffuseBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,DiffuseDataType),DiffuseDataSpec.type](DiffuseDataSpec,(mac,content),r)
         case c:Hello =>
           val content:HelloDataType = (s.toString,r.toString,c.slot)
-          sendToNetwork[HelloDataType,HelloSpec.type](HelloSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getHelloBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,HelloDataType),HelloSpec.type](HelloSpec,(mac,content),r)
         case c:RequestBlock =>
           val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
-          sendToNetwork[RequestBlockType,RequestBlockSpec.type](RequestBlockSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getRequestBlockBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,RequestBlockType),RequestBlockSpec.type](RequestBlockSpec,(mac,content),r)
         case c:RequestTine =>
           val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
-          sendToNetwork[RequestTineType,RequestTineSpec.type](RequestTineSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getRequestTineBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,RequestTineType),RequestTineSpec.type](RequestTineSpec,(mac,content),r)
         case c:ReturnBlocks =>
           val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
-          sendToNetwork[ReturnBlocksType,ReturnBlocksSpec.type](ReturnBlocksSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getReturnBlocksBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,ReturnBlocksType),ReturnBlocksSpec.type](ReturnBlocksSpec,(mac,content),r)
         case c:SendBlock =>
           val content:SendBlockType = (s.toString,r.toString,c.block)
-          sendToNetwork[SendBlockType,SendBlockSpec.type](SendBlockSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getSendBlockBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,SendBlockType),SendBlockSpec.type](SendBlockSpec,(mac,content),r)
         case c:SendTx =>
           val content:SendTxType = (s.toString,r.toString,c.transaction)
-          sendToNetwork[SendTxType,SendTxSpec.type](SendTxSpec,content,r)
+          val msgTime = System.currentTimeMillis()
+          val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
+            serializer.getBytes(msgTime),
+            serializer.getSendTxBytes(content),
+            ecx.scalarMult(sk_ecx,pathToPeer(r)._2)
+          ))),msgTime)
+          sendToNetwork[(Mac,SendTxType),SendTxSpec.type](SendTxSpec,(mac,content),r)
         case _ =>
       }
   }
@@ -566,7 +734,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     Try{spec.toBytes(c)}.toOption match {
       case Some(bytes:Array[Byte]) =>
         pathToPeer.get(r) match {
-          case Some(peerName) => networkController ! SendToNetwork(Message(spec,Left(bytes),None),SendToPeerByName(peerName,self))
+          case Some((peerName,_,_)) => networkController ! SendToNetwork(
+            Message(spec,Left(bytes),None),SendToPeerByName(peerName,self)
+          )
           case None =>
         }
       case None =>
@@ -585,8 +755,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
     case InvalidateHolders(peerName) =>
       var holdersOut:List[ActorRefWrapper] = holders.filterNot(_.remote)
       for (holder <- holders) if (pathToPeer.keySet.contains(holder.actorPath)) {
-        println(pathToPeer(holder.actorPath),holder.actorPath)
-        if (pathToPeer(holder.actorPath) == peerName) {
+        println(pathToPeer(holder.actorPath)._1,holder.actorPath)
+        if (pathToPeer(holder.actorPath)._1 == peerName) {
           pathToPeer -= holder.actorPath
         } else {
           holdersOut ::= holder
@@ -618,5 +788,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 }
 
 object Router {
-  def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props = Props(new Router(seed,ref.map(ActorRefWrapper.routerRef)))
+  def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
+    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef)))
 }
