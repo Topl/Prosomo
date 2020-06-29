@@ -407,7 +407,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case _ => println("Error: Diffuse message not parsed")
           }
         case HelloSpec.messageCode =>
-          println("Got Hello")
+
           data match {
             case value:(Mac,HelloDataType)@unchecked => Try{
               val mac = value._1
