@@ -68,22 +68,22 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   val pk_ecx:PublicKey = ecx.scalarMultBasePoint(sk_ecx)
 
   var systemTime:Long = System.nanoTime()
-  var messageTime:Long = systemTime
+  var messageTime:Long = 0
 
   private case object ActorPathSendTimerKey
 
   def nextMsgTime():Long = {
     System.nanoTime() match {
-      case newTime:Long if newTime > systemTime && newTime > messageTime =>
+      case newTime:Long if newTime > systemTime =>
         systemTime = newTime
-        messageTime = newTime
-        messageTime
+        messageTime = 0
+        systemTime
       case _ =>
         messageTime += 1
-        messageTime
+        systemTime + messageTime
     }
   }
-  
+
   /**
     * Sends commands one by one to list of stakeholders
     * @param holders actor list

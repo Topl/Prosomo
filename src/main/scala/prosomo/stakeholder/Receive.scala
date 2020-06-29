@@ -126,6 +126,8 @@ trait Receive extends Members {
             gossipSet(selfWrapper,holders).take(1),
             Hello(localChain.getLastActiveSlot(globalSlot)._1+1, selfWrapper)
           )
+          bootStrapMessage = context.system.scheduler
+            .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
         } else {
           bootStrapLock = false
         }
