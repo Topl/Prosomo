@@ -255,7 +255,6 @@ trait Receive extends Members {
       * contains the last known slot, triggers tine recovery up to current head
       **/
     case value:Hello =>
-      println("Got Hello")
       if (!actorStalled) Try{
         tineProvider match {
           case None =>
@@ -275,7 +274,6 @@ trait Receive extends Members {
                   if (globalSlot > value.slot+tineMaxDepth) {-1} else {-2},
                   Some(subChain(localChain,value.slot,value.slot+tineMaxDepth))
                 )
-                println("Fetch Info Started")
               case None => println("Error: tine provider not initialized")
             }
           case _ =>
