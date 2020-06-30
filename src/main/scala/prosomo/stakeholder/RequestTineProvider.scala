@@ -71,8 +71,6 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
               break
             }
           }
-          // job -2 means end of fetch info
-          if (returnedIdList.length < depth) send(holderRef,ref,ReturnBlocks(List(),-2,holderRef))
         }
       } else {
         breakable{

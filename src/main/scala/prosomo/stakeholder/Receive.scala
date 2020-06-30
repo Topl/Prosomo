@@ -159,8 +159,6 @@ trait Receive extends Members {
               }
               bootStrapMessage = context.system.scheduler
                 .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
-            } else if (value.job == -2) {
-              bootStrapLock = false
             }
           }
         }
@@ -276,11 +274,12 @@ trait Receive extends Members {
     case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
       if (bootStrapLock && bootStrapJob == -1) {
-        if (globalSlot > 1) {
+        val lastSlot = localChain.getLastActiveSlot(globalSlot)._1
+        if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
           send(
             selfWrapper,
             gossipSet(selfWrapper,holders).take(1),
-            Hello(localChain.getLastActiveSlot(globalSlot)._1+1, selfWrapper)
+            Hello(lastSlot+1, selfWrapper)
           )
           bootStrapMessage = context.system.scheduler
             .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
