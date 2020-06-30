@@ -271,14 +271,15 @@ trait Receive extends Members {
             }.toOption
             tineProvider match {
               case Some(ref:ActorRefWrapper) =>
+                val tineToSend:Tine = localChain.getNext(value.slot,tineMaxDepth)
                 ref ! RequestTineProvider.Info(
                   holderIndex,
                   value.sender,
                   selfWrapper,
                   startId,
                   depth,
-                  if (globalSlot > value.slot+slotWindow) {-1} else {-2},
-                  Some(subChain(localChain,value.slot,value.slot+slotWindow))
+                  if (tineToSend.length == tineMaxDepth) {-1} else {-2},
+                  Some(tineToSend)
                 )
               case None => println("Error: tine provider not initialized")
             }
