@@ -13,7 +13,7 @@ import org.bouncycastle.crypto.engines.AESEngine
 import org.bouncycastle.crypto.generators.SCrypt
 import org.bouncycastle.crypto.modes.SICBlockCipher
 import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
-import prosomo.components.Serializer.DeserializeMalkinKey
+import prosomo.components.Serializer.DeserializeForgingKey
 import scorex.util.encode.Base58
 import scorex.crypto.hash.Keccak256
 import java.io.File
@@ -84,7 +84,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       val byteStream = new ByteStream(decrypted,None)
       val numBytes = byteStream.getInt
       val decryptedMK = serializer.fromBytes(
-        new ByteStream(byteStream.get(numBytes),DeserializeMalkinKey)
+        new ByteStream(byteStream.get(numBytes),DeserializeForgingKey)
       ) match {case mk:ForgingKey => mk}
       require(pubKeyBytes_kes sameElements decryptedMK.getPublic(kes), "Error: PublicKey in file is invalid")
       decryptedMK
@@ -315,7 +315,7 @@ object KeyFile {
 
   def update(
               keyFile:KeyFile,
-              malkinKey: ForgingKey,
+              forgingKey: ForgingKey,
               password:String,
               defaultKeyDir: String,
               serializer: Serializer,
@@ -327,9 +327,9 @@ object KeyFile {
     val kes_info = {
       val ivData = fch.hash(uuid).slice(0, 16)
       val (cipherText, mac) = if (derivedKey.isEmpty) {
-        encryptAES(getDerivedKey(password, salt), ivData, serializer.getBytes(malkinKey))
+        encryptAES(getDerivedKey(password, salt), ivData, serializer.getBytes(forgingKey))
       } else {
-        encryptAES(derivedKey, ivData, serializer.getBytes(malkinKey))
+        encryptAES(derivedKey, ivData, serializer.getBytes(forgingKey))
       }
       (
         keyFile.kes_info._1: Array[Byte],

@@ -209,8 +209,8 @@ trait ChainSelection extends Members {
     if (holderIndex == SharedData.printingHolder) {
       val headId = localChain.getLastActiveSlot(globalSlot)
       val head = getBlockHeader(headId)
-      println(Console.CYAN + "Previous head: " + s" block ${head.get._9} "
-        + Base58.encode(headId._2.data) + Console.RESET)
+      println("Previous head: " + s" block ${head.get._9} "
+        + Base58.encode(headId._2.data))
     }
 
     assert(!tine.isEmpty)

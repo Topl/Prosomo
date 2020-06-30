@@ -73,6 +73,13 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private case object ActorPathSendTimerKey
 
+  /**
+    * Message time for MAC authentication,
+    * Use this instead of nanoTime so the time increments
+    * properly if successive calls to nanoTime return the same value
+    * @return next message time
+    */
+
   def nextMsgTime():Long = {
     System.nanoTime() match {
       case newTime:Long if newTime > systemTime =>
@@ -568,9 +575,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
                     )(context.system.dispatcher,self)
                   } else {
                     println("Error: SendTx MAC failed")
-                    println(hmac == mac.hash, mac.time > pathToPeer(s.actorPath)._3)
-                    println(Base58.encode(hmac.data),Base58.encode(ecx.scalarMult(sk_ecx,pathToPeer(s.actorPath)._2)))
-                    println(mac.time,pathToPeer(s.actorPath)._3)
                   }
                 }
                 case None => println("Error: SendTx paths not valid")
@@ -630,9 +634,11 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   def holdersToNetwork():Unit = {
     sendToNetwork[HoldersType,HoldersFromRemoteSpec.type](
       HoldersFromRemoteSpec,
-      (holders.filterNot(_.remote).map(_.path.toString),
+      (
+        holders.filterNot(_.remote).map(_.path.toString),
         pk_ecx,
-        nextMsgTime())
+        nextMsgTime()
+      )
     )
   }
 

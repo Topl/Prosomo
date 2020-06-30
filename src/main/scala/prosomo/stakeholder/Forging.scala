@@ -41,7 +41,7 @@ trait Forging extends Members with Types {
       val h: Hash = hash(pb,serializer)
       val ledger:Hash = hash(txs,serializer)
       val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,metaInfo)
-      val kes_sig: MalkinSignature = forgerKeys.sk_kes.sign(
+      val kes_sig: ForgingSignature = forgerKeys.sk_kes.sign(
         kes,
         h.data
           ++serializer.getBytes(ledger)
@@ -130,7 +130,7 @@ trait Forging extends Members with Types {
     val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
     val ledger:Hash = hashGen(genesisEntries,serializer)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
-    val sig:MalkinSignature = sk_kes.sign(
+    val sig:ForgingSignature = sk_kes.sign(
       kes,
       h.data
         ++serializer.getBytes(ledger)

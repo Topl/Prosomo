@@ -71,19 +71,6 @@ case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
     ListMap(data.toSeq.sortBy(_._1):_*).toArray.map(toSlotId)
   }
 
-  def getNext(slot:Slot,n:Int):Tine = {
-    val out:Tine = new Tine
-    var i:Int = 0
-    for (entry<-ordered) {
-      if (slot >= entry._1 && i < n) {
-        val toAdd = data(entry._1)
-        out.update(entry,toAdd._2)
-        i += 1
-      }
-    }
-    out
-  }
-
   def largestGap:Int = {
     var diff:List[Int] = List(0)
     val slots = ordered.map(sid=>sid._1)

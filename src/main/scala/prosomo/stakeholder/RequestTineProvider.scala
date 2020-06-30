@@ -55,25 +55,28 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
       }
       var returnedIdList:List[SlotId] = List()
       var id:SlotId = startId
-      if (job < 0) {
-        println(s"Bootstrap job length: ${tine.get.length}")
+      if (job == -1) {
         // job -1 means fetch info from hello message
         breakable{
           for (id <- tine.get.ordered) {
-            blockStorage.restore(id) match {
-              case Some(block:Block) =>
-                returnedIdList ::= id
-                send(holderRef,ref,ReturnBlocks(List(block),job,holderRef))
-              case None => break
+            if (returnedIdList.length < depth) {
+              blockStorage.restore(id) match {
+                case Some(block:Block) =>
+                  returnedIdList ::= id
+                  send(holderRef,ref,ReturnBlocks(List(block),-1,holderRef))
+                case None => break
+              }
+              if (!useFencing) Thread.sleep(100)
+            } else {
+              break
             }
-            if (!useFencing) Thread.sleep(100)
           }
           // job -2 means end of fetch info
-          if (job == -2) send(holderRef,ref,ReturnBlocks(List(),job,holderRef))
+          if (returnedIdList.length < depth) send(holderRef,ref,ReturnBlocks(List(),-2,holderRef))
         }
       } else {
         breakable{
-          while (returnedIdList.length <= depth) {
+          while (returnedIdList.length < depth) {
             blockStorage.restore(id) match {
               case Some(block:Block) =>
                 returnedIdList ::= id

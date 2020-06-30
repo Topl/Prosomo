@@ -41,7 +41,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(ratio:Ratio):Array[Byte] = sRatio(ratio)
   def getBytes(slotId: SlotId):Array[Byte] = Bytes.concat(getBytes(slotId._1),getBytes(slotId._2))
   def getBytes(cert:Cert):Array[Byte] = sCert(cert)
-  def getBytes(kesSignature: MalkinSignature):Array[Byte] = sKesSignature(kesSignature)
+  def getBytes(kesSignature: ForgingSignature):Array[Byte] = sKesSignature(kesSignature)
   def getBytes(state: State):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(mac:Mac):Array[Byte] = sMac(mac)
@@ -52,7 +52,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getBytes(chain:Tine):Array[Byte] = sChain(chain)
   def getBytes(wallet:Wallet):Array[Byte] = sWallet(wallet)
-  def getBytes(malkinKey:ForgingKey):Array[Byte] = sMalkinKey(malkinKey)
+  def getBytes(forgingKey:ForgingKey):Array[Byte] = sForgingKey(forgingKey)
   def getBytes(block:Block):Array[Byte] = sBlock(block)
   def getDiffuseBytes(msg:DiffuseDataType):Array[Byte] = sDiffuse(msg)
   def getHelloBytes(msg:HelloDataType):Array[Byte] = sHello(msg)
@@ -74,7 +74,7 @@ trait SerializationMethods extends SimpleTypes {
       case DeserializeIdList => dIdList(input)
       case DeserializeState => dState(input)
       case DeserializeChain => dChain(input)
-      case DeserializeMalkinKey => dMalkinKey(input)
+      case DeserializeForgingKey => dForgingKey(input)
       case DeserializeWallet => dWallet(input)
       case DeserializeBlock => dBlock(input)
       case DeserializeGenesisBlock => dBlock(input)
@@ -534,7 +534,7 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sKesSignature(kesSignature:MalkinSignature):Array[Byte] = {
+  private def sKesSignature(kesSignature:ForgingSignature):Array[Byte] = {
     val output = Bytes.concat(
       Ints.toByteArray(kesSignature._1.length),
       kesSignature._1,
@@ -548,7 +548,7 @@ trait SerializationMethods extends SimpleTypes {
     Ints.toByteArray(output.length) ++ output
   }
 
-  private def dKesSignature(stream: ByteStream): MalkinSignature = {
+  private def dKesSignature(stream: ByteStream): ForgingSignature = {
     val out1len = stream.getInt
     val out1 = stream.get(out1len)
     val out2len = stream.getInt
@@ -657,7 +657,7 @@ trait SerializationMethods extends SimpleTypes {
     Tine(out)
   }
 
-  private def sMalkinKey(key: ForgingKey):Array[Byte] = {
+  private def sForgingKey(key: ForgingKey):Array[Byte] = {
     Bytes.concat(
       sTree(key.L),
       sTree(key.Si),
@@ -669,7 +669,7 @@ trait SerializationMethods extends SimpleTypes {
     )
   }
 
-  private def dMalkinKey(stream:ByteStream):ForgingKey = {
+  private def dForgingKey(stream:ByteStream):ForgingKey = {
     val out1len = stream.getInt
     val out1Bytes = new ByteStream(stream.get(out1len),stream.caseObject)
     val out1 = dTree(out1Bytes)

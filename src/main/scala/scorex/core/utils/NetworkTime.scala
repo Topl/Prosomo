@@ -48,7 +48,7 @@ class NetworkTimeProvider(ntpSettings: NetworkTimeProviderSettings)(implicit ec:
           log.info("New offset adjusted: " + offset)
           lastUpdate.set(time)
         case Failure(e) =>
-          log.warn("Problems with NTP: ", e)
+          log.info("Problems with NTP: ", e)
           lastUpdate.compareAndSet(time, lu)
       }
     } else {
