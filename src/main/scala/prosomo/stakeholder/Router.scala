@@ -26,7 +26,8 @@ import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessage
   * AMS 2020:
   * Primary interface between Stakeholder system and network controller,
   * All messages from local and remote are processed here,
-  * Acts as remote interface, should only communicate with Stakeholder and Network Controller
+  * Acts as remote interface, should only communicate with Stakeholder and Network Controller,
+  * Remote messages are authenticated with Ecx X25519 Hash Mac
   * F^Delta^_{N-MC} multicast network functionality
   * @param seed entropy for randomness
   * @param inputRef network controller refs
@@ -407,7 +408,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
             case _ => println("Error: Diffuse message not parsed")
           }
         case HelloSpec.messageCode =>
-
           data match {
             case value:(Mac,HelloDataType)@unchecked => Try{
               val mac = value._1
