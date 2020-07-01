@@ -130,36 +130,37 @@ trait Receive extends Members {
                 println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
               }
               blocks.add(block)
-            } else {println("error: invalid returned block")}
-            if (value.job >= 0 && tinePool.keySet.contains(value.job) && !helloLock) {
-              if (bootStrapLock) {
-                if (value.job == bootStrapJob) {
-                  bootStrapMessage match {
-                    case scheduledMessage:Cancellable => scheduledMessage.cancel
-                    case null =>
-                  }
-                  bootStrapMessage = context.system.scheduler
-                    .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+            } else {println("Error: invalid returned block")}
+          }
+          if (value.job >= 0 && tinePool.keySet.contains(value.job) && !helloLock) {
+            if (bootStrapLock) {
+              if (value.job == bootStrapJob) {
+                bootStrapMessage match {
+                  case scheduledMessage:Cancellable => scheduledMessage.cancel
+                  case null =>
                 }
-              } else {
-                buildTine((value.job,tinePool(value.job)))
+                bootStrapMessage = context.system.scheduler
+                  .scheduleOnce(1*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
               }
-            } else if (value.job == -1 && helloLock) {
-              val b = block.prosomoHeader
-              val bHash = hash(b,serializer)
-              val bSlot = b._3
-              val bRho = b._5
-              if (!tinePool.keySet.contains(-1) && !tinePoolWithPrefix.map(_._3).contains(-1)) {
-                tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
-                buildTine((-1,tinePool(-1)))
-              }
-              bootStrapMessage match {
-                case scheduledMessage:Cancellable => scheduledMessage.cancel
-                case null =>
-              }
-              bootStrapMessage = context.system.scheduler
-                .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+            } else {
+              buildTine((value.job,tinePool(value.job)))
             }
+          } else if (value.job == -1 && helloLock) {
+            val b = block.prosomoHeader
+            val bHash = hash(b,serializer)
+            val bSlot = b._3
+            val bRho = b._5
+            if (tinePool.keySet.contains(-1)) tinePool -= -1
+            tinePoolWithPrefix = Array()
+            if (tinePool.keySet.isEmpty) {
+              tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
+            }
+            bootStrapMessage match {
+              case scheduledMessage:Cancellable => scheduledMessage.cancel
+              case null =>
+            }
+            bootStrapMessage = context.system.scheduler
+              .scheduleOnce(1*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
           }
         }
       }
@@ -272,23 +273,42 @@ trait Receive extends Members {
     /******************************************** From Local ****************************************************/
 
     case BootstrapJob =>
-      println(s"Holder $holderIndex Bootstrapping...")
-      if (bootStrapLock && helloLock) {
-        val lastSlot = localChain.getLastActiveSlot(globalSlot)._1
-        if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
-          send(
-            selfWrapper,
-            gossipSet(selfWrapper,holders).take(1),
-            Hello(lastSlot+1, selfWrapper)
-          )
-          bootStrapMessage = context.system.scheduler
-            .scheduleOnce(10*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+      if (helloLock) {
+        if (tinePool.keySet.isEmpty && tinePoolWithPrefix.isEmpty) {
+          val lastSlot = localChain.getLastActiveSlot(globalSlot)._1
+          if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
+            println(s"Holder $holderIndex Bootstrapping...")
+            send(
+              selfWrapper,
+              gossipSet(selfWrapper,holders).take(1),
+              Hello(lastSlot+1, selfWrapper)
+            )
+            bootStrapMessage match {
+              case scheduledMessage:Cancellable => scheduledMessage.cancel
+              case null =>
+            }
+            bootStrapMessage = context.system.scheduler
+              .scheduleOnce(10*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+          } else {
+            bootStrapMessage match {
+              case scheduledMessage:Cancellable => scheduledMessage.cancel
+              case null =>
+            }
+            bootStrapLock = false
+            helloLock = false
+          }
         } else {
-          if (tinePool.keySet.contains(-1)) tinePool -= -1
-          bootStrapLock = false
-          helloLock = false
+          if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
+          maxValidBG()
+          bootStrapMessage match {
+            case scheduledMessage:Cancellable => scheduledMessage.cancel
+            case null =>
+          }
+          bootStrapMessage = context.system.scheduler
+            .scheduleOnce(10.millis,self,BootstrapJob)(context.system.dispatcher,self)
         }
       } else if (bootStrapLock && tinePool.keySet.contains(bootStrapJob)) {
+        println(s"Holder $holderIndex Bootstrapping...")
         if (holders.contains(tinePool(bootStrapJob)._5)) {
           buildTine((bootStrapJob,tinePool(bootStrapJob)))
         } else {

@@ -38,11 +38,16 @@ case class Tine(var data:Map[Slot,(BlockId,Rho)] = Map()) {
   def getLastActiveSlot(slot:Slot):SlotId = get(lastActiveSlot(slot))
 
   def lastActiveSlot(s:Slot): Slot = {
-    var i:Slot = -1
-    for (slot <- this.slots) {
-      if (slot > i && slot <= s) i = slot
+    val max = this.slots.max
+    if (s >= max) {
+      max
+    } else {
+      var i:Slot = -1
+      for (slot <- this.slots) {
+        if (slot > i && slot <= s) i = slot
+      }
+      i
     }
-    i
   }
 
   def last:SlotId = {
