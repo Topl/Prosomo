@@ -144,21 +144,21 @@ trait Receive extends Members {
               } else {
                 buildTine((value.job,tinePool(value.job)))
               }
-            } else if (value.job == -1 && bootStrapLock && helloLock) {
+            } else if (value.job == -1 && helloLock) {
               val b = block.prosomoHeader
               val bHash = hash(b,serializer)
               val bSlot = b._3
               val bRho = b._5
+              if (!tinePool.keySet.contains(-1) && !tinePoolWithPrefix.map(_._3).contains(-1)) {
+                tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
+                buildTine((-1,tinePool(-1)))
+              }
               bootStrapMessage match {
                 case scheduledMessage:Cancellable => scheduledMessage.cancel
                 case null =>
               }
               bootStrapMessage = context.system.scheduler
                 .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
-              if (!tinePool.keySet.contains(-1) && !tinePoolWithPrefix.map(_._3).contains(-1)) {
-                tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
-                buildTine((-1,tinePool(-1)))
-              }
             }
           }
         }
@@ -274,9 +274,6 @@ trait Receive extends Members {
     case BootstrapJob =>
       println(s"Holder $holderIndex Bootstrapping...")
       if (bootStrapLock && helloLock) {
-        while (tinePoolWithPrefix.nonEmpty) {
-          maxValidBG()
-        }
         val lastSlot = localChain.getLastActiveSlot(globalSlot)._1
         if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
           send(
@@ -285,16 +282,9 @@ trait Receive extends Members {
             Hello(lastSlot+1, selfWrapper)
           )
           bootStrapMessage = context.system.scheduler
-            .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+            .scheduleOnce(10*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
         } else {
-          bootStrapMessage match {
-            case scheduledMessage:Cancellable => scheduledMessage.cancel
-            case null =>
-          }
           if (tinePool.keySet.contains(-1)) tinePool -= -1
-          while (tinePoolWithPrefix.nonEmpty) {
-            maxValidBG()
-          }
           bootStrapLock = false
           helloLock = false
         }

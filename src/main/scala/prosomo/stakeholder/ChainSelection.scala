@@ -1,11 +1,13 @@
 package prosomo.stakeholder
 
+import akka.actor.Cancellable
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
+import scala.concurrent.duration._
 
 import scala.util.Try
 import scala.util.control.Breaks.{break, breakable}
@@ -164,7 +166,7 @@ trait ChainSelection extends Members {
     } else {
       totalTries += 1
       tinePool -= job._1
-      tinePool += (job._1 -> (tine,counter,tine.length,totalTries,ref))
+      if (counter<tineMaxTries) tinePool += (job._1 -> (tine,counter,tine.length,totalTries,ref))
     }
   }
 
@@ -349,6 +351,14 @@ trait ChainSelection extends Members {
       val head = getBlockHeader(headId)
       println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
         + Base58.encode(headId._2.data) + Console.RESET)
+    }
+    if (helloLock) {
+      bootStrapMessage match {
+        case scheduledMessage:Cancellable => scheduledMessage.cancel
+        case null =>
+      }
+      bootStrapMessage = context.system.scheduler
+        .scheduleOnce(2*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
     }
   }
 
