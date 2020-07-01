@@ -168,7 +168,7 @@ trait Update extends Members {
       }
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
-        SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
+        SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
         SharedData.blockTime = {
           val head = localChain.getLastActiveSlot(globalSlot)
@@ -187,35 +187,30 @@ trait Update extends Members {
         SharedData.activeStake = {
           var out = 0.0
           for (info<-inbox) {
-            info._2._2 match {
-              case Some(pks) => out += relativeStake(ByteArrayWrapper(pks._1++pks._2++pks._3),stakingState).toDouble
-              case None =>
-            }
+            val pks = info._2._2
+            out += relativeStake(ByteArrayWrapper(pks._1++pks._2++pks._3),stakingState).toDouble
           }
           out += relativeStake(keys.pkw,stakingState).toDouble
           out
         }
         for (holder<-holders) {
-          inbox.toList.find(info=>info._2._1.contains(holder)) match {
+          inbox.toList.find(info=>info._2._1 == holder) match {
             case Some(inboxInfo) => Try{
-              inboxInfo._2._2 match {
-                case Some(hpks:PublicKeys) =>
-                  val hpk:PublicKeyW = ByteArrayWrapper(hpks._1++hpks._2++hpks._3)
-                  val str = holder.actorPath.toString
-                  wallet.confirmedState.get(hpk) match {
-                    case Some(st) =>
-                      val ha = relativeStake(hpk,wallet.confirmedState).toDouble
-                      SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
-                      SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
-                    case None =>
-                  }
-                  stakingState.get(hpk) match {
-                    case Some(st) =>
-                      val ha = relativeStake(hpk,stakingState).toDouble
-                      SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
-                      SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
-                    case None =>
-                  }
+              val hpks:PublicKeys = inboxInfo._2._2
+              val hpk:PublicKeyW = ByteArrayWrapper(hpks._1++hpks._2++hpks._3)
+              val str = holder.actorPath.toString
+              wallet.confirmedState.get(hpk) match {
+                case Some(st) =>
+                  val ha = relativeStake(hpk,wallet.confirmedState).toDouble
+                  SharedData.confirmedBalance = SharedData.confirmedBalance + (str->st._1)
+                  SharedData.confirmedAlpha = SharedData.confirmedAlpha + (str->ha)
+                case None =>
+              }
+              stakingState.get(hpk) match {
+                case Some(st) =>
+                  val ha = relativeStake(hpk,stakingState).toDouble
+                  SharedData.stakingBalance = SharedData.stakingBalance + (str->st._1)
+                  SharedData.stakingAlpha = SharedData.stakingAlpha + (str->ha)
                 case None =>
               }
             }

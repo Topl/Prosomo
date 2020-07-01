@@ -7,7 +7,6 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Ecx, Fch, Mac, Parameters, SharedData, Types}
-import prosomo.remote.SpecTypes.{DiffuseDataType, HelloDataType, HoldersType, RequestBlockType, RequestTineType, ReturnBlocksType, SendBlockType, SendTxType}
 import prosomo.remote.{DiffuseDataSpec, _}
 import scorex.util.encode.Base58
 
@@ -21,6 +20,17 @@ import scorex.core.network.ConnectedPeer
 import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
+
+import prosomo.remote.SpecTypes.{
+  DiffuseDataType,
+  HelloDataType,
+  HoldersType,
+  RequestBlockType,
+  RequestTineType,
+  ReturnBlocksType,
+  SendBlockType,
+  SendTxType
+}
 
 /**
   * AMS 2020:
@@ -147,7 +157,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         holdersPosition(recip)._2,
         "K")).toLong)
     }
-    val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((sender,recip))
+    val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong
+      + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((sender,recip))
     if (delay_ns/1.0e9 > maxDelay) {maxDelay = delay_ns/1.0e9}
     delay_ns.nano
   }
@@ -182,7 +193,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
               case _ => " "
             }
           )
-          if (!r.remote) context.system.scheduler.scheduleOnce(0.nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
+          if (!r.remote)
+            context.system.scheduler.scheduleOnce(0.nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
           if (messageMap.nonEmpty) queue += (holder->messageMap)
         }
       }
@@ -202,7 +214,9 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
         val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
-        context.system.scheduler.scheduleOnce(0.nano,holder1.actorRef,IssueTx(holder2,delta))(context.system.dispatcher,self)
+        context.system.scheduler.scheduleOnce(0.nano,holder1.actorRef,
+          IssueTx(holder2,delta)
+        )(context.system.dispatcher,self)
       }
     }
   }
@@ -274,12 +288,6 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
   def routerReceive: Receive = {
 
     case Flag(ref,value) =>
-      //      if (value == "updateChain" || value == "passData") {if (printSteps) println(value+" "+holders.indexOf(sender).toString)
-      //        for (holder<-holders) {
-      //          if (printSteps) println(holders.indexOf(holder).toString+" "+holderReady(holder))
-      //        }
-      //        if (printSteps) println(holderMessages.keySet.contains(globalSlot))
-      //      }
       if (value == roundStep && holderReady.keySet.contains(ref)) {
         holderReady -= ref
         holderReady += (ref -> true)
@@ -295,7 +303,8 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       val messageDelta:Slot = ((nsDelay.toNanos+ts)/(slotT*1000000)).toInt
       val priority:Long = (nsDelay.toNanos+ts)%(slotT*1000000)
       val offsetSlot = globalSlot+messageDelta
-      val messages:Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]] = if (holderMessages.keySet.contains(offsetSlot)) {
+      val messages:Map[Long,Map[ActorRefWrapper,Map[BigInt,(ActorRefWrapper,ActorRefWrapper,Any)]]] =
+        if (holderMessages.keySet.contains(offsetSlot)) {
         var m = holderMessages(offsetSlot)
         holderMessages -= offsetSlot
         if (m.keySet.contains(priority)) {
@@ -681,11 +690,10 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private def messageFromLocal: Receive = {
     /** adds delay to locally routed message*/
-    case MessageFromLocalToLocal(s,r,c) =>
-      assert(!s.remote && !r.remote)
+    case MessageFromLocalToLocal(s,r,c) if !s.remote && !r.remote =>
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
 
-    case MessageFromLocalToRemote(sender,r,command) =>
+    case MessageFromLocalToRemote(sender,r,command) if pathToPeer.keySet.contains(r) && !sender.remote =>
       val s = sender.actorPath
       command match {
         case c:DiffuseData =>
@@ -808,7 +816,7 @@ class Router(seed:Array[Byte],inputRef:Seq[ActorRefWrapper]) extends Actor
       messageFromLocal orElse
       messageFromPeer orElse
       routerReceive orElse {
-      case _: Any =>
+      case _ =>
     }
 }
 

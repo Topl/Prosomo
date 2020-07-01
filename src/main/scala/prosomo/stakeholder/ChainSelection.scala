@@ -22,7 +22,6 @@ import scala.util.control.Breaks.{break, breakable}
   * Txs are filed into MemPool from every block encountered.
   */
 
-
 trait ChainSelection extends Members {
   import Parameters._
 
@@ -38,7 +37,7 @@ trait ChainSelection extends Members {
           wallet.getConfirmedBalance,
           wallet.getPendingBalance
         )
-        SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
+        SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
       }
     } else {
@@ -57,7 +56,7 @@ trait ChainSelection extends Members {
                     wallet.getConfirmedBalance,
                     wallet.getPendingBalance
                   )
-                  SharedData.issueTxInfo = Some((keys.pkw,completeInboxEntries(inbox)))
+                  SharedData.issueTxInfo = Some((keys.pkw,inbox))
                   SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
@@ -123,11 +122,13 @@ trait ChainSelection extends Members {
                 }
               case None =>
                 val tineLength = getActiveSlots(tine)
-                if (tineLength>tineMaxDepth && job._1 >= 0) {
+                if (tineLength>tineMaxDepth && job._1 >= 0 && !helloLock) {
                   bootStrapLock = true
                   bootStrapJob = job._1
                   if (holderIndex == SharedData.printingHolder && printFlag) println(
-                    "Holder " + holderIndex.toString + " Looking for Parent Tine, Job:"+job._1+" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
+                    "Holder " + holderIndex.toString
+                      + " Looking for Parent Tine, Job:"+job._1
+                      +" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
                   )
                   val depth:Int = if (tineLength < tineMaxDepth) {
                     tineLength
@@ -137,7 +138,9 @@ trait ChainSelection extends Members {
                   send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
                 } else {
                   if (holderIndex == SharedData.printingHolder && printFlag) println(
-                    "Holder " + holderIndex.toString + " Looking for Parent Block, Job:"+job._1+" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
+                    "Holder " + holderIndex.toString
+                      + " Looking for Parent Block, Job:"+job._1
+                      +" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
                   )
                   send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
                 }
@@ -335,7 +338,7 @@ trait ChainSelection extends Members {
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
 
-    if (job == bootStrapJob && job >= 0) {
+    if (job == bootStrapJob && job >= 0 && !helloLock) {
       bootStrapJob = -1
       bootStrapLock = false
       routerRef ! BootstrapJob(selfWrapper)

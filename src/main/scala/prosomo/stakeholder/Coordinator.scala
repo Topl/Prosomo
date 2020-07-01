@@ -82,7 +82,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var holders: List[ActorRefWrapper] = List()
   var gOff = 0
   var numHello = 0
-  var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])] = Map()
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
   var blocksForged = 0
   var globalSlot = 0
   var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)] = Map()
@@ -103,6 +103,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var covert:Boolean = false
   var forgeAll:Boolean = false
   var bootStrapLock:Boolean = false
+  var helloLock:Boolean = false
   var bootStrapJob:Int = 0
   var bootStrapMessage:Cancellable = _
   var tineProvider: Option[ActorRefWrapper] = None

@@ -52,7 +52,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var holders: List[ActorRefWrapper]
   var gOff:Int
   var numHello:Int
-  var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)]
   var blocksForged:Int
   var globalSlot:Slot
   var tinePool:Map[Int,(Tine,Int,Int,Int,ActorRefWrapper)]
@@ -74,6 +74,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var forgeAll:Boolean
 
   var bootStrapLock:Boolean
+  var helloLock:Boolean
   var bootStrapJob:Int
   var bootStrapMessage:Cancellable
   var tineProvider:Option[ActorRefWrapper]
@@ -84,7 +85,6 @@ trait Members extends SimpleTypes with Actor with Timers {
 
   case object TimerKey
 
-  def completeInboxEntries(inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]):Map[Sid,(ActorRefWrapper,PublicKeys)]
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet():Unit

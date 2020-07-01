@@ -104,10 +104,4 @@ trait Operations extends Members {
     }
   }
 
-  def completeInboxEntries(inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])]):Map[Sid,(ActorRefWrapper,PublicKeys)] = {
-    var out:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
-    for (info <- inbox) if (info._2._2.isDefined && info._2._1.isDefined) out += (info._1->(info._2._1.get,info._2._2.get))
-    out
-  }
-
 }

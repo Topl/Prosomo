@@ -13,11 +13,11 @@ import scala.concurrent.Future
   */
 
 case class ActorRefWrapper(
-                            inputRouterRef:akka.actor.ActorRef,
-                            actorRef:akka.actor.ActorRef,
-                            actorPath:akka.actor.ActorPath,
-                            remote:Boolean = false
-                   ) {
+  inputRouterRef:akka.actor.ActorRef,
+  actorRef:akka.actor.ActorRef,
+  actorPath:akka.actor.ActorPath,
+  remote:Boolean = false
+) {
 
   def canEqual(a:Any):Boolean = a.isInstanceOf[ActorRefWrapper]
 

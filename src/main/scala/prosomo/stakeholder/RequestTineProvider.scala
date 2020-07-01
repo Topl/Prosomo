@@ -18,7 +18,8 @@ import scala.util.Random
   * @param routerRef actor ref to send network messages to
   */
 
-class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper) extends Actor with Timers with Types {
+class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper)
+  extends Actor with Timers with Types {
   import RequestTineProvider.Info
   val sig:Sig = new Sig
   val rng:Random = new Random
@@ -66,7 +67,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
                   send(holderRef,ref,ReturnBlocks(List(block),-1,holderRef))
                 case None => break
               }
-              if (!useFencing) Thread.sleep(100)
+              if (!useFencing) Thread.sleep(50)
             } else {
               break
             }
@@ -82,7 +83,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
                 id = block.parentSlotId
               case None => break
             }
-            if (!useFencing) Thread.sleep(100)
+            if (!useFencing) Thread.sleep(50)
           }
         }
       }
@@ -108,5 +109,6 @@ object RequestTineProvider extends SimpleTypes {
     tine:Option[Tine]
   )
   case object Done
-  def props(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper):Props = Props(new RequestTineProvider(blockStorage))
+  def props(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper):Props =
+    Props(new RequestTineProvider(blockStorage))
 }

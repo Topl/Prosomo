@@ -95,7 +95,7 @@ class Stakeholder(
   //number of tries to issue hello in slots
   var numHello = 0
   //map of all session IDs and public keys associated with holders in holder list
-  var inbox:Map[Sid,(Option[ActorRefWrapper],Option[PublicKeys])] = Map()
+  var inbox:Map[Sid,(ActorRefWrapper,PublicKeys)] = Map()
   //total number of times this stakeholder was elected slot leader
   var blocksForged = 0
   //slot time as determined from coordinator clock
@@ -137,6 +137,7 @@ class Stakeholder(
   var forgeAll:Boolean = false
 
   var bootStrapLock:Boolean = true
+  var helloLock:Boolean = true
   var bootStrapJob:Int = -1
   var bootStrapMessage: Cancellable = _
   var tineProvider:Option[ActorRefWrapper] = None
