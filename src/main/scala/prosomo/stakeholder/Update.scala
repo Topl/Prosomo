@@ -146,7 +146,6 @@ trait Update extends Members {
             forgeBlock(keys)
           }
           keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
-          if ((globalSlot+(phase*60).toInt)%60 == 0) self ! Diffuse
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
