@@ -155,6 +155,8 @@ trait Receive extends Members {
             if (tinePool.keySet.isEmpty) {
               tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
             }
+            if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
+            bootstrapAdoptTine()
             bootStrapMessage match {
               case scheduledMessage:Cancellable => scheduledMessage.cancel
               case null =>

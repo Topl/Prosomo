@@ -67,7 +67,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
                   send(holderRef,ref,ReturnBlocks(List(block),-1,holderRef))
                 case None => break
               }
-              if (!useFencing) Thread.sleep(50)
+              if (!useFencing) Thread.sleep(100)
             } else {
               break
             }
@@ -83,7 +83,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
                 id = block.parentSlotId
               case None => break
             }
-            if (!useFencing) Thread.sleep(50)
+            if (!useFencing) Thread.sleep(100)
           }
         }
       }
