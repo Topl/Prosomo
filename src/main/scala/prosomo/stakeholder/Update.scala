@@ -146,6 +146,7 @@ trait Update extends Members {
             forgeBlock(keys)
           }
           keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
+          if ((globalSlot+(phase*60).toInt)%60 == 0) self ! Diffuse
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
@@ -167,7 +168,6 @@ trait Update extends Members {
           }
         case _ =>
       }
-      if ((globalSlot+(phase*60).toInt)%60 == 0) self ! Diffuse
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
