@@ -95,6 +95,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine):State
   def update():Unit
+  def scheduleDiffuse():Unit
   def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
   def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer):Hash

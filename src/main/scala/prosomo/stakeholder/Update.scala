@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{Diffuse, Flag, WriteFile}
+import prosomo.cases.{Flag, WriteFile}
 import prosomo.components.Tine
 import prosomo.primitives.Parameters.useGui
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
@@ -134,7 +134,7 @@ trait Update extends Members {
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
             }
             inbox = Map()
-            self ! Diffuse
+            scheduleDiffuse()
           case _ =>
         }
         if (globalSlot == localSlot && updating) {

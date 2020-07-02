@@ -437,7 +437,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           println("Splitting Party into groups of "+holders1.length.toString+" and "+holders2.length.toString)
           sendAssertDone(holders1,Party(holders1,clear = true))
           sendAssertDone(holders2,Party(holders2,clear = true))
-          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
 
@@ -450,7 +449,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           sendAssertDone(List(commonRef),Party(holders,clear = false))
           sendAssertDone(holders1.tail,Party(holders1,clear = false))
           sendAssertDone(holders2,Party(commonRef::holders2,clear = false))
-          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders1
           parties ::= holders2
 
@@ -458,7 +456,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           parties = List()
           println("Joining Parties")
           sendAssertDone(holders.filterNot(_.remote),Party(holders,clear = true))
-          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           parties ::= holders
 
         case "new_holder" =>
@@ -477,7 +474,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(routerRef,HoldersFromLocal(holders))
               sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
               newHolder ! Run
-              holders.filterNot(_.remote).foreach(_ ! Diffuse)
             case _ => newHolder ! PoisonPill
           }
 
@@ -534,7 +530,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             println(s"Splitting Stake to $alpha1 and $alpha2 with $numh1 and $numh2 holders")
             sendAssertDone(holders1,Party(holders1,clear = true))
             sendAssertDone(holders2,Party(holders2,clear = true))
-            holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
           }
@@ -578,7 +573,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             sendAssertDone(List(commonRef),Party(holders,clear = false))
             sendAssertDone(holders1.tail,Party(holders1,clear = false))
             sendAssertDone(holders2,Party(commonRef::holders2,clear = false))
-            holders.filterNot(_.remote).foreach(_ ! Diffuse)
             parties ::= holders1
             parties ::= holders2
           }
@@ -650,7 +644,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(routerRef,HoldersFromLocal(holders))
                 sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
                 newHolder ! Run
-                holders.filterNot(_.remote).foreach(_ ! Diffuse)
               case _ => newHolder ! PoisonPill
             }
 
@@ -936,7 +929,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           sendAssertDone(routerRef,HoldersFromLocal(holders))
           sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
           newHolder ! Run
-          holders.filterNot(_.remote).foreach(_ ! Diffuse)
           println("Forging started.")
         case _ => newHolder ! PoisonPill
       }

@@ -310,6 +310,7 @@ trait Receive extends Members {
             }
             bootStrapLock = false
             helloLock = false
+            scheduleDiffuse()
           }
         } else {
           if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
@@ -497,7 +498,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
-      self ! Diffuse
+      scheduleDiffuse()
       context.system.scheduler.scheduleOnce(slotT*refreshInterval.millis,self,Refresh)(context.system.dispatcher,self)
 
     case GetTime =>

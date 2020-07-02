@@ -5,6 +5,7 @@ import prosomo.cases._
 import prosomo.history.BlockStorage
 import prosomo.primitives.Parameters
 import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.math.BigInt
 
 /**
@@ -15,6 +16,17 @@ import scala.math.BigInt
 
 trait Messages extends Members {
   import Parameters._
+
+  override def scheduleDiffuse(): Unit = {
+    var t = 0
+    t += rng.nextInt(10)+1
+    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+    t += rng.nextInt(10)+1
+    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+    t += rng.nextInt(10)+1
+    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+  }
+
 
   /**
     * picks set of gossipers randomly
