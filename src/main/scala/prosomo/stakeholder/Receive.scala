@@ -254,13 +254,13 @@ trait Receive extends Members {
           case _ =>
         }
       }
-      for (entry <- inbox) {
-        send(
-          selfWrapper,
-          value.sender,
-          DiffuseData(entry._1,entry._2._1,entry._2._2,selfWrapper)
-        )
-      }
+//      for (entry <- inbox) {
+//        send(
+//          selfWrapper,
+//          value.sender,
+//          DiffuseData(entry._1,entry._2._1,entry._2._2,selfWrapper)
+//        )
+//      }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
