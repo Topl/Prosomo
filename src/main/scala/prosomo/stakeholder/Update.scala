@@ -167,6 +167,7 @@ trait Update extends Members {
           }
         case _ =>
       }
+      if ((globalSlot+(phase*60).toInt)%60 == 0) self ! Diffuse
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
