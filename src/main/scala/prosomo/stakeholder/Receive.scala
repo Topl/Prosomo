@@ -72,7 +72,7 @@ trait Receive extends Members {
           val bHash = hash(b,serializer)
           val bSlot = b._3
           val bRho = b._5
-          if (holderIndex == SharedData.printingHolder) {
+          if (holderIndex == SharedData.printingHolder && !helloLock) {
             networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
             if (networkDelayList.size > 100) networkDelayList.take(100)
             def average(points:List[Double]):Double={
@@ -254,6 +254,13 @@ trait Receive extends Members {
           case _ =>
         }
       }
+      for (entry <- inbox) {
+        send(
+          selfWrapper,
+          value.sender,
+          DiffuseData(entry._1,entry._2._1,entry._2._2,selfWrapper)
+        )
+      }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }
@@ -262,6 +269,12 @@ trait Receive extends Members {
       * Validates diffused keys from other holders and stores in inbox
       **/
     case value:DiffuseData => if (!inbox.keySet.contains(value.sid)){
+      val pkwNew = ByteArrayWrapper(value.pks._1++value.pks._2++value.pks._3)
+      if (pkwNew != keys.pkw) {
+        for (entry<-inbox) {
+          val pkwEntry = ByteArrayWrapper(entry._2._2._1++entry._2._2._2++entry._2._2._3)
+          if (pkwEntry == pkwNew) inbox -= entry._1
+        }
         inbox += (value.sid->(value.ref,value.pks))
         send(
           selfWrapper,
@@ -269,6 +282,7 @@ trait Receive extends Members {
           DiffuseData(value.sid,value.ref,value.pks,selfWrapper)
         )
       }
+    }
 
     /******************************************** From Local ****************************************************/
 
@@ -299,7 +313,7 @@ trait Receive extends Members {
           }
         } else {
           if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
-          maxValidBG()
+          bootstrapAdoptTine()
           bootStrapMessage match {
             case scheduledMessage:Cancellable => scheduledMessage.cancel
             case null =>
@@ -363,7 +377,7 @@ trait Receive extends Members {
 
     /**sends holder information for populating inbox*/
     case Diffuse =>
-      send(selfWrapper,gossipSet(selfWrapper,holders),DiffuseData(sessionId,selfWrapper,keys.publicKeys,selfWrapper))
+      send(selfWrapper,gossipSet(selfWrapper,holders),DiffuseData(hash(uuid,serializer),selfWrapper,keys.publicKeys,selfWrapper))
 
     /**allocation and vars of simulation*/
     case Initialize(gs,inputPassword) =>
@@ -474,7 +488,6 @@ trait Receive extends Members {
         context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
         timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
         context.system.scheduler.scheduleOnce(slotT* (refreshInterval * rng.nextDouble).toInt.millis,self,Refresh)(context.system.dispatcher,self)
-        context.system.scheduler.scheduleOnce(5*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
       }
       self ! BootstrapJob
 
@@ -484,6 +497,7 @@ trait Receive extends Members {
       chainStorage.refresh
       history.refresh
       walletStorage.refresh
+      self ! Diffuse
       context.system.scheduler.scheduleOnce(slotT*refreshInterval.millis,self,Refresh)(context.system.dispatcher,self)
 
     case GetTime =>

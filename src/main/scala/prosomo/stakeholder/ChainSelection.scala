@@ -9,7 +9,7 @@ import prosomo.primitives.{Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 import scala.concurrent.duration._
 
-import scala.util.Try
+import scala.util.{Try,Success,Failure}
 import scala.util.control.Breaks.{break, breakable}
 
 /**
@@ -202,7 +202,10 @@ trait ChainSelection extends Members {
     }
   }
 
-  /**main chain selection routine, maxvalid-bg*/
+  /**
+    * Chain adoption for synchronized nodes,
+    * Optimal for nodes with a previous head close to the current global slot
+    * */
   def maxValidBG(): Unit = Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
     val tine:Tine = Tine(tinePoolWithPrefix.last._1)
@@ -352,7 +355,128 @@ trait ChainSelection extends Members {
       println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
         + Base58.encode(headId._2.data) + Console.RESET)
     }
+  } match {
+    case Failure(exception) => exception.printStackTrace()
+    case _ =>
   }
+
+  /**
+    * Chain adoption for bootstrapping nodes,
+    * Optimal for nodes that are processing fetch info responses
+    */
+  def bootstrapAdoptTine(): Unit = Try{
+    val prefix:Slot = tinePoolWithPrefix.last._2
+    val tine:Tine = Tine(tinePoolWithPrefix.last._1)
+    val job:Int = tinePoolWithPrefix.last._3
+    val tineMaxSlot = tine.last._1
+    val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
+    val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
+
+    if (holderIndex == SharedData.printingHolder) {
+      val headId = localChain.getLastActiveSlot(globalSlot)
+      val head = getBlockHeader(headId)
+      println("Previous head: " + s" block ${head.get._9} "
+        + Base58.encode(headId._2.data))
+    }
+
+    assert(!tine.isEmpty)
+    assert(localSlot == localChain.lastActiveSlot(localSlot))
+    assert(job == -1)
+
+    val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
+      true
+    } else {
+      val slotsTine = getActiveSlots(subChain(tine,prefix+1,prefix+1+slotWindow))
+      val slotsLocal = getActiveSlots(subChain(localChain,prefix+1,prefix+1+slotWindow))
+      slotsLocal < slotsTine
+    }
+
+    if (bestChain) {
+      if (verifySubChain(tine,localChain.lastActiveSlot(prefix))) {
+        adoptTine()
+        chainStorage.store(localChain,localChainId,serializer)
+      } else {
+        println("Error: invalid best chain")
+        tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
+        SharedData.throwError(holderIndex)
+      }
+    } else {
+      dropTine()
+    }
+
+    def adoptTine():Unit = {
+      if (holderIndex == SharedData.printingHolder && printFlag)
+        println(s"Tine Adopted  $bnt  >  $bnl")
+      for (i <- prefix+1 to tineMaxSlot) {
+        localChain.remove(i)
+        val id = tine.get(i)
+        if (id._1 > -1) {
+          assert(id._1 == i)
+          assert(
+            getParentId(id) match {
+              case Some(pid:SlotId) =>
+                localChain.getLastActiveSlot(i) == pid
+              case _ => false
+            }
+          )
+          localChain.update(id,getNonce(id).get)
+        }
+      }
+      val lastSlot = tineMaxSlot
+      assert(lastSlot == localChain.lastActiveSlot(tineMaxSlot))
+      history.get(localChain.get(lastSlot)) match {
+        case Some(reorgState:(State,Eta)) =>
+          localState = reorgState._1
+          eta = reorgState._2
+        case _ =>
+          println("Error: invalid state and eta on adopted tine")
+          SharedData.throwError(holderIndex)
+      }
+      var localEpoch = lastSlot / epochLength
+      assert(localEpoch == currentEpoch)
+      while (localSlot < tineMaxSlot) {
+        updateEpoch(localSlot,localEpoch,eta,localChain) match {
+          case result:(Int,Eta) if result._1 > localEpoch =>
+            localEpoch = result._1
+            currentEpoch = localEpoch
+            eta = result._2
+            stakingState = getStakingState(localEpoch,localChain)
+            alphaCache match {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
+                loadingCache.invalidateAll()
+              case None => alphaCache = Some(
+                CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                  new CacheLoader[ByteArrayWrapper,Ratio] {
+                    def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                  }
+                )
+              )
+            }
+            keys.alpha = alphaCache.get.get(keys.pkw)
+          case _ =>
+        }
+        localSlot += 1
+      }
+      tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
+    }
+
+    def dropTine():Unit = {
+      if (holderIndex == SharedData.printingHolder && printFlag)
+        println(s"Tine Rejected $bnt  <= $bnl")
+      tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
+    }
+
+    if (holderIndex == SharedData.printingHolder) {
+      val headId = localChain.getLastActiveSlot(tineMaxSlot)
+      val head = getBlockHeader(headId)
+      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
+        + Base58.encode(headId._2.data) + Console.RESET)
+    }
+  } match {
+    case Failure(exception) => exception.printStackTrace()
+    case _ =>
+  }
+
 
   def validateChainIds(c:Tine):Boolean = {
     var pid = c.least

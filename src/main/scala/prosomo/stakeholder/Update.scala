@@ -2,11 +2,12 @@ package prosomo.stakeholder
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{Flag, WriteFile}
+import prosomo.cases.{Diffuse, Flag, WriteFile}
 import prosomo.components.Tine
 import prosomo.primitives.Parameters.useGui
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
+
 import scala.util.Try
 
 /**
@@ -89,8 +90,6 @@ trait Update extends Members {
     * The new key is saved to disk, the keys already on disk are made old keys, and the old old key file is erased,
     * leaving only new key and old key on disk.
     *
-    * Gossipers are refreshed
-    *
     * Chain selection according to MaxValid-BG occurs on the last element of tinePoolWithPrefix
     *
     * Aux information is updated
@@ -98,7 +97,7 @@ trait Update extends Members {
 
   def update():Unit = timeFlag{
     if (SharedData.error) actorStalled = true
-    if (!actorStalled && !updating) {
+    if (!actorStalled && !updating && !helloLock) {
       updating = true
       if (SharedData.killFlag) {
         timers.cancelAll
@@ -134,6 +133,8 @@ trait Update extends Members {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
             }
+            inbox = Map()
+            self ! Diffuse
           case _ =>
         }
         if (globalSlot == localSlot && updating) {
