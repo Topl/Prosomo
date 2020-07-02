@@ -248,16 +248,13 @@ trait ChainSelection extends Members {
     def adoptTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Adopted  $bnt  >  $bnl")
-      if (!helloLock) {
-        collectLedger(subChain(localChain,prefix+1,globalSlot))
-        collectLedger(tine)
-        for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
-          val ledger:TransactionSet = blocks.get(id).get.blockBody.get
-          wallet.add(ledger)
-        }
+      collectLedger(subChain(localChain,prefix+1,globalSlot))
+      collectLedger(tine)
+      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
+        val ledger:TransactionSet = blocks.get(id).get.blockBody.get
+        wallet.add(ledger)
       }
-      val newLastSlot = tine.last._1
-      for (i <- prefix+1 to newLastSlot) {
+      for (i <- prefix+1 to globalSlot) {
         localChain.remove(i)
         val id = tine.get(i)
         if (id._1 > -1) {
@@ -270,17 +267,15 @@ trait ChainSelection extends Members {
             }
           )
           localChain.update(id,getNonce(id).get)
-          if (!helloLock) {
-            val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
-            for (trans<-blockLedger) {
-              if (memPool.keySet.contains(trans.sid)) {
-                memPool -= trans.sid
-              }
+          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+          for (trans<-blockLedger) {
+            if (memPool.keySet.contains(trans.sid)) {
+              memPool -= trans.sid
             }
           }
         }
       }
-      val lastSlot = newLastSlot
+      val lastSlot = localChain.lastActiveSlot(globalSlot)
       history.get(localChain.get(lastSlot)) match {
         case Some(reorgState:(State,Eta)) =>
           localState = reorgState._1
@@ -290,9 +285,7 @@ trait ChainSelection extends Members {
           SharedData.throwError(holderIndex)
       }
       var epoch = lastSlot / epochLength
-      var slot = lastSlot
-      while (slot < globalSlot) {
-        slot = epochLength*(epoch+1)
+      for (slot <- lastSlot to globalSlot) {
         updateEpoch(slot,epoch,eta,localChain) match {
           case result:(Int,Eta) if result._1 > epoch =>
             epoch = result._1
@@ -313,8 +306,9 @@ trait ChainSelection extends Members {
           case _ =>
         }
       }
-      if (!helloLock) updateWallet()
-      if (!helloLock) trimMemPool()
+      assert(currentEpoch == epoch)
+      updateWallet()
+      trimMemPool()
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
       var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- tinePoolWithPrefix) {
@@ -332,15 +326,13 @@ trait ChainSelection extends Members {
     def dropTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Rejected $bnt  <= $bnl")
-      if (!helloLock) {
-        collectLedger(tine)
-        for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
-          if (id._1 > -1) {
-            val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
-            for (trans <- blockLedger) {
-              if (memPool.keySet.contains(trans.sid)){
-                memPool -= trans.sid
-              }
+      collectLedger(tine)
+      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
+        if (id._1 > -1) {
+          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+          for (trans <- blockLedger) {
+            if (memPool.keySet.contains(trans.sid)){
+              memPool -= trans.sid
             }
           }
         }
@@ -348,7 +340,7 @@ trait ChainSelection extends Members {
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
     }
 
-    if (job == bootStrapJob && job >= 0 && !helloLock) {
+    if (job == bootStrapJob && job >= 0) {
       bootStrapJob = -1
       bootStrapLock = false
       routerRef ! BootstrapJob(selfWrapper)
