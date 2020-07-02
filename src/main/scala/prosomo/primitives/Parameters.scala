@@ -124,6 +124,8 @@ object Parameters {
   val holderIndexMax:Int = config.getInt("params.holderIndexMax")
   //duration of slot in milliseconds
   val slotT:Long = (config.getInt("params.slotT")*timeScale).toLong
+  //interval between return blocks in tine provider
+  val requestTineInterval:Int = config.getInt("params.requestTineInterval")
   //delay in milliseconds per kilometer in router model
   val delay_ms_km:Double = config.getDouble("params.delay_ms_km")*timeScale
   //delay in milliseconds per bit in router model

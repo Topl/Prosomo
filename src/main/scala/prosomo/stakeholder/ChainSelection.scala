@@ -206,7 +206,7 @@ trait ChainSelection extends Members {
     * Chain adoption for synchronized nodes,
     * Optimal for nodes with a previous head close to the current global slot
     * */
-  def maxValidBG(): Unit = Try{
+  def maxValidBG(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
     val tine:Tine = Tine(tinePoolWithPrefix.last._1)
     val job:Int = tinePoolWithPrefix.last._3
@@ -364,7 +364,7 @@ trait ChainSelection extends Members {
     * Chain adoption for bootstrapping nodes,
     * Optimal for nodes that are processing fetch info responses
     */
-  def bootstrapAdoptTine(): Unit = Try{
+  def bootstrapAdoptTine(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
     val tine:Tine = Tine(tinePoolWithPrefix.last._1)
     val job:Int = tinePoolWithPrefix.last._3

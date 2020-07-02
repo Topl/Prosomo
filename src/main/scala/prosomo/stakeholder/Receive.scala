@@ -213,7 +213,16 @@ trait Receive extends Members {
               }.toOption
               tineProvider match {
                 case Some(ref:ActorRefWrapper) =>
-                  ref ! RequestTineProvider.Info(holderIndex,value.sender,selfWrapper,startId,depth,value.job,None)
+                  ref ! RequestTineProvider.Info(
+                    holderIndex,
+                    value.sender,
+                    selfWrapper,
+                    startId,
+                    depth,
+                    value.job,
+                    None,
+                    None
+                  )
                 case None => println("error: tine provider not initialized")
               }
             } else {println("error: chain request mac invalid")}
@@ -249,20 +258,14 @@ trait Receive extends Members {
                   startId,
                   depth,
                   -1,
-                  Some(subChain(localChain,value.slot,globalSlot))
+                  Some(subChain(localChain,value.slot,globalSlot)),
+                  Some(inbox)
                 )
               case None => println("Error: tine provider not initialized")
             }
           case _ =>
         }
       }
-//      for (entry <- inbox) {
-//        send(
-//          selfWrapper,
-//          value.sender,
-//          DiffuseData(entry._1,entry._2._1,entry._2._2,selfWrapper)
-//        )
-//      }
       if (useFencing) {
         routerRef ! Flag(selfWrapper,"passData")
       }

@@ -1,11 +1,11 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
-import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks}
+import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks, DiffuseData}
 import prosomo.components.{Block, Serializer, Tine}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Fch, SharedData, Sig, SimpleTypes, Types}
-import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting}
+import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting, requestTineInterval}
 
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
@@ -49,7 +49,8 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
     startId:SlotId,
     depth:Int,
     job:Int,
-    tine:Option[Tine]
+    tine:Option[Tine],
+    inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
     ) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
@@ -64,14 +65,30 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
               blockStorage.restore(id) match {
                 case Some(block:Block) =>
                   returnedIdList ::= id
-                  send(holderRef,ref,ReturnBlocks(List(block),-1,holderRef))
+                  send(
+                    holderRef,
+                    ref,
+                    ReturnBlocks(List(block),-1,holderRef)
+                  )
                 case None => break
               }
-              if (!useFencing) Thread.sleep(100)
+              if (!useFencing) Thread.sleep(requestTineInterval)
             } else {
               break
             }
           }
+        }
+        inbox match {
+          case Some(data) =>
+            for (entry <- data) {
+              send(
+                holderRef,
+                ref,
+                DiffuseData(entry._1,entry._2._1,entry._2._2,holderRef)
+              )
+              Thread.sleep(requestTineInterval)
+            }
+          case None =>
         }
       } else {
         breakable{
@@ -79,11 +96,15 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
             blockStorage.restore(id) match {
               case Some(block:Block) =>
                 returnedIdList ::= id
-                send(holderRef,ref,ReturnBlocks(List(block),job,holderRef))
+                send(
+                  holderRef,
+                  ref,
+                  ReturnBlocks(List(block), job,holderRef)
+                )
                 id = block.parentSlotId
               case None => break
             }
-            if (!useFencing) Thread.sleep(100)
+            if (!useFencing) Thread.sleep(requestTineInterval)
           }
         }
       }
@@ -106,7 +127,8 @@ object RequestTineProvider extends SimpleTypes {
     startId:SlotId,
     depth:Int,
     job:Int,
-    tine:Option[Tine]
+    tine:Option[Tine],
+    inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
   )
   case object Done
   def props(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper):Props =
