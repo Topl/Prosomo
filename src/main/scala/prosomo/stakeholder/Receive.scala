@@ -521,7 +521,7 @@ trait Receive extends Members {
     }
 
     /**accepts list of other holders from coordinator */
-    case HoldersFromLocal(list:List[ActorRefWrapper]) =>
+    case HoldersFromLocal(list:List[ActorRefWrapper],printInfo) =>
       holders = list
       sender() ! "done"
 

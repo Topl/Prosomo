@@ -216,15 +216,15 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       } else {
         println("No Holders to start...")
       }
-      sendAssertDone(routerRef,HoldersFromLocal(holders))
-      sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
+      sendAssertDone(routerRef,HoldersFromLocal(holders,printInfo = true))
+      sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote),printInfo = false))
       self ! Register
   }
 
   def receiveRemoteHolders: Receive = {
     case HoldersFromRemote(remoteHolders:List[ActorRefWrapper]) =>
       holders = remoteHolders
-      holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromLocal(holders)))
+      holders.filterNot(_.remote).foreach(sendAssertDone(_,HoldersFromLocal(holders,printInfo = false)))
   }
 
   def restoreOrGenerateGenBlock: Receive = {
@@ -292,7 +292,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       SharedData.printingHolder = holderIndexMin
     }
     println("Sending holders list")
-    sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
+    sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders,printInfo = false))
     println("Sending holders coordinator ref")
     sendAssertDone(holders.filterNot(_.remote),CoordRef(selfWrapper))
     println("Send GenBlock")
@@ -467,15 +467,15 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           holders.find(newHolder.path == _.path) match {
             case None =>
               holders ::= newHolder
-              sendAssertDone(newHolder,HoldersFromLocal(holders))
+              sendAssertDone(newHolder,HoldersFromLocal(holders,printInfo = false))
               sendAssertDone(newHolder,CoordRef(selfWrapper))
               sendAssertDone(newHolder,GenBlock(genesisBlock.get))
               sendAssertDone(newHolder,Initialize(0,None))
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
-              sendAssertDone(routerRef,HoldersFromLocal(holders))
-              sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
-              sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
+              sendAssertDone(routerRef,HoldersFromLocal(holders,printInfo = true))
+              sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote),printInfo = false))
+              sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders,printInfo = false))
               newHolder ! Run
             case _ => newHolder ! PoisonPill
           }
@@ -638,15 +638,15 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             holders.find(newHolder.path == _.path) match {
               case None =>
                 holders ::= newHolder
-                sendAssertDone(newHolder,HoldersFromLocal(holders))
+                sendAssertDone(newHolder,HoldersFromLocal(holders,printInfo = false))
                 sendAssertDone(newHolder,CoordRef(selfWrapper))
                 sendAssertDone(newHolder,GenBlock(genesisBlock.get))
                 sendAssertDone(newHolder,Initialize(0,None))
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
-                sendAssertDone(routerRef,HoldersFromLocal(holders))
-                sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
-                sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
+                sendAssertDone(routerRef,HoldersFromLocal(holders,printInfo = true))
+                sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote),printInfo = false))
+                sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders,printInfo = false))
                 newHolder ! Run
               case _ => newHolder ! PoisonPill
             }
@@ -925,14 +925,14 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       holders.find(newHolder.path == _.path) match {
         case None =>
           holders ::= newHolder
-          sendAssertDone(newHolder,HoldersFromLocal(holders))
+          sendAssertDone(newHolder,HoldersFromLocal(holders,printInfo = false))
           sendAssertDone(newHolder,CoordRef(selfWrapper))
           sendAssertDone(newHolder,GenBlock(genesisBlock.get))
           sendAssertDone(newHolder,Initialize(globalSlot,None))
           sendAssertDone(newHolder,SetClock(t0))
-          sendAssertDone(routerRef,HoldersFromLocal(holders))
-          sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
-          sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
+          sendAssertDone(routerRef,HoldersFromLocal(holders,printInfo = true))
+          sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote),printInfo = false))
+          sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders,printInfo = false))
           newHolder ! Run
           println("Forging started.")
         case _ => newHolder ! PoisonPill

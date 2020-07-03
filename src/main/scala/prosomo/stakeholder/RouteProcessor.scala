@@ -714,12 +714,12 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
 
   private def holdersFromLocal: Receive = {
     /** accepts list of other holders from coordinator */
-    case HoldersFromLocal(list:List[ActorRefWrapper]) =>
+    case HoldersFromLocal(list:List[ActorRefWrapper],printInfo) =>
       val name = SharedData.scorexSettings.get.network.agentName
       for (holder<-list) {
         if (!holders.contains(holder)) {
           holders ::= holder
-          SharedData.guiPeerInfo.get(name) match {
+          if (printInfo) SharedData.guiPeerInfo.get(name) match {
             case Some(list:List[ActorRefWrapper]) =>
               val newList = holder::list
               SharedData.guiPeerInfo -= name
@@ -878,7 +878,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       router = Some({
         var i = 0
         val routees = Vector.fill(numMessageProcessors) {
-          val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)), s"Remote_${i}")
+          val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)), s"Remote_$i")
           i += 1
           ActorRefRoutee(ref)
         }
