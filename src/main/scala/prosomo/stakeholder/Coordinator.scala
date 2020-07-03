@@ -217,7 +217,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         println("No Holders to start...")
       }
       sendAssertDone(routerRef,HoldersFromLocal(holders))
-      sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
       self ! Register
   }
 
@@ -474,7 +473,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
               sendAssertDone(newHolder,SetClock(t0))
               println("Starting new holder")
               sendAssertDone(routerRef,HoldersFromLocal(holders))
-              sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
               sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
               newHolder ! Run
             case _ => newHolder ! PoisonPill
@@ -645,7 +643,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
                 sendAssertDone(newHolder,SetClock(t0))
                 println("Starting new holder")
                 sendAssertDone(routerRef,HoldersFromLocal(holders))
-                sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
                 sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
                 newHolder ! Run
               case _ => newHolder ! PoisonPill
@@ -931,7 +928,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           sendAssertDone(newHolder,Initialize(globalSlot,None))
           sendAssertDone(newHolder,SetClock(t0))
           sendAssertDone(routerRef,HoldersFromLocal(holders))
-          sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote)))
           sendAssertDone(holders.filterNot(_.remote),HoldersFromLocal(holders))
           newHolder ! Run
           println("Forging started.")
