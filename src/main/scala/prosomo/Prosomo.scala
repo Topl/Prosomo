@@ -10,7 +10,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress}
 import prosomo.primitives.Parameters.{inputSeed, prosomoMessageSpecs, useGui}
 import prosomo.primitives.{Fch, SharedData}
-import prosomo.stakeholder.{Coordinator, Router}
+import prosomo.stakeholder.{Coordinator, RouteProcessor}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import scorex.core.app.{Application, ScorexContext}
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
@@ -126,8 +126,9 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
 
   log.info(s"Starting application with settings \n$settings")
   log.info("Using seed: "+inputSeed)
-  val routerRef:ActorRef = actorSystem.actorOf(Router.props(fch.hash(inputSeed+"router"),Seq(networkControllerRef,peerManagerRef)), "Router")
-  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(fch.hash(inputSeed),Seq(routerRef)), "Coordinator")
+  val routerRef:ActorRef = actorSystem.actorOf(RouteProcessor.props(fch.hash(inputSeed+"remote"),Seq(networkControllerRef,peerManagerRef)), "Remote")
+  val localRef:ActorRef = actorSystem.actorOf(RouteProcessor.props(fch.hash(inputSeed+"local"),Seq(networkControllerRef,peerManagerRef)), "Local")
+  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(fch.hash(inputSeed),Seq(routerRef,localRef)), "Coordinator")
 
   window match {
     case None =>

@@ -32,6 +32,69 @@ trait SerializationMethods extends SimpleTypes {
     HoldersType
   }
 
+  def sendTxFromBytes(bytes: Array[Byte]): SendTxType = {
+    val msgBytes = new ByteStream(bytes,DeserializeSendTx)
+    fromBytes(msgBytes) match {
+      case msg:SendTxType@unchecked => msg
+    }
+  }
+
+  def sendTxToBytes(msg: SendTxType): Array[Byte] = sSendTx(msg)
+
+  def sendBlockFromBytes(bytes: Array[Byte]): SendBlockType = {
+    val msgBytes = new ByteStream(bytes,DeserializeSendBlock)
+    fromBytes(msgBytes) match {
+      case msg:SendBlockType@unchecked => msg
+    }
+  }
+
+  def sendBlockToBytes(msg: SendBlockType): Array[Byte] = sSendBlock(msg)
+
+  def returnBlocksFromBytes(bytes: Array[Byte]): ReturnBlocksType = {
+    val msgBytes = new ByteStream(bytes,DeserializeReturnBlocks)
+    fromBytes(msgBytes) match {
+      case msg:ReturnBlocksType@unchecked => msg
+    }
+  }
+
+  def returnBlocksToBytes(msg: ReturnBlocksType): Array[Byte] = sReturnBlocks(msg)
+
+  def requestTineFromBytes(bytes: Array[Byte]): RequestTineType = {
+    val msgBytes = new ByteStream(bytes,DeserializeRequestTine)
+    fromBytes(msgBytes) match {
+      case msg:RequestTineType@unchecked => msg
+    }
+  }
+
+  def requestTineToBytes(msg: RequestTineType): Array[Byte] = sRequestTine(msg)
+
+  def requestBlockFromBytes(bytes: Array[Byte]): RequestBlockType = {
+    val msgBytes = new ByteStream(bytes,DeserializeRequestBlock)
+    fromBytes(msgBytes) match {
+      case msg:RequestBlockType@unchecked => msg
+    }
+  }
+
+  def requestBlockToBytes(msg: RequestBlockType): Array[Byte] = sRequestBlock(msg)
+
+  def helloFromBytes(bytes: Array[Byte]): HelloDataType = {
+    val msgBytes = new ByteStream(bytes,DeserializeHello)
+    fromBytes(msgBytes) match {
+      case msg:HelloDataType@unchecked => msg
+    }
+  }
+
+  def helloToBytes(msg: HelloDataType): Array[Byte] = sHello(msg)
+
+  def diffuseFromBytes(bytes: Array[Byte]): DiffuseDataType = {
+    val msgBytes = new ByteStream(bytes,DeserializeDiffuse)
+    fromBytes(msgBytes) match {
+      case msg:DiffuseDataType@unchecked => msg
+    }
+  }
+
+  def diffuseToBytes(msg:DiffuseDataType): Array[Byte] = sDiffuse(msg)
+
   def getBytes(bytes:Array[Byte]):Array[Byte] = bytes
   def getBytes(int:BigInt):Array[Byte] = sBigInt(int)
   def getBytes(int:Int):Array[Byte] = Ints.toByteArray(int)
@@ -54,13 +117,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(wallet:Wallet):Array[Byte] = sWallet(wallet)
   def getBytes(forgingKey:ForgingKey):Array[Byte] = sForgingKey(forgingKey)
   def getBytes(block:Block):Array[Byte] = sBlock(block)
-  def getDiffuseBytes(msg:DiffuseDataType):Array[Byte] = sDiffuse(msg)
-  def getHelloBytes(msg:HelloDataType):Array[Byte] = sHello(msg)
-  def getRequestBlockBytes(msg:RequestBlockType):Array[Byte] = sRequestBlock(msg)
-  def getRequestTineBytes(msg:RequestTineType):Array[Byte] = sRequestTine(msg)
-  def getReturnBlocksBytes(msg:ReturnBlocksType):Array[Byte] = sReturnBlocks(msg)
-  def getSendBlockBytes(msg:SendBlockType):Array[Byte] = sSendBlock(msg)
-  def getSendTxBytes(msg:SendTxType):Array[Byte] = sSendTx(msg)
+
   def getHoldersBytes(msg:HoldersType):Array[Byte] = sHolders(msg)
   def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
 

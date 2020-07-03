@@ -52,7 +52,7 @@ trait Messages extends Members {
       if (ref.remote) {
         routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
       } else {
-        routerRef ! MessageFromLocalToLocal(sender, ref, command)
+        localRef ! MessageFromLocalToLocal(sender, ref, command)
       }
     } else if (useFencing) {
       routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,ref,command)
@@ -72,7 +72,7 @@ trait Messages extends Members {
         if (holder.remote) {
           routerRef ! MessageFromLocalToRemote(sender,holder.path, command)
         } else {
-          routerRef ! MessageFromLocalToLocal(sender, holder, command)
+          localRef ! MessageFromLocalToLocal(sender, holder, command)
         }
       } else if (useFencing) {
         routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,holder,command)

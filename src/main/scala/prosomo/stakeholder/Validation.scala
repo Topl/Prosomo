@@ -22,7 +22,7 @@ trait Validation extends Members with Types {
     * @return true if signature is valid, false otherwise
     */
   def verifyBlockHeader(b:BlockHeader): Boolean = {
-    val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn,ps) = b
+    val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn, ps) = b
     kes.verify(sig._5, hash.data
       ++serializer.getBytes(ledger)
         ++serializer.getBytes(slot)

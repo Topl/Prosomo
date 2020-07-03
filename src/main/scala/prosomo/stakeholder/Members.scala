@@ -18,6 +18,7 @@ import scala.util.Random
 trait Members extends SimpleTypes with Actor with Timers {
 
   implicit val routerRef:ActorRefWrapper
+  val localRef:ActorRefWrapper
   val holderIndex:Int
   val seed:Array[Byte]
   val serializer:Serializer

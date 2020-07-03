@@ -26,6 +26,7 @@ import scala.util.Try
 
 object Parameters {
   val fch = new Fch
+  val ecx = new Ecx
   val localChainId = ByteArrayWrapper(fch.hash("LOCAL_CHAIN"))
   val prosomoNodeUID:String = Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
   //tag for identifying ledger entries
@@ -247,6 +248,13 @@ object Parameters {
       config.getString("params.inputSeed")
     }
   }
+
+  //number of message processors
+  val numMessageProcessors:Int = config.getInt("params.numMessageProcessors")
+  //node secret for HMAC used in each router actor
+  val sk_ecx:Array[Byte] = ecx.generateSK
+  //public key for HMAC used in each router actor
+  val pk_ecx:Array[Byte] = ecx.scalarMultBasePoint(sk_ecx)
 
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeed

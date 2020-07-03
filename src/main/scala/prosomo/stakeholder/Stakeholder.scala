@@ -48,6 +48,7 @@ class Stakeholder(
 {
   import Parameters.dataFileDir
   implicit val routerRef:ActorRefWrapper = inputRef.head
+  val localRef:ActorRefWrapper = inputRef(1)
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = inputDataDir match {
