@@ -71,6 +71,7 @@ case class Adversary(s:String)
 case class Initialize(gs:Slot,password:Option[String])
 case class GuiCommand(s:String)
 case class RouterPeerInfo(pathToPeer:Map[ActorPath,(String,PublicKey,Long)],
+                          pathsToRemove:Seq[ActorPath],
                           bootStrapJobs:Set[ActorRefWrapper],
                           holders:List[ActorRefWrapper])
 case class BootstrapJob(ref:ActorRefWrapper)

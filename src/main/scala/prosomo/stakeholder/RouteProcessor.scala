@@ -87,11 +87,12 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   var pathToPeer:Map[ActorPath,(String,PublicKey,Long)] = Map()
   var bootStrapJobs:Set[ActorRefWrapper] = Set()
 
-  var routees:Seq[akka.actor.ActorRef] = Seq()
+  var egressRoutees:Seq[akka.actor.ActorRef] = Seq()
+  var ingressRoutees:Seq[akka.actor.ActorRef] = Seq()
   var rrc:Int = -1
 
   def roundRobinCount:Int = {
-    if (rrc < routees.size-1) {
+    if (rrc < egressRoutees.size-1) {
       rrc += 1
     } else {
       rrc = 0
@@ -411,7 +412,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
 
   private def messageFromPeer: Receive = {
     case DataFromPeer(spec, data, remote) =>
-      routees.size match {
+      ingressRoutees.size match {
         case 0 =>
           spec.messageCode match {
             case DiffuseDataSpec.messageCode =>
@@ -434,7 +435,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                                 val peerInfo = pathToPeer(s.actorPath)
                                 pathToPeer -= s.actorPath
                                 pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                                updatePeerInfo()
                                 context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                                   DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
                                 )(context.system.dispatcher,self)
@@ -469,7 +469,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               Hello(msg._3,s)
                             )(context.system.dispatcher,self)
@@ -502,7 +501,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               RequestBlock(msg._3,msg._4,s)
                             )(context.system.dispatcher,self)
@@ -537,7 +535,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               RequestTine(msg._3,msg._4,msg._5,s)
                             )(context.system.dispatcher,self)
@@ -571,7 +568,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               ReturnBlocks(msg._3,msg._4,s)
                             )(context.system.dispatcher,self)
@@ -604,7 +600,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               SendBlock(msg._3,s)
                             )(context.system.dispatcher,self)
@@ -638,7 +633,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            updatePeerInfo()
                             context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
                               SendTx(msg._3,s)
                             )(context.system.dispatcher,self)
@@ -678,6 +672,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             }
                             println("New holder "+newPath.toString)
                             coordinatorRef ! HoldersFromRemote(holders)
+                            updatePeerInfo()
                             if (!holders.forall(_.remote)) holdersToNetwork()
                           case Some(actorRef:ActorRefWrapper) =>
                             if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
@@ -696,17 +691,18 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                               }
                               if (!holders.forall(_.remote)) holdersToNetwork()
                               println("Updated Peer "+newPath.toString)
+                              egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
+                              ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
                             }
                         }
                       case None => println("Error: could not parse actor path "+string)
                     }
                   }
-                  updatePeerInfo()
                 }.orElse(Try{println("Error: remote holders data not parsed")})
                 case _ => println("Error: remote holders data not parsed")
               }
             case _ =>
-              routees(roundRobinCount) ! DataFromPeer(spec, data, remote)
+              ingressRoutees(messageCodeToIndex(spec.messageCode)) ! DataFromPeer(spec, data, remote)
           }
 
       }
@@ -765,7 +761,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
 
     case MessageFromLocalToRemote(from,r,command) if pathToPeer.keySet.contains(r) && !from.remote =>
-      routees.size match {
+      egressRoutees.size match {
         case 0 =>
           val s = from.actorPath
           command match {
@@ -842,7 +838,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case _ =>
           }
         case _ =>
-          routees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
+          egressRoutees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
       }
   }
 
@@ -870,24 +866,32 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   private def registerNC: Receive = {
     case InvalidateHolders(peerName) =>
       var holdersOut:List[ActorRefWrapper] = holders.filterNot(_.remote)
+      var holdersToRemove:Seq[ActorPath] = Seq()
       for (holder <- holders) if (pathToPeer.keySet.contains(holder.actorPath)) {
-        println(pathToPeer(holder.actorPath)._1,holder.actorPath)
         if (pathToPeer(holder.actorPath)._1 == peerName) {
           pathToPeer -= holder.actorPath
+          holdersToRemove ++= Seq(holder.actorPath)
         } else {
           holdersOut ::= holder
         }
       }
       if (useGui) Try{SharedData.guiPeerInfo -= peerName}
+      egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
+      ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
       println("Peer removed: "+peerName)
       holders = holdersOut
       coordinatorRef ! HoldersFromRemote(holders)
-      updatePeerInfo()
     case Register =>
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       var i = 0
-      routees = Seq.fill(numMessageProcessors) {
-        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"Routee_$i")
+      egressRoutees = Seq.fill(numMessageProcessors) {
+        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"egressRoutee_$i")
+        i += 1
+        ref
+      }
+      i = 0
+      ingressRoutees = Seq.fill(messageCodeToIndex.keySet.size) {
+        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"ingressRoutee_$i")
         i += 1
         ref
       }
@@ -903,21 +907,26 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   }
 
   def updatePeerInfo():Unit = {
-    routees.size match {
-      case 0 => context.parent ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders)
-      case _ => routees.foreach(_ ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders))
+    egressRoutees.size match {
+      case 0 =>
+      case _ => egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
+    }
+    ingressRoutees.size match {
+      case 0 =>
+      case _ => ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
     }
   }
 
   def syncPeerInfo:Receive = {
     case value:RouterPeerInfo =>
-      pathToPeer = value.pathToPeer
+      for (entry<-value.pathsToRemove) {
+        if (pathToPeer.keySet.contains(entry)) pathToPeer -= entry
+      }
+      for (entry<-value.pathToPeer) {
+        if (!pathToPeer.keySet.contains(entry._1)) pathToPeer += (entry._1 -> entry._2)
+      }
       bootStrapJobs = value.bootStrapJobs
       holders = value.holders
-      routees.size match {
-        case 0 =>
-        case _ => routees.foreach(_ ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders))
-      }
   }
 
   def receive: Receive =
