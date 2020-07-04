@@ -275,14 +275,4 @@ object Parameters {
     SendTxSpec,
     HoldersFromRemoteSpec
   )
-  val messageCodeToIndex = Map(
-    DiffuseDataSpec.messageCode->0,
-    HelloSpec.messageCode->1,
-    RequestBlockSpec.messageCode->2,
-    RequestTineSpec.messageCode->3,
-    ReturnBlocksSpec.messageCode->4,
-    SendBlockSpec.messageCode->5,
-    SendTxSpec.messageCode->6
-  )
-
 }

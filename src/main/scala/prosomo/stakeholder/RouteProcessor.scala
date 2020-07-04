@@ -703,7 +703,15 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                 case _ => println("Error: remote holders data not parsed")
               }
             case _ =>
-              ingressRoutees(messageCodeToIndex(spec.messageCode)) ! DataFromPeer(spec, data, remote)
+              spec.messageCode match {
+                case DiffuseDataSpec.messageCode => ingressRoutees(0) ! DataFromPeer(spec, data, remote)
+                case HelloSpec.messageCode => ingressRoutees(1) ! DataFromPeer(spec, data, remote)
+                case RequestBlockSpec.messageCode => ingressRoutees(2) ! DataFromPeer(spec, data, remote)
+                case RequestTineSpec.messageCode => ingressRoutees(3) ! DataFromPeer(spec, data, remote)
+                case ReturnBlocksSpec.messageCode => ingressRoutees(4) ! DataFromPeer(spec, data, remote)
+                case SendBlockSpec.messageCode => ingressRoutees(5) ! DataFromPeer(spec, data, remote)
+                case SendTxSpec.messageCode => ingressRoutees(6) ! DataFromPeer(spec, data, remote)
+              }
           }
       }
   }
@@ -887,11 +895,12 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
         ref
       }
       i = 0
-      ingressRoutees = Seq.fill(messageCodeToIndex.keySet.size) {
+      ingressRoutees = Seq.fill(7) {
         val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"ingressRoutee_$i")
         i += 1
         ref
       }
+      assert(ingressRoutees.length == 7)
       println("Router System Started...")
       sender() ! "done"
     case BootstrapJob(bootStrapper) =>
@@ -904,14 +913,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   }
 
   def updatePeerInfo():Unit = {
-    egressRoutees.size match {
-      case 0 =>
-      case _ => egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
-    }
-    ingressRoutees.size match {
-      case 0 =>
-      case _ => ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
-    }
+    egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
+    ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(), bootStrapJobs, holders))
   }
 
   def syncPeerInfo:Receive = {
