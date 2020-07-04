@@ -45,7 +45,7 @@ import prosomo.remote.SpecTypes.{
   * @param inputRef network controller refs
   */
 
-class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
+class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
   with Types
   with Timers {
   import Parameters._
@@ -233,7 +233,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       if (r<txProbability%1.0) {
         val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
         assert(holder1 != holder2)
-        val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+        val delta:BigInt =
+          BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
         context.system.scheduler.scheduleOnce(0.nano,holder1.actorRef,
@@ -459,7 +460,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.helloFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -491,7 +493,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.requestBlockFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -525,7 +528,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.requestTineFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -558,7 +562,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.returnBlocksFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -590,7 +595,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.sendBlockFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -623,7 +629,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                   Try{serializer.sendTxFromBytes(msgBytes)} match {
                     case Success(msg) =>
                       getRefs(msg._1,msg._2) match {
-                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) => if (!r.remote && !bootStrapJobs.contains(r)) {
+                        case Some((s:ActorRefWrapper,r:ActorRefWrapper)) =>
+                          if (!r.remote && !bootStrapJobs.contains(r)) {
                           val msgHash = ByteArrayWrapper(fch.hash(Bytes.concat(
                             serializer.getBytes(mac.time),
                             msgBytes,
@@ -703,7 +710,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
               }
             case _ =>
               spec.messageCode match {
-                case DiffuseDataSpec.messageCode => ingressRoutees(0) ! DataFromPeer(spec, data, remote)
+                case DiffuseDataSpec.messageCode => ingressRoutees.head ! DataFromPeer(spec, data, remote)
                 case HelloSpec.messageCode => ingressRoutees(1) ! DataFromPeer(spec, data, remote)
                 case RequestBlockSpec.messageCode => ingressRoutees(2) ! DataFromPeer(spec, data, remote)
                 case RequestTineSpec.messageCode => ingressRoutees(3) ! DataFromPeer(spec, data, remote)
@@ -843,19 +850,19 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
           }
         case _ =>
           command match {
-            case c:DiffuseData =>
-              egressRoutees(0) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:Hello =>
+            case _:DiffuseData =>
+              egressRoutees.head ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case _:Hello =>
               egressRoutees(1) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:RequestBlock =>
+            case _:RequestBlock =>
               egressRoutees(2) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:RequestTine =>
+            case _:RequestTine =>
               egressRoutees(3) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:ReturnBlocks =>
+            case _:ReturnBlocks =>
               egressRoutees(4) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:SendBlock =>
+            case _:SendBlock =>
               egressRoutees(5) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
-            case c:SendTx =>
+            case _:SendTx =>
               egressRoutees(6) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
             case _ =>
           }
@@ -905,13 +912,19 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       var i = 0
       egressRoutees = Seq.fill(7) {
-        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"egressRoutee_$i")
+        val ref = context.actorOf(Router.props(
+            fch.hash(seed+s"$i"),
+            inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
+          ), s"egressRoutee_$i")
         i += 1
         ref
       }
       i = 0
       ingressRoutees = Seq.fill(7) {
-        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"ingressRoutee_$i")
+        val ref = context.actorOf(Router.props(
+          fch.hash(seed+s"$i"),
+          inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
+        ),s"ingressRoutee_$i")
         i += 1
         ref
       }
@@ -954,7 +967,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
     }
 }
 
-object RouteProcessor {
+object Router {
   def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new RouteProcessor(seed,ref.map(ActorRefWrapper.routerRef)))
+    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef)))
 }
