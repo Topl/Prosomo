@@ -1,7 +1,6 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, Props, Timers}
-import akka.routing.{ActorRefRoutee,SmallestMailboxRoutingLogic,Router}
 import com.google.common.primitives.Bytes
 import akka.util.Timeout
 import io.iohk.iodb.ByteArrayWrapper
@@ -88,7 +87,17 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   var pathToPeer:Map[ActorPath,(String,PublicKey,Long)] = Map()
   var bootStrapJobs:Set[ActorRefWrapper] = Set()
 
-  var router:Option[Router] = None
+  var routees:Seq[akka.actor.ActorRef] = Seq()
+  var rrc:Int = 0
+
+  def roundRobinCount:Int = {
+    if (rrc < routees.size-1) {
+      rrc += 1
+    } else {
+      rrc = 0
+    }
+    rrc
+  }
 
   case class RouterPeerInfo(pathToPeer:Map[ActorPath,(String,PublicKey,Long)],
                             bootStrapJobs:Set[ActorRefWrapper],
@@ -164,17 +173,17 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
     holderReady += (holder->false)
   }
 
-  def delay(sender:ActorRefWrapper, recip:ActorRefWrapper, data:Any):FiniteDuration = {
-    if (!distanceMap.keySet.contains((sender,recip))) {
-      distanceMap += ((sender,recip)->(delay_ms_km*1.0e6*Distance.calculate(
-        holdersPosition(sender)._1,
-        holdersPosition(sender)._2,
+  def delay(from:ActorRefWrapper, recip:ActorRefWrapper, data:Any):FiniteDuration = {
+    if (!distanceMap.keySet.contains((from,recip))) {
+      distanceMap += ((from,recip)->(delay_ms_km*1.0e6*Distance.calculate(
+        holdersPosition(from)._1,
+        holdersPosition(from)._2,
         holdersPosition(recip)._1,
         holdersPosition(recip)._2,
         "K")).toLong)
     }
     val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong
-      + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((sender,recip))
+      + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((from,recip))
     if (delay_ns/1.0e9 > maxDelay) {maxDelay = delay_ns/1.0e9}
     delay_ns.nano
   }
@@ -385,8 +394,8 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
     result
   }
 
-  def getRefs(sender:String,recipient:String):Option[(ActorRefWrapper,ActorRefWrapper)] = {
-    Try{ActorPath.fromString(sender)} match {
+  def getRefs(from:String, recipient:String):Option[(ActorRefWrapper,ActorRefWrapper)] = {
+    Try{ActorPath.fromString(from)} match {
       case Success(snd:ActorPath) =>
         Try{ActorPath.fromString(recipient)} match {
           case Success(rec:ActorPath) =>
@@ -406,57 +415,9 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
 
   private def messageFromPeer: Receive = {
     case DataFromPeer(spec, data, remote) =>
-      router match {
-        case Some(rt) if spec.messageCode != HoldersFromRemoteSpec.messageCode => rt.route(DataFromPeer(spec, data, remote), sender)
-        case _ =>
+      routees.size match {
+        case 0 =>
           spec.messageCode match {
-            case HoldersFromRemoteSpec.messageCode =>
-              data match {
-                case msg:HoldersType@unchecked => Try{for (string<-msg._1) {
-                  Try{ActorPath.fromString(string)}.toOption match {
-                    case Some(newPath:ActorPath) =>
-                      holders.find(_.path == newPath) match {
-                        case None =>
-                          holders ::= ActorRefWrapper(newPath)
-                          pathToPeer += (newPath -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
-                          SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
-                            case Some(list:List[ActorRefWrapper]) =>
-                              val newList = ActorRefWrapper(newPath)::list
-                              SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
-                              SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                            case None =>
-                              SharedData.guiPeerInfo +=
-                                (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
-                          }
-                          println("New holder "+newPath.toString)
-                          updatePeerInfo()
-                          coordinatorRef ! HoldersFromRemote(holders)
-                          if (!holders.forall(_.remote)) holdersToNetwork()
-                        case Some(actorRef:ActorRefWrapper) =>
-                          if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
-                            if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path)._1))
-                              SharedData.guiPeerInfo -= pathToPeer(actorRef.path)._1
-                            val key = actorRef.path
-                            pathToPeer -= key
-                            pathToPeer += (key -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
-                            SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
-                              case Some(list:List[ActorRefWrapper]) =>
-                                val newList = actorRef::list
-                                SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
-                                SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                              case None =>
-                                SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
-                            }
-                            if (!holders.forall(_.remote)) holdersToNetwork()
-                            println("Updated Peer "+newPath.toString)
-                            updatePeerInfo()
-                          }
-                      }
-                    case None => println("Error: could not parse actor path "+string)
-                  }
-                }}.orElse(Try{println("Error: remote holders data not parsed")})
-                case _ => println("Error: remote holders data not parsed")
-              }
             case DiffuseDataSpec.messageCode =>
               data match {
                 case value:(Mac,Array[Byte])@unchecked => Try{
@@ -698,6 +659,59 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
               }
             case _ => println("Error: message code did not match any specs")
           }
+        case _ =>
+          spec.messageCode match {
+            case HoldersFromRemoteSpec.messageCode =>
+              data match {
+                case msg:HoldersType@unchecked => Try{
+                  for (string<-msg._1) {
+                    Try{ActorPath.fromString(string)}.toOption match {
+                      case Some(newPath:ActorPath) =>
+                        holders.find(_.path == newPath) match {
+                          case None =>
+                            holders ::= ActorRefWrapper(newPath)
+                            pathToPeer += (newPath -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
+                            SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                              case Some(list:List[ActorRefWrapper]) =>
+                                val newList = ActorRefWrapper(newPath)::list
+                                SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                                SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                              case None =>
+                                SharedData.guiPeerInfo +=
+                                  (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
+                            }
+                            println("New holder "+newPath.toString)
+                            coordinatorRef ! HoldersFromRemote(holders)
+                            if (!holders.forall(_.remote)) holdersToNetwork()
+                          case Some(actorRef:ActorRefWrapper) =>
+                            if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
+                              if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path)._1))
+                                SharedData.guiPeerInfo -= pathToPeer(actorRef.path)._1
+                              val key = actorRef.path
+                              pathToPeer -= key
+                              pathToPeer += (key -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
+                              SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                                case Some(list:List[ActorRefWrapper]) =>
+                                  val newList = actorRef::list
+                                  SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                                  SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                                case None =>
+                                  SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
+                              }
+                              if (!holders.forall(_.remote)) holdersToNetwork()
+                              println("Updated Peer "+newPath.toString)
+                            }
+                        }
+                      case None => println("Error: could not parse actor path "+string)
+                    }
+                  }
+                  updatePeerInfo()
+                }.orElse(Try{println("Error: remote holders data not parsed")})
+                case _ => println("Error: remote holders data not parsed")
+              }
+            case _ => routees(roundRobinCount) ! DataFromPeer(spec, data, remote)
+          }
+
       }
   }
 
@@ -749,16 +763,14 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       sender() ! "done"
   }
 
-
   private def messageFromLocal: Receive = {
     /** adds delay to locally routed message*/
     case MessageFromLocalToLocal(s,r,c) if !s.remote && !r.remote =>
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
 
     case MessageFromLocalToRemote(from,r,command) if pathToPeer.keySet.contains(r) && !from.remote =>
-      router match {
-        case Some(rt) => rt.route(MessageFromLocalToRemote(from,r,command),sender)
-        case None =>
+      routees.size match {
+        case 0 =>
           val s = from.actorPath
           command match {
             case c:DiffuseData =>
@@ -833,6 +845,9 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
               sendToNetwork[(Mac,Array[Byte]),SendTxSpec.type](SendTxSpec,(mac,msgBytes),r)
             case _ =>
           }
+        case _ => {
+          routees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
+        }
       }
   }
 
@@ -875,15 +890,13 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       updatePeerInfo()
     case Register =>
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
-      router = Some({
-        var i = 0
-        val routees = Vector.fill(numMessageProcessors) {
-          val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)), s"Remote_$i")
-          i += 1
-          ActorRefRoutee(ref)
-        }
-        Router(SmallestMailboxRoutingLogic(),routees)
-      })
+      var i = 0
+      routees = Seq.fill(numMessageProcessors) {
+        val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)))
+        i += 1
+        ref
+      }
+      println("Router System Started...")
       sender() ! "done"
     case BootstrapJob(bootStrapper) =>
       if (bootStrapJobs.contains(bootStrapper)) {
@@ -895,9 +908,11 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   }
 
   def updatePeerInfo():Unit = {
-    router match {
-      case Some(rt) => rt.routees.foreach(r=>r.send(RouterPeerInfo(pathToPeer, bootStrapJobs, holders),self))
-      case None => context.parent ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders)
+    routees.size match {
+      case 0 => context.parent ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders)
+      case _ => {
+        routees.foreach(_ ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders))
+      }
     }
   }
 
@@ -906,9 +921,9 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
       pathToPeer = value.pathToPeer
       bootStrapJobs = value.bootStrapJobs
       holders = value.holders
-      router match {
-        case Some(rt) => rt.routees.foreach(r=>r.send(RouterPeerInfo(pathToPeer, bootStrapJobs, holders),self))
-        case None =>
+      routees.size match {
+        case 0 =>
+        case _ => routees.foreach(_ ! RouterPeerInfo(pathToPeer, bootStrapJobs, holders))
       }
   }
 
