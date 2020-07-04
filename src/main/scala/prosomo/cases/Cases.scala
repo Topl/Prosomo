@@ -47,7 +47,7 @@ case class SendTx(transaction:Transaction,sender:ActorRefWrapper)
 
 //messages between coordinator/router and holders
 case class NewHolderFromUI(kf:KeyFile,dir:String,pswd:String,name:String,kdir:String)
-case class MessageFromLocalToRemote(s:ActorRefWrapper,r:ActorPath,c:Any)
+case class MessageFromLocalToRemote(s:ActorRefWrapper,r:ActorPath,c:Any,time:Option[Long] = None)
 case class MessageFromLocalToLocal(s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
 case class MessageFromLocalToLocalId(uid:BigInt,s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
 case class HoldersFromLocal(list:List[ActorRefWrapper],printInfo:Boolean)

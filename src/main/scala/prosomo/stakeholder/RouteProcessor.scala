@@ -704,7 +704,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case _ =>
               ingressRoutees(messageCodeToIndex(spec.messageCode)) ! DataFromPeer(spec, data, remote)
           }
-
       }
   }
 
@@ -760,15 +759,18 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
     case MessageFromLocalToLocal(s,r,c) if !s.remote && !r.remote =>
       context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
 
-    case MessageFromLocalToRemote(from,r,command) if pathToPeer.keySet.contains(r) && !from.remote =>
+    case MessageFromLocalToRemote(from,r,command,time) if pathToPeer.keySet.contains(r) && !from.remote =>
       egressRoutees.size match {
         case 0 =>
           val s = from.actorPath
+          val msgTime:Long = time match {
+            case Some(t) => t
+            case None => nextMsgTime()
+          }
           command match {
             case c:DiffuseData =>
               val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
               val msgBytes = serializer.diffuseToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -778,7 +780,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:Hello =>
               val content:HelloDataType = (s.toString,r.toString,c.slot)
               val msgBytes = serializer.helloToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -788,7 +789,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:RequestBlock =>
               val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
               val msgBytes = serializer.requestBlockToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -798,7 +798,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:RequestTine =>
               val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
               val msgBytes = serializer.requestTineToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -808,7 +807,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:ReturnBlocks =>
               val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
               val msgBytes = serializer.returnBlocksToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -818,7 +816,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:SendBlock =>
               val content:SendBlockType = (s.toString,r.toString,c.block)
               val msgBytes = serializer.sendBlockToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -828,7 +825,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case c:SendTx =>
               val content:SendTxType = (s.toString,r.toString,c.transaction)
               val msgBytes = serializer.sendTxToBytes(content)
-              val msgTime = nextMsgTime()
               val mac = Mac(ByteArrayWrapper(fch.hash(Bytes.concat(
                 serializer.getBytes(msgTime),
                 msgBytes,
@@ -838,7 +834,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case _ =>
           }
         case _ =>
-          egressRoutees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
+          egressRoutees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
       }
   }
 
