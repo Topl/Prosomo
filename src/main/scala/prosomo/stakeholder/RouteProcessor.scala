@@ -843,7 +843,23 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case _ =>
           }
         case _ =>
-          egressRoutees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+          command match {
+            case c:DiffuseData =>
+              egressRoutees(0) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:Hello =>
+              egressRoutees(1) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:RequestBlock =>
+              egressRoutees(2) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:RequestTine =>
+              egressRoutees(3) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:ReturnBlocks =>
+              egressRoutees(4) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:SendBlock =>
+              egressRoutees(5) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case c:SendTx =>
+              egressRoutees(6) ! MessageFromLocalToRemote(from,r,command,time = Some(nextMsgTime()))
+            case _ =>
+          }
       }
   }
 
@@ -889,7 +905,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
     case Register =>
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       var i = 0
-      egressRoutees = Seq.fill(numMessageProcessors) {
+      egressRoutees = Seq.fill(7) {
         val ref = context.actorOf(RouteProcessor.props(fch.hash(seed+s"$i"),inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)),s"egressRoutee_$i")
         i += 1
         ref
@@ -900,7 +916,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
         i += 1
         ref
       }
-      assert(ingressRoutees.length == 7)
       println("Router System Started...")
       sender() ! "done"
     case BootstrapJob(bootStrapper) =>
