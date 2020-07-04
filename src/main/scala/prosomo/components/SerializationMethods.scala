@@ -1,7 +1,5 @@
 package prosomo.components
 
-import java.io.{ByteArrayOutputStream, ObjectOutputStream}
-
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
@@ -905,24 +903,4 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  /*
-  Do not use for consensus, only for estimate of msg size in local delay model
- */
-  def getAnyBytes(input:Any):Array[Byte] = {
-    def serialize(value: Any): Array[Byte] = {
-      val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(stream)
-      oos.writeObject(value)
-      oos.close()
-      stream.toByteArray
-    }
-    input match {
-      case block:Block => sBlock(block)
-      case mac:Mac => sMac(mac)
-      case transaction: Transaction => sTransaction(transaction)
-      case ratio: Ratio => sRatio(ratio)
-      case blockHeader: BlockHeader@unchecked => sBlockHeader(blockHeader)
-      case _ => serialize(input)
-    }
-  }
 }

@@ -51,6 +51,7 @@ case class MessageFromLocalToRemote(s:ActorRefWrapper,r:ActorPath,c:Any,time:Opt
 case class MessageFromLocalToLocal(s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
 case class MessageFromLocalToLocalId(uid:BigInt,s:ActorRefWrapper,r:ActorRefWrapper,c:Any)
 case class HoldersFromLocal(list:List[ActorRefWrapper],printInfo:Boolean)
+case class HoldersWithPosition(list:List[ActorRefWrapper],pos:Map[ActorRefWrapper,(Double,Double)])
 case class HoldersFromRemote(list:List[ActorRefWrapper])
 case class Flag(s:ActorRefWrapper,f:String)
 case class GetSlot(s:Int)

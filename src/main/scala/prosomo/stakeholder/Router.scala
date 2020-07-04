@@ -89,10 +89,11 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
   var egressRoutees:Seq[akka.actor.ActorRef] = Seq()
   var ingressRoutees:Seq[akka.actor.ActorRef] = Seq()
+  var localRoutees:Seq[akka.actor.ActorRef] = Seq()
   var rrc:Int = -1
 
   def roundRobinCount:Int = {
-    if (rrc < egressRoutees.size-1) {
+    if (rrc < localRoutees.size-1) {
       rrc += 1
     } else {
       rrc = 0
@@ -170,7 +171,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
     holderReady += (holder->false)
   }
 
-  def delay(from:ActorRefWrapper, recip:ActorRefWrapper, data:Any):FiniteDuration = {
+  def delay(from:ActorRefWrapper, recip:ActorRefWrapper, byteLen:Int):FiniteDuration = {
     if (!distanceMap.keySet.contains((from,recip))) {
       distanceMap += ((from,recip)->(delay_ms_km*1.0e6*Distance.calculate(
         holdersPosition(from)._1,
@@ -180,7 +181,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
         "K")).toLong)
     }
     val delay_ns:Long = (rng.nextDouble()*delay_ms_noise*1.0e6).toLong
-      + (serializer.getAnyBytes(data).length*delay_ms_byte*1.0e6).toLong + distanceMap((from,recip))
+      + (byteLen*delay_ms_byte*1.0e6).toLong + distanceMap((from,recip))
     if (delay_ns/1.0e9 > maxDelay) {maxDelay = delay_ns/1.0e9}
     delay_ns.nano
   }
@@ -320,9 +321,33 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       if (roundDone) globalSlot += 1
       roundDone = false
 
-    case MessageFromLocalToLocalId(uid,s,r,c) =>
-      val newMessage = (s,r,c)
-      val nsDelay = delay(s,r,c)
+    case MessageFromLocalToLocalId(uid,s,r,msg) =>
+      val newMessage = (s,r,msg)
+      val msgBytes = msg match {
+        case c:DiffuseData =>
+          val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
+          serializer.diffuseToBytes(content)
+        case c:Hello =>
+          val content:HelloDataType = (s.toString,r.toString,c.slot)
+          serializer.helloToBytes(content)
+        case c:RequestBlock =>
+          val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
+          serializer.requestBlockToBytes(content)
+        case c:RequestTine =>
+          val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
+          serializer.requestTineToBytes(content)
+        case c:ReturnBlocks =>
+          val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
+          serializer.returnBlocksToBytes(content)
+        case c:SendBlock =>
+          val content:SendBlockType = (s.toString,r.toString,c.block)
+          serializer.sendBlockToBytes(content)
+        case c:SendTx =>
+          val content:SendTxType = (s.toString,r.toString,c.transaction)
+          serializer.sendTxToBytes(content)
+        case _ => Array()
+      }
+      val nsDelay = delay(s,r,msgBytes.length)
       val messageDelta:Slot = ((nsDelay.toNanos+ts)/(slotT*1000000)).toInt
       val priority:Long = (nsDelay.toNanos+ts)%(slotT*1000000)
       val offsetSlot = globalSlot+messageDelta
@@ -766,13 +791,47 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
         holdersToNetwork()
       }
       updatePeerInfo()
+      localRoutees.foreach(ref=>ref ! HoldersWithPosition(holders.filterNot(_.remote),holdersPosition))
       sender() ! "done"
+    case value:HoldersWithPosition =>
+      holders = value.list
+      holdersPosition = value.pos
   }
 
   private def messageFromLocal: Receive = {
     /** adds delay to locally routed message*/
-    case MessageFromLocalToLocal(s,r,c) if !s.remote && !r.remote =>
-      context.system.scheduler.scheduleOnce(delay(s,r,c),r.actorRef,c)(context.system.dispatcher,sender())
+    case MessageFromLocalToLocal(s,r,msg) if !s.remote && !r.remote =>
+      localRoutees.length match {
+        case 0 =>
+          val msgBytes = msg match {
+            case c:DiffuseData =>
+              val content:DiffuseDataType = (s.toString,r.toString,c.ref.actorPath.toString,c.sid,c.pks)
+              serializer.diffuseToBytes(content)
+            case c:Hello =>
+              val content:HelloDataType = (s.toString,r.toString,c.slot)
+              serializer.helloToBytes(content)
+            case c:RequestBlock =>
+              val content:RequestBlockType = (s.toString,r.toString,c.id,c.job)
+              serializer.requestBlockToBytes(content)
+            case c:RequestTine =>
+              val content:RequestTineType = (s.toString,r.toString,c.id,c.depth,c.job)
+              serializer.requestTineToBytes(content)
+            case c:ReturnBlocks =>
+              val content:ReturnBlocksType = (s.toString,r.toString,c.blocks,c.job)
+              serializer.returnBlocksToBytes(content)
+            case c:SendBlock =>
+              val content:SendBlockType = (s.toString,r.toString,c.block)
+              serializer.sendBlockToBytes(content)
+            case c:SendTx =>
+              val content:SendTxType = (s.toString,r.toString,c.transaction)
+              serializer.sendTxToBytes(content)
+            case _ => Array()
+          }
+          context.system.scheduler.scheduleOnce(
+            delay(s,r,msgBytes.length),r.actorRef,msg
+          )(context.system.dispatcher,sender())
+        case _ => localRoutees(roundRobinCount) ! MessageFromLocalToLocal(s,r,msg)
+      }
 
     case MessageFromLocalToRemote(from,r,command,time) if pathToPeer.keySet.contains(r) && !from.remote =>
       egressRoutees.size match {
@@ -908,12 +967,23 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       println("Peer removed: "+peerName)
       holders = holdersOut
       coordinatorRef ! HoldersFromRemote(holders)
+    case Populate =>
+      var i = 0
+      localRoutees = Seq.fill(numMessageProcessors) {
+        val ref = context.actorOf(Router.props(
+          fch.hash(seed+s"loc$i"),
+          inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
+        ), s"localRoutee_$i")
+        i += 1
+        ref
+      }
+      sender() ! "done"
     case Register =>
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
       var i = 0
       egressRoutees = Seq.fill(7) {
         val ref = context.actorOf(Router.props(
-            fch.hash(seed+s"$i"),
+            fch.hash(seed+s"egr$i"),
             inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
           ), s"egressRoutee_$i")
         i += 1
@@ -922,7 +992,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       i = 0
       ingressRoutees = Seq.fill(7) {
         val ref = context.actorOf(Router.props(
-          fch.hash(seed+s"$i"),
+          fch.hash(seed+s"ing$i"),
           inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
         ),s"ingressRoutee_$i")
         i += 1

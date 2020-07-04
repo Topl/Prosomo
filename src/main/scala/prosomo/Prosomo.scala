@@ -1,13 +1,14 @@
 package prosomo
 
 import java.net.InetSocketAddress
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{GuiCommand, IssueTxToAddress}
+import prosomo.cases.{GuiCommand, IssueTxToAddress, Populate}
 import prosomo.primitives.Parameters.{inputSeed, prosomoMessageSpecs, useGui}
 import prosomo.primitives.{Fch, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
@@ -21,6 +22,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 import scorex.util.encode.Base58
+
 import scala.concurrent.ExecutionContext
 import scala.swing._
 import scala.util.Try

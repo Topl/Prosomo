@@ -204,6 +204,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     case Populate =>
       sendAssertDone(routerRef,CoordRef(selfWrapper))
       sendAssertDone(routerRef,Register)
+      sendAssertDone(localRef,CoordRef(selfWrapper))
+      sendAssertDone(localRef,Populate)
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
       println(s"K = $k_s")
