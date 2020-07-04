@@ -638,6 +638,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                             )(context.system.dispatcher,self)
                           } else {
                             println("Error: SendTx MAC failed")
+                            println(msgHash == mac.hash , mac.time > pathToPeer(s.actorPath)._3)
                           }
                         }
                         case None => println("Error: SendTx paths not valid")
