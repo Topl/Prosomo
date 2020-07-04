@@ -1,7 +1,6 @@
 package prosomo.stakeholder
 
 import akka.actor.{Actor, ActorPath, Props, Timers}
-import akka.routing.{Router,SmallestMailboxRoutingLogic}
 import com.google.common.primitives.Bytes
 import akka.util.Timeout
 import io.iohk.iodb.ByteArrayWrapper
@@ -89,7 +88,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
   var bootStrapJobs:Set[ActorRefWrapper] = Set()
 
   var routees:Seq[akka.actor.ActorRef] = Seq()
-  val router:Router = Router(SmallestMailboxRoutingLogic(),Vector.empty)
   var rrc:Int = -1
 
   def roundRobinCount:Int = {
@@ -708,8 +706,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
                 case _ => println("Error: remote holders data not parsed")
               }
             case _ =>
-              router.route(DataFromPeer(spec, data, remote),self)
-              //routees(roundRobinCount) ! DataFromPeer(spec, data, remote)
+              routees(roundRobinCount) ! DataFromPeer(spec, data, remote)
           }
 
       }
@@ -845,8 +842,7 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
             case _ =>
           }
         case _ =>
-          router.route(MessageFromLocalToRemote(from,r,command),self)
-          //routees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
+          routees(roundRobinCount) ! MessageFromLocalToRemote(from,r,command)
       }
   }
 
@@ -895,7 +891,6 @@ class RouteProcessor(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Ac
         i += 1
         ref
       }
-      routees.foreach(ref=>router.addRoutee(ref))
       println("Router System Started...")
       sender() ! "done"
     case BootstrapJob(bootStrapper) =>
