@@ -280,7 +280,7 @@ trait Receive extends Members {
     }
 
     /******************************************** From Local ****************************************************/
-      
+
     case DelayModelMessage(delay,nonce,msg) =>
       timers.startSingleTimer(nonce,msg,delay)
 
