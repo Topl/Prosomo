@@ -20,13 +20,12 @@ trait Messages extends Members {
   override def scheduleDiffuse(): Unit = {
     var t = 0
     t += rng.nextInt(10)+1
-    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
     t += rng.nextInt(10)+1
-    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
     t += rng.nextInt(10)+1
-    context.system.scheduler.scheduleOnce(t*slotT.millis,self,Diffuse)(context.system.dispatcher,self)
+    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
   }
-
 
   /**
     * picks set of gossipers randomly

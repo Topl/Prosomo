@@ -77,14 +77,11 @@ trait Members extends SimpleTypes with Actor with Timers {
   var bootStrapLock:Boolean
   var helloLock:Boolean
   var bootStrapJob:Int
-  var bootStrapMessage:Cancellable
   var tineProvider:Option[ActorRefWrapper]
   var alphaCache:Option[LoadingCache[ByteArrayWrapper,Ratio]]
   var thresholdCache:Option[LoadingCache[(Ratio,Slot),Ratio]]
   var networkDelayList:List[Double]
   var genesisBlock:Option[Block]
-
-  case object TimerKey
 
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]

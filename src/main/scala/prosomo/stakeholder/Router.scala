@@ -101,6 +101,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
     rrc
   }
 
+  def uuid: String = java.util.UUID.randomUUID.toString
   var systemTime:Long = System.nanoTime()
   var messageTime:Long = 0
 
@@ -216,8 +217,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
               case _ => " "
             }
           )
-          if (!r.remote)
-            context.system.scheduler.scheduleOnce(0.nano,r.actorRef,c)(context.system.dispatcher,s.actorRef)
+          if (!r.remote) r.actorRef ! c
           if (messageMap.nonEmpty) queue += (holder->messageMap)
         }
       }
@@ -238,9 +238,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
           BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
         reset(holder1)
         transactionCounter += 1
-        context.system.scheduler.scheduleOnce(0.nano,holder1.actorRef,
-          IssueTx(holder2,delta)
-        )(context.system.dispatcher,self)
+        holder1.actorRef ! IssueTx(holder2,delta)
       }
     }
   }
@@ -461,9 +459,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                                 val peerInfo = pathToPeer(s.actorPath)
                                 pathToPeer -= s.actorPath
                                 pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                                context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                                  DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
-                                )(context.system.dispatcher,self)
+                                r.actorRef ! DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
                               } else {
                                 println("Error: Diffuse MAC failed")
                               }
@@ -496,9 +492,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              Hello(msg._3,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! Hello(msg._3,s)
                           } else {
                             println("Error: Hello MAC failed")
                           }
@@ -529,9 +523,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              RequestBlock(msg._3,msg._4,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! RequestBlock(msg._3,msg._4,s)
                           } else {
                             println("Error: RequestBlock MAC failed")
                           }
@@ -564,9 +556,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              RequestTine(msg._3,msg._4,msg._5,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! RequestTine(msg._3,msg._4,msg._5,s)
                           } else {
                             println("Error: RequestTine MAC failed")
                           }
@@ -598,9 +588,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              ReturnBlocks(msg._3,msg._4,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! ReturnBlocks(msg._3,msg._4,s)
                           } else {
                             println("Error: ReturnBlocks MAC failed")
                           }
@@ -631,9 +619,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              SendBlock(msg._3,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! SendBlock(msg._3,s)
                           } else {
                             println("Error: SendBlock MAC failed")
                           }
@@ -665,9 +651,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             val peerInfo = pathToPeer(s.actorPath)
                             pathToPeer -= s.actorPath
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
-                            context.system.scheduler.scheduleOnce(0.nanos,r.actorRef,
-                              SendTx(msg._3,s)
-                            )(context.system.dispatcher,self)
+                            r.actorRef ! SendTx(msg._3,s)
                           } else {
                             println("Error: SendTx MAC failed")
                           }
@@ -827,9 +811,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
               serializer.sendTxToBytes(content)
             case _ => Array()
           }
-          context.system.scheduler.scheduleOnce(
-            delay(s,r,msgBytes.length),r.actorRef,msg
-          )(context.system.dispatcher,sender())
+          r.actorRef ! DelayModelMessage(delay(s,r,msgBytes.length),hash(uuid,serializer),msg)
         case _ => localRoutees(roundRobinCount) ! MessageFromLocalToLocal(s,r,msg)
       }
 

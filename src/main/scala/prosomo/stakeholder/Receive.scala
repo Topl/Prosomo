@@ -32,7 +32,7 @@ trait Receive extends Members {
       **/
     case Update =>
       update()
-      context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
+      timers.startSingleTimer(Update,Update,updateTime)
 
     /******************************************** Network Messages *********************************************/
 
@@ -135,12 +135,7 @@ trait Receive extends Members {
           if (value.job >= 0 && tinePool.keySet.contains(value.job) && !helloLock) {
             if (bootStrapLock) {
               if (value.job == bootStrapJob) {
-                bootStrapMessage match {
-                  case scheduledMessage:Cancellable => scheduledMessage.cancel
-                  case null =>
-                }
-                bootStrapMessage = context.system.scheduler
-                  .scheduleOnce(1*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+                timers.startSingleTimer(BootstrapJob,BootstrapJob,1*slotT.millis)
               }
             } else {
               buildTine((value.job,tinePool(value.job)))
@@ -157,12 +152,7 @@ trait Receive extends Members {
             }
             if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
             bootstrapAdoptTine()
-            bootStrapMessage match {
-              case scheduledMessage:Cancellable => scheduledMessage.cancel
-              case null =>
-            }
-            bootStrapMessage = context.system.scheduler
-              .scheduleOnce(1*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+            timers.startSingleTimer(BootstrapJob,BootstrapJob,1*slotT.millis)
           }
         }
       }
@@ -209,11 +199,11 @@ trait Receive extends Members {
               val startId:SlotId = value.id
               val depth:Int = value.depth
               tineProvider = Try{
-                ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))
+                ActorRefWrapper(context.actorOf(TineProvider.props(blocks,localRef), "RequestTineProvider"))
               }.toOption
               tineProvider match {
                 case Some(ref:ActorRefWrapper) =>
-                  ref ! RequestTineProvider.Info(
+                  ref ! TineProvider.Info(
                     holderIndex,
                     value.sender,
                     selfWrapper,
@@ -233,7 +223,7 @@ trait Receive extends Members {
         routerRef ! Flag(selfWrapper,"passData")
       }
 
-    case RequestTineProvider.Done =>
+    case TineProvider.Done =>
       tineProvider = None
 
     /**
@@ -247,11 +237,11 @@ trait Receive extends Members {
             val startId:SlotId = localChain.getLastActiveSlot(value.slot)
             val depth:Int = tineMaxDepth
             tineProvider = Try{
-              ActorRefWrapper(context.actorOf(RequestTineProvider.props(blocks), "TineProvider"))
+              ActorRefWrapper(context.actorOf(TineProvider.props(blocks,localRef), "BootstrapProvider"))
             }.toOption
             tineProvider match {
               case Some(ref:ActorRefWrapper) =>
-                ref ! RequestTineProvider.Info(
+                ref ! TineProvider.Info(
                   holderIndex,
                   value.sender,
                   selfWrapper,
@@ -290,6 +280,9 @@ trait Receive extends Members {
     }
 
     /******************************************** From Local ****************************************************/
+      
+    case DelayModelMessage(delay,nonce,msg) =>
+      timers.startSingleTimer(nonce,msg,delay)
 
     case BootstrapJob =>
       if (helloLock) {
@@ -302,17 +295,8 @@ trait Receive extends Members {
               gossipSet(selfWrapper,holders).take(1),
               Hello(lastSlot+1, selfWrapper)
             )
-            bootStrapMessage match {
-              case scheduledMessage:Cancellable => scheduledMessage.cancel
-              case null =>
-            }
-            bootStrapMessage = context.system.scheduler
-              .scheduleOnce(10*slotT.millis,self,BootstrapJob)(context.system.dispatcher,self)
+            timers.startSingleTimer(BootstrapJob,BootstrapJob,10*slotT.millis)
           } else {
-            bootStrapMessage match {
-              case scheduledMessage:Cancellable => scheduledMessage.cancel
-              case null =>
-            }
             bootStrapLock = false
             helloLock = false
             scheduleDiffuse()
@@ -320,12 +304,7 @@ trait Receive extends Members {
         } else {
           if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
           bootstrapAdoptTine()
-          bootStrapMessage match {
-            case scheduledMessage:Cancellable => scheduledMessage.cancel
-            case null =>
-          }
-          bootStrapMessage = context.system.scheduler
-            .scheduleOnce(10.millis,self,BootstrapJob)(context.system.dispatcher,self)
+          self ! BootstrapJob
         }
       } else if (bootStrapLock && tinePool.keySet.contains(bootStrapJob)) {
         println(s"Holder $holderIndex Bootstrapping...")
@@ -491,9 +470,9 @@ trait Receive extends Members {
         win.issueTxButton.get.enabled = true
       }
       if (!useFencing) {
-        context.system.scheduler.scheduleOnce(updateTime,self,Update)(context.system.dispatcher,self)
-        timers.startPeriodicTimer(TimerKey, GetTime, updateTime)
-        context.system.scheduler.scheduleOnce(slotT* (refreshInterval * rng.nextDouble).toInt.millis,self,Refresh)(context.system.dispatcher,self)
+        timers.startSingleTimer(Update,Update,updateTime)
+        timers.startPeriodicTimer(GetTime, GetTime, updateTime)
+        timers.startSingleTimer(Refresh,Refresh,slotT* (refreshInterval * rng.nextDouble).toInt.millis)
       }
       self ! BootstrapJob
 
@@ -504,7 +483,7 @@ trait Receive extends Members {
       history.refresh
       walletStorage.refresh
       scheduleDiffuse()
-      context.system.scheduler.scheduleOnce(slotT*refreshInterval.millis,self,Refresh)(context.system.dispatcher,self)
+      timers.startPeriodicTimer(Refresh,Refresh,slotT*refreshInterval.millis)
 
     case GetTime =>
       coordinatorRef ! GetTime

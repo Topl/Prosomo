@@ -140,7 +140,6 @@ class Stakeholder(
   var bootStrapLock:Boolean = true
   var helloLock:Boolean = true
   var bootStrapJob:Int = -1
-  var bootStrapMessage: Cancellable = _
   var tineProvider:Option[ActorRefWrapper] = None
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None

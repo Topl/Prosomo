@@ -4,8 +4,9 @@ import akka.actor.ActorPath
 import prosomo.stakeholder.ActorRefWrapper
 import prosomo.components.{Block, Transaction}
 import prosomo.primitives.Types._
-import prosomo.primitives.{KeyFile}
+import prosomo.primitives.KeyFile
 
+import scala.concurrent.duration.FiniteDuration
 import scala.math.BigInt
 
 /**
@@ -36,7 +37,7 @@ case object Refresh
 case object Register
 case object BootstrapJob
 
-//signed messages between holders, messages from remote
+//authenticated messages that are communicated remotely and locally between stakeholders
 case class DiffuseData(sid:Sid,ref:ActorRefWrapper,pks:PublicKeys,sender:ActorRefWrapper)
 case class Hello(slot:Slot,sender:ActorRefWrapper)
 case class RequestBlock(id:SlotId,job:Int,sender:ActorRefWrapper)
@@ -46,6 +47,7 @@ case class SendBlock(block:Block,sender:ActorRefWrapper)
 case class SendTx(transaction:Transaction,sender:ActorRefWrapper)
 
 //messages between coordinator/router and holders
+case class DelayModelMessage(delay:FiniteDuration,nonce:Hash,msg:Any)
 case class NewHolderFromUI(kf:KeyFile,dir:String,pswd:String,name:String,kdir:String)
 case class MessageFromLocalToRemote(s:ActorRefWrapper,r:ActorPath,c:Any,time:Option[Long] = None)
 case class MessageFromLocalToLocal(s:ActorRefWrapper,r:ActorRefWrapper,c:Any)

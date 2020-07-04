@@ -106,7 +106,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var bootStrapLock:Boolean = false
   var helloLock:Boolean = false
   var bootStrapJob:Int = 0
-  var bootStrapMessage:Cancellable = _
   var tineProvider: Option[ActorRefWrapper] = None
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
@@ -314,7 +313,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       for (holder<-rng.shuffle(holders.filterNot(_.remote))) {
         holder ! Run
       }
-      if (!useFencing) timers.startPeriodicTimer(TimerKey, ReadCommand, commandUpdateTime)
+      if (!useFencing) timers.startPeriodicTimer(ReadCommand, ReadCommand, commandUpdateTime)
   }
 
   def giveTime:Receive = {

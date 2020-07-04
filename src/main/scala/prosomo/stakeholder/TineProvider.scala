@@ -18,9 +18,9 @@ import scala.util.Random
   * @param routerRef actor ref to send network messages to
   */
 
-class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper)
+class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit routerRef:ActorRefWrapper)
   extends Actor with Timers with Types {
-  import RequestTineProvider.Info
+  import TineProvider.Info
   val sig:Sig = new Sig
   val rng:Random = new Random
   val serializer:Serializer = new Serializer
@@ -32,7 +32,7 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
       if (ref.remote) {
         routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
       } else {
-        routerRef ! MessageFromLocalToLocal(sender, ref, command)
+        localRef ! MessageFromLocalToLocal(sender, ref, command)
       }
     } else if (useFencing) {
       routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,ref,command)
@@ -115,11 +115,11 @@ class RequestTineProvider(blockStorage: BlockStorage)(implicit routerRef:ActorRe
   }
 
   override def postStop(): Unit = {
-    context.parent ! RequestTineProvider.Done
+    context.parent ! TineProvider.Done
   }
 }
 
-object RequestTineProvider extends SimpleTypes {
+object TineProvider extends SimpleTypes {
   case class Info(
     holderIndex:Int,
     ref:ActorRefWrapper,
@@ -131,6 +131,6 @@ object RequestTineProvider extends SimpleTypes {
     inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
   )
   case object Done
-  def props(blockStorage: BlockStorage)(implicit routerRef:ActorRefWrapper):Props =
-    Props(new RequestTineProvider(blockStorage))
+  def props(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit routerRef:ActorRefWrapper):Props =
+    Props(new TineProvider(blockStorage,localRef))
 }
