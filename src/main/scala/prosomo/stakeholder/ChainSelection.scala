@@ -102,13 +102,13 @@ trait ChainSelection extends Members {
     val previousLen:Int = entry._3
     var totalTries:Int = entry._4
     val ref:ActorRefWrapper = entry._5
-    var prefix:Slot = 0
+    var prefix:Option[Slot] = None
     breakable{
       while(foundAncestor) {
         getParentId(tine.oldest) match {
           case Some(parentId:SlotId) =>
             if (localChain.get(parentId._1).contains(parentId)) {
-              prefix = parentId._1
+              prefix = Some(parentId._1)
               break
             } else {
               getBlockHeader(parentId) match {
@@ -151,10 +151,10 @@ trait ChainSelection extends Members {
     }
 
     if (foundAncestor) {
-      if (tine.notSparsePast(prefix)) {
+      if (tine.notSparsePast(prefix.get)) {
         if (holderIndex == SharedData.printingHolder && printFlag)
-          println(s"Tine length = ${tine.numActive} Common prefix slot = $prefix")
-        tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
+          println(s"Tine length = ${tine.numActive} Common prefix slot = ${prefix.get}")
+        tinePoolWithPrefix = Array((tine,prefix.get,job._1)) ++ tinePoolWithPrefix
       }
       tinePool -= job._1
     } else {
@@ -249,9 +249,9 @@ trait ChainSelection extends Members {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Adopted  $bnt  >  $bnl")
       val reorgTine = localChain.slice(prefix+1,globalSlot)
-      collectLedger(reorgTine)
+      if (!reorgTine.isEmpty) collectLedger(reorgTine)
       collectLedger(tine)
-      for (id <- reorgTine.ordered) {
+      if (!reorgTine.isEmpty) for (id <- reorgTine.ordered) {
         val ledger:TransactionSet = blocks.get(id).get.blockBody.get
         wallet.add(ledger)
       }
@@ -340,7 +340,10 @@ trait ChainSelection extends Members {
         + Base58.encode(newHeadId._2.data) + Console.RESET)
     }
   } match {
-    case Failure(exception) => exception.printStackTrace()
+    case Failure(exception) => {
+      exception.printStackTrace()
+      Thread.sleep(10000)
+    }
     case _ =>
   }
 

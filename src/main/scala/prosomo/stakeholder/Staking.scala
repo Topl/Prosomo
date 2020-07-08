@@ -142,13 +142,9 @@ trait Staking extends Members {
           Array()
       }
     } else {
-      var v: Array[Byte] = Array()
-      val prev_two_thirds_epoch = c.slice((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
-      for(id <- prev_two_thirds_epoch.ordered) {
-        v = v++prev_two_thirds_epoch.getNonce(id._1).get
-      }
-      val next = c.slice(0,(ep-1)*epochLength-1)
-      fch.hash(eta_from_genesis(next,ep-1)++serializer.getBytes(ep)++v)
+      val prev_two_thirds_epoch:Array[Byte] =
+        c.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
+      fch.hash(eta_from_genesis(c,ep-1) ++ serializer.getBytes(ep) ++ prev_two_thirds_epoch)
     }
   }
 
@@ -169,15 +165,10 @@ trait Staking extends Members {
           Array()
       }
     } else {
-      var v: Array[Byte] = Array()
-      val prev_two_thirds_epoch = c.slice(ep*epochLength-epochLength,ep*epochLength-epochLength/3-1)
-      for(id <- prev_two_thirds_epoch.ordered) {
-        v = v++prev_two_thirds_epoch.getNonce(id._1).get
-      }
-      val eta_ep = fch.hash(eta_prev++serializer.getBytes(ep)++v)
+      val prev_two_thirds_epoch:Array[Byte] =
+        c.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
+      val eta_ep = fch.hash(eta_prev ++ serializer.getBytes(ep) ++ prev_two_thirds_epoch)
       eta_ep
     }
   }
-
-
 }

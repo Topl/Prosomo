@@ -64,7 +64,7 @@ trait Forging extends Members with Types {
           blocksForged += 1
           val jobNumber = tineCounter
           tineCounter += 1
-          tinePoolWithPrefix = tinePoolWithPrefix ++ Array((Tine((slot,block.id),rho),slot-1,jobNumber))
+          tinePoolWithPrefix = tinePoolWithPrefix ++ Array((Tine((slot,block.id),rho),ps,jobNumber))
         case _ =>
           SharedData.throwError(holderIndex)
           println("error: invalid ledger in forged block")
