@@ -86,7 +86,7 @@ trait Validation extends Members with Types {
     var pid:SlotId = (0,gh)
     var i = 0
 
-    getBlockHeader(c.get(0)) match {
+    getBlockHeader(c.get(0).get) match {
       case Some(b:BlockHeader) => bool &&= hash(b,serializer) == gh
       case _ => bool &&= false
     }
@@ -119,9 +119,9 @@ trait Validation extends Members with Types {
           eta_Ep = eta_from_tine(c, ep, eta_Ep)
           val toUpdate:State = if(ep == 0 || ep == 1 || ep == 2) {Map()} else staking_state_tine
           val epochChain = if(ep == 0 || ep == 1) {
-            subChain(c,0,0)
+            c.slice(0,0)
           } else {
-            subChain(c,(ep-2)*epochLength,(ep-1)*epochLength-1)
+            c.slice((ep-2)*epochLength,(ep-1)*epochLength-1)
           }
           updateLocalState(toUpdate,epochChain) match {
             case Some(value:State) =>  staking_state_tine = value
@@ -183,9 +183,13 @@ trait Validation extends Members with Types {
     */
   def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
-    val candidateTine = subChain(localChain, 0, prefix) ++ tine
+    val candidateTine = {
+      val out = localChain.copy()
+      out.reorg(prefix,tine)
+      out
+    }
 
-    history.get(candidateTine.getLastActiveSlot(prefix)) match {
+    history.get(candidateTine.getLastActiveSlot(prefix).get) match {
       case Some(value:(State,Eta)) =>
         val ep_prefix = prefix/epochLength
         val eta_prefix = value._2
@@ -197,7 +201,7 @@ trait Validation extends Members with Types {
         var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var currentSlot = prefix+1
-        var pid:SlotId = candidateTine.getLastActiveSlot(prefix)
+        var pid:SlotId = candidateTine.getLastActiveSlot(prefix).get
         breakable{
           for (id <- tine.ordered) {
             updateLocalState(ls,id) match {

@@ -25,7 +25,7 @@ trait Forging extends Members with Types {
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
     val y: Rho = vrf.vrfProofToHash(pi_y)
-    val pb:BlockHeader = getBlockHeader(localChain.getLastActiveSlot(slot-1)).get
+    val pb:BlockHeader = getBlockHeader(localChain.head).get
     assert(pb._3 != slot)
     val ps:Slot = pb._3
 
@@ -59,7 +59,6 @@ trait Forging extends Members with Types {
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
         case Some(forgedState:State) =>
-          assert(localChain.getLastActiveSlot(slot-1)._2 == b._1)
           send(selfWrapper,gossipSet(selfWrapper,holders), SendBlock(block,selfWrapper))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1

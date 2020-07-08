@@ -10,11 +10,9 @@ import scala.math.BigInt
 /**
   * AMS 2020:
   * Byte serializers for all types and classes,
-  * ALL types and serializers are to be represented and linked here,
-  * Use of off the shelf serializers will not be allowed,
   * getBytes are statically type cast for performance,
   * parse bytes uses pattern matching to identify class to be parsed,
-  * Each class has its own serializer object for better concurrency
+  * Each actor has its own serializer object for better concurrency
   */
 
 trait SerializationMethods extends SimpleTypes {
@@ -690,26 +688,31 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sChain(chain:Tine):Array[Byte] = {
-    def toBytes(in:(Slot,(BlockId,Rho))):Array[Byte] = getBytes(in._1) ++ getBytes(in._2._1) ++ getBytes(in._2._2)
-    Ints.toByteArray(chain.length) ++ Bytes.concat(chain.getData.map(toBytes):_*)
+  private def sChain(tine:Tine):Array[Byte] = {
+    def toBytes(in:(BigInt,SlotId)):Array[Byte] = Bytes.concat(getBytes(in._1.toInt),getBytes(in._2))
+    val bestData = Bytes.concat(tine.best.toSeq.map(toBytes):_*)
+      Ints.toByteArray(tine.best.keySet.size) ++
+      bestData ++
+      Ints.toByteArray(tine.maxSlot.get) ++
+      Ints.toByteArray(tine.minSlot.get)
   }
 
-  private def dChain(stream: ByteStream):Tine = {
+  private def dChain(stream: ByteStream):TineData = {
     val numEntries = stream.getInt
-    var out:Map[Slot,(BlockId,Rho)] = Map()
+    var out1:Map[BigInt,SlotId] = Map()
     var i = 0
     while (i < numEntries) {
+      val index = stream.getInt
       val slot = stream.getInt
       val id:Hash = ByteArrayWrapper(stream.get(hash_length))
-      val nonce:Rho = stream.get(rho_length)
-      val newOut = (id,nonce)
-      out += (slot->newOut)
+      out1 += (BigInt(index)->(slot,id))
       i += 1
     }
-    assert(out.keySet.size == numEntries)
+    assert(out1.keySet.size == numEntries)
+    val out2 = stream.getInt
+    val out3 = stream.getInt
     assert(stream.empty)
-    Tine(out)
+    (out1,out2,out3)
   }
 
   private def sForgingKey(key: ForgingKey):Array[Byte] = {

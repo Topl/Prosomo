@@ -18,7 +18,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
   val fch = new Fch
   var walletStore:LDBStore = LDBStore(s"$dir/wallet")
 
-  def refresh:Unit = {
+  def refresh():Unit = {
     walletStore.refresh()
   }
 
@@ -33,10 +33,9 @@ class WalletStorage(dir:String) extends SimpleTypes {
       case Some(bytes: ByteArrayWrapper) => {
         val byteStream = new ByteStream(bytes.data,DeserializeWallet)
         Try{serializer.fromBytes(byteStream)}.toOption match {
-          case Some(w:Wallet) if w.pkw == pkw => {
+          case Some(w:Wallet) if w.pkw == pkw =>
             println("Recovered wallet")
             w
-          }
           case _ => newWallet
         }
       }

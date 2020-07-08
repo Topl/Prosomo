@@ -41,7 +41,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
       }
     })
 
-  def refresh:Unit = {
+  def refresh():Unit = {
     etaStoreCache.asMap().keySet().forEach(etaStoreCache.get(_).refresh())
     stateStoreCache.asMap().keySet().forEach(stateStoreCache.get(_).refresh())
   }

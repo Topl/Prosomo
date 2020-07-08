@@ -1,15 +1,13 @@
 package prosomo.stakeholder
 
-import akka.actor.Cancellable
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
-import scala.concurrent.duration._
 
-import scala.util.{Try,Success,Failure}
+import scala.util.{Try,Failure}
 import scala.util.control.Breaks.{break, breakable}
 
 /**
@@ -28,7 +26,7 @@ trait ChainSelection extends Members {
   import Parameters._
 
   def updateWallet():Unit = Try{
-    var id = localChain.getLastActiveSlot(globalSlot)
+    var id = localChain.getLastActiveSlot(globalSlot).get
     val bn:Int = getBlockHeader(id).get._9
     if (bn == 0) {
       wallet.update(history.get(id).get._1)
@@ -99,7 +97,7 @@ trait ChainSelection extends Members {
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = {
     val entry = job._2
     var foundAncestor = true
-    var tine:Tine = Tine(entry._1)
+    val tine:Tine = entry._1
     var counter:Int = entry._2
     val previousLen:Int = entry._3
     var totalTries:Int = entry._4
@@ -107,136 +105,135 @@ trait ChainSelection extends Members {
     var prefix:Slot = 0
     breakable{
       while(foundAncestor) {
-        getParentId(tine.least) match {
+        getParentId(tine.oldest) match {
           case Some(parentId:SlotId) =>
-            getBlockHeader(parentId) match {
-              case Some(pbh:BlockHeader) =>
-                tine = Tine(parentId,pbh._5) ++ tine
-                if (tine.least == localChain.get(tine.least._1)) {
-                  prefix = tine.least._1
-                  tine.remove(prefix)
-                  break
-                }
-                if (tine.least._1 == 0) {
-                  prefix = 0
-                  tine.remove(prefix)
-                  break
-                }
-              case None =>
-                val tineLength = getActiveSlots(tine)
-                if (tineLength>tineMaxDepth && job._1 >= 0 && !helloLock) {
-                  bootStrapLock = true
-                  bootStrapJob = job._1
-                  if (holderIndex == SharedData.printingHolder && printFlag) println(
-                    "Holder " + holderIndex.toString
-                      + " Looking for Parent Tine, Job:"+job._1
-                      +" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
-                  )
-                  val depth:Int = if (tineLength < tineMaxDepth) {
-                    tineLength
+            if (localChain.get(parentId._1).contains(parentId)) {
+              prefix = parentId._1
+              break
+            } else {
+              getBlockHeader(parentId) match {
+                case Some(pbh:BlockHeader) =>
+                  tine.update(parentId,pbh._5)
+                case None =>
+                  val tineLength = tine.numActive
+                  if (tineLength>tineMaxDepth && job._1 >= 0 && !helloLock) {
+                    bootStrapLock = true
+                    bootStrapJob = job._1
+                    if (holderIndex == SharedData.printingHolder && printFlag) println(
+                      "Holder " + holderIndex.toString
+                        + " Looking for Parent Tine, Job:"+job._1
+                        +" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
+                    )
+                    val depth:Int = if (tineLength < tineMaxDepth) {
+                      tineLength
+                    } else {
+                      tineMaxDepth
+                    }
+                    send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
                   } else {
-                    tineMaxDepth
+                    if (holderIndex == SharedData.printingHolder && printFlag) println(
+                      "Holder " + holderIndex.toString
+                        + " Looking for Parent Block, Job:"+job._1
+                        +" Tries:"+counter.toString+" Length:"+tine.numActive+" Tines:"+tinePool.keySet.size
+                    )
+                    send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
                   }
-                  send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
-                } else {
-                  if (holderIndex == SharedData.printingHolder && printFlag) println(
-                    "Holder " + holderIndex.toString
-                      + " Looking for Parent Block, Job:"+job._1
-                      +" Tries:"+counter.toString+" Length:"+getActiveSlots(tine)+" Tines:"+tinePool.keySet.size
-                  )
-                  send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
-                }
-                if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
-                foundAncestor = false
+                  if (tine.numActive == previousLen) {counter+=1} else {counter=0}
+                  foundAncestor = false
+              }
             }
           case None =>
-            if (getActiveSlots(tine) == previousLen) {counter+=1} else {counter=0}
+            if (tine.numActive == previousLen) {counter+=1} else {counter=0}
+            println("Error: Tine in tinepool contains oldest slotId not in database")
             foundAncestor = false
         }
       }
     }
 
     if (foundAncestor) {
-      if (tine.largestGap < slotWindow) {
+      if (tine.notSparsePast(prefix)) {
         if (holderIndex == SharedData.printingHolder && printFlag)
-          println(s"Tine length = ${tine.length} Common prefix slot = $prefix")
+          println(s"Tine length = ${tine.numActive} Common prefix slot = $prefix")
         tinePoolWithPrefix = Array((tine,prefix,job._1)) ++ tinePoolWithPrefix
       }
       tinePool -= job._1
     } else {
       totalTries += 1
       tinePool -= job._1
-      if (counter<tineMaxTries) tinePool += (job._1 -> (tine,counter,tine.length,totalTries,ref))
+      if (counter<tineMaxTries) tinePool += (job._1 -> (tine,counter,tine.numActive,totalTries,ref))
     }
   }
 
   def updateTine(inputTine:Tine): Option[(Tine,Slot)] = {
-    val headIdOpt:Option[SlotId] = Try{inputTine.last}.toOption
+    val headIdOpt:Option[SlotId] = Try{inputTine.head}.toOption
     headIdOpt match {
       case Some(headId:SlotId) =>
-        if (headId == localChain.get(headId._1)) {
+        if (localChain.get(headId._1).contains(headId)) {
           None
         } else {
           var prefix = -1
-          var tine:Tine = Tine(subChain(inputTine,headId._1,headId._1))
+          val tine:Tine = Tine(headId,inputTine.getNonce(headId._1).get)
           @scala.annotation.tailrec
           def loop(id:SlotId):Unit = {
             getParentId(id) match {
               case Some(pid:SlotId) =>
-                if (pid == localChain.get(pid._1)) {
+                if (localChain.get(pid._1).contains(pid)) {
                   prefix = pid._1
                 } else {
-                  tine = tine ++ Tine(subChain(inputTine,pid._1,pid._1))
+                  tine.update(pid,inputTine.getNonce(pid._1).get)
                   loop(pid)
                 }
               case None =>
-                println("Error: tineUpdate found no common prefix")
+                println("Error: tine update found no common prefix")
             }
           }
           loop(headId)
           Some((tine,prefix))
         }
       case None =>
-        println("Error: invalid head id in updateTine")
+        println("Error: invalid head id in update tine")
         None
     }
   }
 
   /**
     * Chain adoption for synchronized nodes,
-    * Optimal for nodes with a previous head close to the current global slot
-    * */
+    * Only for nodes with a previous head close to the current global slot,
+    * Ledger collection is performed on all blocks
+    */
+
   def maxValidBG(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
-    val tine:Tine = Tine(tinePoolWithPrefix.last._1)
+    assert(localChain.lastActiveSlot(prefix).get == prefix)
+    val tine:Tine = tinePoolWithPrefix.last._1
+    assert(!tine.isEmpty)
     val job:Int = tinePoolWithPrefix.last._3
-    val tineMaxSlot = tine.last._1
-    val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
-    val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
+    val headId = localChain.head
+    val head = getBlockHeader(headId)
+    val tineHeadId = tine.head
+    val tineHead = getBlockHeader(tineHeadId)
+    val bnt = tineHead.get._9
+    val bnl = head.get._9
 
     if (holderIndex == SharedData.printingHolder) {
-      val headId = localChain.getLastActiveSlot(globalSlot)
-      val head = getBlockHeader(headId)
       println("Previous head: " + s" block ${head.get._9} "
         + Base58.encode(headId._2.data))
     }
-
-    assert(!tine.isEmpty)
 
     if (job == bootStrapJob && bootStrapJob >= 0) {
       routerRef ! BootstrapJob(selfWrapper)
     }
 
-    val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
+    val bestChain = if(tineHeadId._1 - prefix < k_s && bnl < bnt) {
       true
     } else {
-      val slotsTine = getActiveSlots(subChain(tine,prefix+1,prefix+1+slotWindow))
-      val slotsLocal = getActiveSlots(subChain(localChain,prefix+1,prefix+1+slotWindow))
+      val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive
+      val slotsLocal = localChain.slice(prefix+1,prefix+1+slotWindow).numActive
       slotsLocal < slotsTine
     }
 
     if (bestChain) {
-      if (verifySubChain(tine,localChain.lastActiveSlot(prefix))) {
+      if (verifySubChain(tine,prefix)) {
         adoptTine()
         chainStorage.store(localChain,localChainId,serializer)
       } else {
@@ -251,35 +248,24 @@ trait ChainSelection extends Members {
     def adoptTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Adopted  $bnt  >  $bnl")
-      collectLedger(subChain(localChain,prefix+1,globalSlot))
+      val reorgTine = localChain.slice(prefix+1,globalSlot)
+      collectLedger(reorgTine)
       collectLedger(tine)
-      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
+      for (id <- reorgTine.ordered) {
         val ledger:TransactionSet = blocks.get(id).get.blockBody.get
         wallet.add(ledger)
       }
-      for (i <- prefix+1 to globalSlot) {
-        localChain.remove(i)
-        val id = tine.get(i)
-        if (id._1 > -1) {
-          assert(id._1 == i)
-          assert(
-            getParentId(id) match {
-              case Some(pid:SlotId) =>
-                localChain.getLastActiveSlot(i) == pid
-              case _ => false
-            }
-          )
-          localChain.update(id,getNonce(id).get)
-          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
-          for (trans<-blockLedger) {
-            if (memPool.keySet.contains(trans.sid)) {
-              memPool -= trans.sid
-            }
+      for (id <- tine.ordered) {
+        val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+        for (trans<-blockLedger) {
+          if (memPool.keySet.contains(trans.sid)) {
+            memPool -= trans.sid
           }
         }
       }
-      val lastSlot = localChain.lastActiveSlot(globalSlot)
-      history.get(localChain.get(lastSlot)) match {
+      localChain.reorg(prefix,tine)
+      val newHeadSlot = localChain.head._1
+      history.get(localChain.get(newHeadSlot).get) match {
         case Some(reorgState:(State,Eta)) =>
           localState = reorgState._1
           eta = reorgState._2
@@ -287,8 +273,8 @@ trait ChainSelection extends Members {
           println("Error: invalid state and eta on adopted tine")
           SharedData.throwError(holderIndex)
       }
-      var epoch = lastSlot / epochLength
-      for (slot <- lastSlot to globalSlot) {
+      var epoch = newHeadSlot / epochLength
+      for (slot <- newHeadSlot to globalSlot) {
         updateEpoch(slot,epoch,eta,localChain) match {
           case result:(Int,Eta) if result._1 > epoch =>
             epoch = result._1
@@ -330,13 +316,11 @@ trait ChainSelection extends Members {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Rejected $bnt  <= $bnl")
       collectLedger(tine)
-      for (id <- subChain(localChain,prefix+1,globalSlot).ordered) {
-        if (id._1 > -1) {
-          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
-          for (trans <- blockLedger) {
-            if (memPool.keySet.contains(trans.sid)){
-              memPool -= trans.sid
-            }
+      for (id <- localChain.slice(prefix+1,globalSlot).ordered) {
+        val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+        for (trans <- blockLedger) {
+          if (memPool.keySet.contains(trans.sid)){
+            memPool -= trans.sid
           }
         }
       }
@@ -350,10 +334,10 @@ trait ChainSelection extends Members {
     }
 
     if (holderIndex == SharedData.printingHolder) {
-      val headId = localChain.getLastActiveSlot(globalSlot)
-      val head = getBlockHeader(headId)
-      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
-        + Base58.encode(headId._2.data) + Console.RESET)
+      val newHeadId = localChain.head
+      val newHead = getBlockHeader(newHeadId)
+      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${newHead.get._9} "
+        + Base58.encode(newHeadId._2.data) + Console.RESET)
     }
   } match {
     case Failure(exception) => exception.printStackTrace()
@@ -362,37 +346,38 @@ trait ChainSelection extends Members {
 
   /**
     * Chain adoption for bootstrapping nodes,
-    * Optimal for nodes that are processing fetch info responses
+    * Only for nodes that are processing fetch info responses
+    * No ledger collection is performed
     */
   def bootstrapAdoptTine(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
-    val tine:Tine = Tine(tinePoolWithPrefix.last._1)
+    assert(localChain.lastActiveSlot(prefix).get == prefix)
+    val tine:Tine = tinePoolWithPrefix.last._1
+    assert(!tine.isEmpty)
     val job:Int = tinePoolWithPrefix.last._3
-    val tineMaxSlot = tine.last._1
-    val bnt = getBlockHeader(tine.getLastActiveSlot(globalSlot)).get._9
-    val bnl = getBlockHeader(localChain.getLastActiveSlot(globalSlot)).get._9
+    assert(job == -1)
+    val headId = localChain.head
+    val head = getBlockHeader(headId)
+    val tineHeadId = tine.head
+    val tineHead = getBlockHeader(tineHeadId)
+    val bnt = tineHead.get._9
+    val bnl = head.get._9
 
     if (holderIndex == SharedData.printingHolder) {
-      val headId = localChain.getLastActiveSlot(globalSlot)
-      val head = getBlockHeader(headId)
       println("Previous head: " + s" block ${head.get._9} "
         + Base58.encode(headId._2.data))
     }
 
-    assert(!tine.isEmpty)
-    assert(localSlot == localChain.lastActiveSlot(localSlot))
-    assert(job == -1)
-
-    val bestChain = if(tineMaxSlot - prefix < k_s && bnl < bnt) {
+    val bestChain = if(tineHeadId._1 - prefix < k_s && bnl < bnt) {
       true
     } else {
-      val slotsTine = getActiveSlots(subChain(tine,prefix+1,prefix+1+slotWindow))
-      val slotsLocal = getActiveSlots(subChain(localChain,prefix+1,prefix+1+slotWindow))
+      val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive
+      val slotsLocal = localChain.slice(prefix+1,prefix+1+slotWindow).numActive
       slotsLocal < slotsTine
     }
 
     if (bestChain) {
-      if (verifySubChain(tine,localChain.lastActiveSlot(prefix))) {
+      if (verifySubChain(tine,prefix)) {
         adoptTine()
         chainStorage.store(localChain,localChainId,serializer)
       } else {
@@ -407,24 +392,9 @@ trait ChainSelection extends Members {
     def adoptTine():Unit = {
       if (holderIndex == SharedData.printingHolder && printFlag)
         println(s"Tine Adopted  $bnt  >  $bnl")
-      for (i <- prefix+1 to tineMaxSlot) {
-        localChain.remove(i)
-        val id = tine.get(i)
-        if (id._1 > -1) {
-          assert(id._1 == i)
-          assert(
-            getParentId(id) match {
-              case Some(pid:SlotId) =>
-                localChain.getLastActiveSlot(i) == pid
-              case _ => false
-            }
-          )
-          localChain.update(id,getNonce(id).get)
-        }
-      }
-      val lastSlot = tineMaxSlot
-      assert(lastSlot == localChain.lastActiveSlot(tineMaxSlot))
-      history.get(localChain.get(lastSlot)) match {
+      localChain.reorg(prefix,tine)
+      val newHeadSlot = localChain.head._1
+      history.get(localChain.head) match {
         case Some(reorgState:(State,Eta)) =>
           localState = reorgState._1
           eta = reorgState._2
@@ -432,15 +402,13 @@ trait ChainSelection extends Members {
           println("Error: invalid state and eta on adopted tine")
           SharedData.throwError(holderIndex)
       }
-      var localEpoch = lastSlot / epochLength
-      assert(localEpoch == currentEpoch)
-      while (localSlot < tineMaxSlot) {
-        updateEpoch(localSlot,localEpoch,eta,localChain) match {
-          case result:(Int,Eta) if result._1 > localEpoch =>
-            localEpoch = result._1
-            currentEpoch = localEpoch
+      var epoch = newHeadSlot / epochLength
+      for (slot <- newHeadSlot to globalSlot) {
+        updateEpoch(slot,epoch,eta,localChain) match {
+          case result:(Int,Eta) if result._1 > epoch =>
+            epoch = result._1
             eta = result._2
-            stakingState = getStakingState(localEpoch,localChain)
+            stakingState = getStakingState(epoch,localChain)
             alphaCache match {
               case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
                 loadingCache.invalidateAll()
@@ -455,9 +423,20 @@ trait ChainSelection extends Members {
             keys.alpha = alphaCache.get.get(keys.pkw)
           case _ =>
         }
-        localSlot += 1
       }
+      assert(currentEpoch == epoch)
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
+      var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
+      for (entry <- tinePoolWithPrefix) {
+        updateTine(entry._1) match {
+          case Some((newTine:Tine,prefix:Slot)) =>
+            if (prefix > 0 && !newTine.isEmpty) {
+              newCandidateTines = newCandidateTines ++ Array((newTine,prefix,entry._3))
+            }
+          case None =>
+        }
+      }
+      tinePoolWithPrefix = newCandidateTines
     }
 
     def dropTine():Unit = {
@@ -467,42 +446,14 @@ trait ChainSelection extends Members {
     }
 
     if (holderIndex == SharedData.printingHolder) {
-      val headId = localChain.getLastActiveSlot(tineMaxSlot)
-      val head = getBlockHeader(headId)
-      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${head.get._9} "
-        + Base58.encode(headId._2.data) + Console.RESET)
+      val newHeadId = localChain.head
+      val newHead = getBlockHeader(newHeadId)
+      println(Console.CYAN + "Current Slot = " + globalSlot.toString + s" on block ${newHead.get._9} "
+        + Base58.encode(newHeadId._2.data) + Console.RESET)
     }
   } match {
     case Failure(exception) => exception.printStackTrace()
     case _ =>
   }
 
-
-  def validateChainIds(c:Tine):Boolean = {
-    var pid = c.least
-    var out = true
-    for (id <- c.ordered.tail) {
-      getParentId(id) match {
-        case Some(bid:SlotId) =>
-          if (bid == pid) {
-            if (history.known(id)) {
-              pid = id
-            } else {
-              println(s"Holder $holderIndex error: could not find id in history")
-              SharedData.throwError(holderIndex)
-              out = false
-            }
-          } else {
-            println(s"Holder $holderIndex error: pid mismatch in tine")
-            SharedData.throwError(holderIndex)
-            out = false
-          }
-        case _ =>
-          println(s"Holder $holderIndex error: couldn't find parent in tine")
-          SharedData.throwError(holderIndex)
-          out = false
-      }
-    }
-    out
-  }
 }

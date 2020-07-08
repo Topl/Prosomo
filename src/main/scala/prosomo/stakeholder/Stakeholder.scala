@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import akka.actor.{ActorPath, Cancellable, Props}
+import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
 import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
@@ -55,8 +55,8 @@ class Stakeholder(
     case None => "coordinator/"+dataFileDir+self.path.toStringWithoutAddress.drop(5)
     case Some(dir) => dir
   }
+  implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   var localChain:Tine = new Tine
-  val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf

@@ -50,18 +50,17 @@ trait Update extends Members {
     */
   def getStakingState(ep:Int, chain:Tine):State = if (ep > 1) {
     val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
-    history.get(chain.getLastActiveSlot(stakeDistributionSlot)) match {
+    history.get(chain.getLastActiveSlot(stakeDistributionSlot).get) match {
       case Some(value:(State,Eta)) =>
         value._1
       case _ =>
-        val thisSlot = lastActiveSlot(chain,stakeDistributionSlot)
-        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot)._2.data))
-        chain.print()
+        val thisSlot:Slot = chain.lastActiveSlot(stakeDistributionSlot).get
+        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data))
         SharedData.throwError(holderIndex)
         Map()
     }
   } else {
-    history.get(chain.get(0)) match {
+    history.get(chain.get(0).get) match {
       case Some(value:(State,Eta)) =>
         value._1
       case _ =>
@@ -172,7 +171,7 @@ trait Update extends Members {
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
         SharedData.blockTime = {
-          val head = localChain.getLastActiveSlot(globalSlot)
+          val head = localChain.head
           globalSlot.toDouble/getBlockHeader(head).get._9.toDouble
         }
         SharedData.activeSlots = 1.0/SharedData.blockTime

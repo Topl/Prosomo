@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter, IOException}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{ActorPath, Cancellable, PoisonPill, Props}
+import akka.actor.{ActorPath, PoisonPill, Props}
 import com.google.common.cache.LoadingCache
 import io.circe.Json
 import io.circe.syntax._
@@ -53,8 +53,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = "coordinator"
+  implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   var localChain:Tine = new Tine
-  val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -230,7 +230,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
   def restoreOrGenerateGenBlock: Receive = {
     case Register =>
-      blocks.restore((0,genBlockKey)) match {
+      blocks.restoreBlock((0,genBlockKey)) match {
         case Some(b:Block) =>
           genesisBlock = Some(Block(hash(b.prosomoHeader,serializer),b.blockHeader,b.blockBody,b.genesisSet))
           verifyBlock(genesisBlock.get)

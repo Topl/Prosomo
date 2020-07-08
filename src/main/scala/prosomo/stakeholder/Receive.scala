@@ -93,7 +93,7 @@ trait Receive extends Members {
                   tinePool -= tinePool.keySet.min
                 } else {
                   for (entry <- tinePool) {
-                    if (entry._2._1.last._1 <= globalSlot-k_s || !holders.contains(entry._2._5)) {
+                    if (entry._2._1.head._1 <= globalSlot-k_s || !holders.contains(entry._2._5)) {
                       if (holderIndex == SharedData.printingHolder && printFlag)
                         println("Holder " + holderIndex.toString + " Dropping Tine")
                       tinePool -= entry._1
@@ -234,7 +234,7 @@ trait Receive extends Members {
       if (!actorStalled) Try{
         tineProvider match {
           case None =>
-            val startId:SlotId = localChain.getLastActiveSlot(value.slot)
+            val startId:SlotId = localChain.getLastActiveSlot(value.slot).get
             val depth:Int = tineMaxDepth
             tineProvider = Try{
               ActorRefWrapper(context.actorOf(TineProvider.props(blocks,localRef), "BootstrapProvider"))
@@ -248,7 +248,7 @@ trait Receive extends Members {
                   startId,
                   depth,
                   -1,
-                  Some(subChain(localChain,value.slot,globalSlot)),
+                  Some(localChain.slice(value.slot,globalSlot)),
                   Some(inbox)
                 )
               case None => println("Error: tine provider not initialized")
@@ -287,7 +287,7 @@ trait Receive extends Members {
     case BootstrapJob =>
       if (helloLock) {
         if (tinePool.keySet.isEmpty && tinePoolWithPrefix.isEmpty) {
-          val lastSlot = localChain.getLastActiveSlot(globalSlot)._1
+          val lastSlot = localChain.head._1
           if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
             println(s"Holder $holderIndex Bootstrapping...")
             send(
@@ -438,8 +438,8 @@ trait Receive extends Members {
           updateWallet()
         case newChain:Tine if !newChain.isEmpty =>
           localChain = newChain
-          val lastId = localChain.last
-          localSlot = localChain.last._1
+          val lastId = localChain.head
+          localSlot = localChain.head._1
           currentEpoch = localSlot/epochLength
           val loadState = history.get(lastId).get
           localState = loadState._1
@@ -476,12 +476,11 @@ trait Receive extends Members {
       }
       self ! BootstrapJob
 
-
     case Refresh =>
-      blocks.refresh
-      chainStorage.refresh
-      history.refresh
-      walletStorage.refresh
+      blocks.refresh()
+      chainStorage.refresh()
+      history.refresh()
+      walletStorage.refresh()
       scheduleDiffuse()
       timers.startPeriodicTimer(Refresh,Refresh,slotT*refreshInterval.millis)
 
@@ -500,7 +499,7 @@ trait Receive extends Members {
     }
 
     /**accepts list of other holders from coordinator */
-    case HoldersFromLocal(list:List[ActorRefWrapper],printInfo) =>
+    case HoldersFromLocal(list:List[ActorRefWrapper],_) =>
       holders = list
       sender() ! "done"
 
@@ -562,10 +561,10 @@ trait Receive extends Members {
     case Verify =>
       val trueChain = verifyChain(localChain, genBlockHash)
       println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
-        + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString + ", Valid chain = "
+        + blocksForged.toString + "\nChain length = " + localChain.numActive.toString + ", Valid chain = "
         + trueChain.toString)
       var chainBytes:Array[Byte] = Array()
-      for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
+      for (id <- localChain.slice(0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
           case Some(b:BlockHeader) => chainBytes ++= fch.hash(serializer.getBytes(b))
           case _ =>
@@ -585,9 +584,9 @@ trait Receive extends Members {
     /**prints stats */
     case Status =>
       println("Holder "+holderIndex.toString + ": t = " + localSlot.toString + ", alpha = " + keys.alpha.toDouble + ", blocks forged = "
-        + blocksForged.toString + "\nChain length = " + getActiveSlots(localChain).toString+", MemPool Size = "+memPool.size)
+        + blocksForged.toString + "\nChain length = " + localChain.numActive.toString+", MemPool Size = "+memPool.size)
       var chainBytes:Array[Byte] = Array()
-      for (id <- subChain(localChain,0,localSlot-confirmationDepth).ordered) {
+      for (id <- localChain.slice(0,localSlot-confirmationDepth).ordered) {
         getBlockHeader(id) match {
           case Some(b:BlockHeader) =>
             chainBytes ++= fch.hash(serializer.getBytes(b))
@@ -600,7 +599,7 @@ trait Receive extends Members {
       var duplicatesFound = false
       var allTxSlots:List[Slot] = List()
       var holderTxOnChain:List[(Sid,Transaction)] = List()
-      for (id <- subChain(localChain,1,localSlot).ordered) {
+      for (id <- localChain.slice(1,localSlot).ordered) {
         for (trans<-blocks.getIfPresent(id).get.blockBody.get) {
           if (!allTx.contains(trans.sid)) {
             if (trans.sender == keys.pkw) holderTxOnChain ::= (trans.sid,trans)
@@ -629,7 +628,7 @@ trait Receive extends Members {
               + globalSlot.toString + " "
               + keys.alpha.toDouble + " "
               + blocksForged.toString + " "
-              + getActiveSlots(localChain).toString + " "
+              + localChain.numActive.toString + " "
               + "\n"
             )
           fileWriter.write(fileString)

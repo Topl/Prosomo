@@ -62,7 +62,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
         breakable{
           for (id <- tine.get.ordered) {
             if (returnedIdList.length < depth) {
-              blockStorage.restore(id) match {
+              blockStorage.restoreBlock(id) match {
                 case Some(block:Block) =>
                   returnedIdList ::= id
                   send(
@@ -93,7 +93,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
       } else {
         breakable{
           while (returnedIdList.length < depth) {
-            blockStorage.restore(id) match {
+            blockStorage.restoreBlock(id) match {
               case Some(block:Block) =>
                 returnedIdList ::= id
                 send(

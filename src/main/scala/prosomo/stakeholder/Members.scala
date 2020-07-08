@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import akka.actor.{Actor, ActorPath, Cancellable, Timers}
+import akka.actor.{Actor, ActorPath, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
@@ -18,13 +18,14 @@ import scala.util.Random
 trait Members extends SimpleTypes with Actor with Timers {
 
   implicit val routerRef:ActorRefWrapper
+  implicit val blocks:BlockStorage
+
   val localRef:ActorRefWrapper
   val holderIndex:Int
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
   var localChain:Tine
-  val blocks:BlockStorage
   val walletStorage:WalletStorage
   val vrf:Vrf
   val kes:Kes
@@ -89,7 +90,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG():Unit
   def bootstrapAdoptTine():Unit
-  def validateChainIds(c:Tine):Boolean
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine):State
   def update():Unit
@@ -107,9 +107,6 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyTX(transaction: Transaction,sig:Sig,serializer: Serializer):Boolean
   def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
   def getParentId(b:BlockHeader):SlotId
-  def lastActiveSlot(c:Tine, s:Slot):Slot
-  def getActiveSlots(c:Tine):Int
-  def subChain(c:Tine, t1:Int, t2:Int):Tine
   def phi(a:Ratio):Ratio
   def phi(a:Ratio,m_f:Ratio):Ratio
   def threshold_cached(a:Ratio, s_interval:Slot):Ratio

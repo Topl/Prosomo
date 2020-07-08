@@ -134,7 +134,7 @@ trait Staking extends Members {
     */
   def eta_from_genesis(c:Tine, ep:Int): Eta = {
     if(ep == 0) {
-      getBlockHeader(c.get(0)) match {
+      getBlockHeader(c.get(0).get) match {
         case Some(b:BlockHeader) => b._1.data
         case _ =>
           println("error: ep 0 eta not recovered")
@@ -143,11 +143,11 @@ trait Staking extends Members {
       }
     } else {
       var v: Array[Byte] = Array()
-      val prev_two_thirds_epoch = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
+      val prev_two_thirds_epoch = c.slice((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
       for(id <- prev_two_thirds_epoch.ordered) {
-        v = v++prev_two_thirds_epoch.getNonce(id._1)
+        v = v++prev_two_thirds_epoch.getNonce(id._1).get
       }
-      val next = subChain(c,0,ep*epochLength-epochLength)
+      val next = c.slice(0,(ep-1)*epochLength-1)
       fch.hash(eta_from_genesis(next,ep-1)++serializer.getBytes(ep)++v)
     }
   }
@@ -161,7 +161,7 @@ trait Staking extends Members {
     */
   def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta): Eta = {
     if(ep == 0) {
-      getBlockHeader(c.get(0)) match {
+      getBlockHeader(c.get(0).get) match {
         case Some(b:BlockHeader) => b._1.data
         case _ =>
           println("error: ep 0 eta not recovered")
@@ -170,9 +170,9 @@ trait Staking extends Members {
       }
     } else {
       var v: Array[Byte] = Array()
-      val prev_two_thirds_epoch = subChain(c,ep*epochLength-epochLength,ep*epochLength-epochLength/3)
+      val prev_two_thirds_epoch = c.slice(ep*epochLength-epochLength,ep*epochLength-epochLength/3-1)
       for(id <- prev_two_thirds_epoch.ordered) {
-        v = v++prev_two_thirds_epoch.getNonce(id._1)
+        v = v++prev_two_thirds_epoch.getNonce(id._1).get
       }
       val eta_ep = fch.hash(eta_prev++serializer.getBytes(ep)++v)
       eta_ep

@@ -2,6 +2,8 @@ package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Transaction
+
+import scala.collection.immutable.SortedMap
 import scala.math.BigInt
 
 /**
@@ -50,5 +52,6 @@ trait SimpleTypes {
   type Request = (List[SlotId],Int,Int)
   type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
   type MemPool = Map[Sid,(Transaction,Int)]
+  type TineData = (Map[BigInt,SlotId],Slot,Slot)
 
 }

@@ -376,7 +376,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       holderMessages += (offsetSlot-> messages)
 
     case Run =>
-      timers.startPeriodicTimer(ActorPathSendTimerKey, Update, 1.nano)
+      timers.startPeriodicTimer(Update, Update, 1.nano)
       coordinatorRef ! NextSlot
 
     case value:CoordRef =>

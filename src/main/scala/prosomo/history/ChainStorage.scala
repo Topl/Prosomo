@@ -1,8 +1,10 @@
 package prosomo.history
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Tine, Serializer}
+import prosomo.components.{Serializer, Tine}
 import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
+
+import scala.util.Try
 
 /**
   * AMS 2020:
@@ -11,32 +13,26 @@ import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
  */
 
 class ChainStorage(dir:String) extends SimpleTypes {
-  import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.storageFlag
+  import prosomo.components.Serializer.DeserializeChain
 
   var chainStore:LDBStore = LDBStore(s"$dir/history/chain")
 
-  def refresh:Unit = {
+  def refresh():Unit = {
     chainStore.refresh()
   }
 
-  def restore(cid:Hash,serializer: Serializer):Tine = if (storageFlag) {
+  def restore(cid:Hash,serializer: Serializer)(implicit blocks: BlockStorage):Tine = {
     chainStore.get(cid) match {
-      case Some(bytes: ByteArrayWrapper) => {
+      case Some(bytes: ByteArrayWrapper) =>
         val byteStream: ByteStream = new ByteStream(bytes.data,DeserializeChain)
-        serializer.fromBytes(byteStream) match {
-          case c:Tine => c
-          case _ => {
+        Try{serializer.fromBytes(byteStream)}.toOption match {
+          case Some(data:TineData@unchecked) => Tine(data)
+          case _ =>
             new Tine
-          }
         }
-      }
-      case None => {
+      case None =>
         new Tine
-      }
     }
-  } else {
-    new Tine
   }
 
   def store(chain:Tine, cid:Hash, serializer: Serializer):Unit  = {
