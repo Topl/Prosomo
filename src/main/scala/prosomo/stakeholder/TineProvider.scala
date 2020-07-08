@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
 import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks, DiffuseData}
-import prosomo.components.{Block, Serializer, Tine}
+import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Fch, SharedData, Sig, SimpleTypes, Types}
 import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting, requestTineInterval}
@@ -49,7 +49,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
     startId:SlotId,
     depth:Int,
     job:Int,
-    tine:Option[Tine],
+    nextBlocks:Option[Array[SlotId]],
     inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
     ) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
@@ -60,7 +60,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
       if (job == -1) {
         // job -1 means fetch info from hello message
         breakable{
-          for (id <- tine.get.ordered) {
+          for (id <- nextBlocks.get) {
             if (returnedIdList.length < depth) {
               blockStorage.restoreBlock(id) match {
                 case Some(block:Block) =>
@@ -127,7 +127,7 @@ object TineProvider extends SimpleTypes {
     startId:SlotId,
     depth:Int,
     job:Int,
-    tine:Option[Tine],
+    nextBlocks:Option[Array[SlotId]],
     inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
   )
   case object Done

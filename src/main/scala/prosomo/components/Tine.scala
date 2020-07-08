@@ -2,7 +2,7 @@ package prosomo.components
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import prosomo.history.BlockStorage
-import prosomo.primitives.SimpleTypes
+import prosomo.primitives.{SimpleTypes, Types}
 import scorex.util.encode.Base58
 import prosomo.primitives.Types._
 import prosomo.primitives.Parameters.{one_third_epoch, slotWindow}
@@ -88,6 +88,29 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
       case Some(data) => Some(data._2)
       case None => None
     }
+  }
+
+  def getNext(start:Slot,n:Int):Array[SlotId] = {
+    var out:Array[SlotId] = Array()
+    var index = start/one_third_epoch
+    var done = false
+    while (!done) {
+      val cacheKey = BigInt(index)
+      if (best.keySet.contains(cacheKey)) {
+        val newCache = tineCache.get(cacheKey).filter(entry => entry._1 >= start)
+        newCache.foreach(entry =>
+          if (out.length < n) {
+            out = out ++ Array(toSlotId(entry))
+          } else {
+            done = true
+          }
+        )
+        index += 1
+      } else {
+        done = true
+      }
+    }
+    out
   }
 
   def getLastActiveSlot(slot:Slot):Option[SlotId] = get(lastActiveSlot(slot).get)

@@ -1,8 +1,6 @@
 package prosomo.stakeholder
 
 import java.io.BufferedWriter
-
-import akka.actor.Cancellable
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import prosomo.primitives.{ Kes, KeyFile, Parameters, Ratio, SharedData, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
@@ -248,7 +246,7 @@ trait Receive extends Members {
                   startId,
                   depth,
                   -1,
-                  Some(localChain.slice(value.slot,globalSlot)),
+                  Some(localChain.getNext(value.slot,depth)),
                   Some(inbox)
                 )
               case None => println("Error: tine provider not initialized")
