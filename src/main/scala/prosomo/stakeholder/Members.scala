@@ -90,8 +90,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG():Unit
   def bootstrapAdoptTine():Unit
-  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta)
-  def getStakingState(ep:Int,chain:Tine):State
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine] = None):(Int,Eta)
+  def getStakingState(ep:Int,chain:Tine,tine:Option[Tine] = None):State
   def update():Unit
   def scheduleDiffuse():Unit
   def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash
@@ -122,7 +122,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getParentId(bid:SlotId):Option[SlotId]
   def getNonce(id:SlotId):Option[Rho]
   def eta_from_genesis(c:Tine, ep:Int):Eta
-  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta):Eta
+  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta, tine:Option[Tine] = None):Eta
   def gossipSet(self:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
   def gossipSet(self:ActorRefWrapper,sender:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
   def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any):Unit
@@ -135,7 +135,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyBlockHeader(b:BlockHeader):Boolean
   def verifyBlock(b:Block):Boolean
   def verifyChain(c:Tine, gh:Hash):Boolean
-  def verifySubChain(tine:Tine, prefix:Slot):Boolean
+  def verifyTine(tine:Tine, prefix:Slot):Boolean
   def verifyTransaction(t:Transaction):Boolean
   def updateLocalState(ls:State, c:Tine):Option[State]
   def updateLocalState(ls:State, id:SlotId):Option[State]

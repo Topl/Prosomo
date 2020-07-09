@@ -366,98 +366,110 @@ trait Receive extends Members {
     case Initialize(gs,inputPassword) =>
       globalSlot = gs
       println("Holder "+holderIndex.toString+s" starting on global slot $globalSlot")
-      inputPassword match {
-        case Some(pw) => password = pw
-        case None if password == "" => password = s"password_holder_$holderIndex"
-        case _ =>
-      }
-      salt = fch.hash(uuid)
-      derivedKey = KeyFile.getDerivedKey(password,salt)
-
-      def generateNewKeys():Unit = {
-        println("Generating new keyfile...")
-        val rngSeed:Random = new Random
-        rngSeed.setSeed(BigInt(seed).toLong)
-        val seed1 = fch.hash(rngSeed.nextString(32))
-        val seed2 = fch.hash(rngSeed.nextString(32))
-        val seed3 = fch.hash(rngSeed.nextString(32))
-        keyFile = Some(KeyFile.fromSeed(
-          password,
-          s"$storageDir/keys/",
-          serializer,
-          sig:Sig,
-          vrf:Vrf,
-          kes:Kes,
-          0,
-          seed1,
-          seed2,
-          seed3
-        ))
-      }
-
-      keyFile match {
-        case None => Try{KeyFile.restore(s"$storageDir/keys/")} match {
-          case Success(Some(restoredFile:KeyFile)) =>
-            println("Reading Keyfile")
-            keyFile = Some(restoredFile)
-          case Success(None) => generateNewKeys()
-          case Failure(exception) =>
-            exception.printStackTrace()
-            generateNewKeys()
+      println("Configuring key...")
+      time{
+        inputPassword match {
+          case Some(pw) => password = pw
+          case None if password == "" => password = s"password_holder_$holderIndex"
+          case _ =>
         }
-        case _ =>
+        salt = fch.hash(uuid)
+        derivedKey = KeyFile.getDerivedKey(password,salt)
+
+        def generateNewKeys():Unit = {
+          println("Generating new keyfile...")
+          val rngSeed:Random = new Random
+          rngSeed.setSeed(BigInt(seed).toLong)
+          val seed1 = fch.hash(rngSeed.nextString(32))
+          val seed2 = fch.hash(rngSeed.nextString(32))
+          val seed3 = fch.hash(rngSeed.nextString(32))
+          keyFile = Some(KeyFile.fromSeed(
+            password,
+            s"$storageDir/keys/",
+            serializer,
+            sig:Sig,
+            vrf:Vrf,
+            kes:Kes,
+            0,
+            seed1,
+            seed2,
+            seed3
+          ))
+        }
+
+        keyFile match {
+          case None => Try{KeyFile.restore(s"$storageDir/keys/")} match {
+            case Success(Some(restoredFile:KeyFile)) =>
+              println("Reading Keyfile")
+              keyFile = Some(restoredFile)
+            case Success(None) => generateNewKeys()
+            case Failure(exception) =>
+              exception.printStackTrace()
+              generateNewKeys()
+          }
+          case _ =>
+        }
+        keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
       }
-      keys = keyFile.get.getKeys(password,serializer,sig,vrf,kes)
-      wallet = walletStorage.restore(serializer,keys.pkw)
-      chainStorage.restore(localChainId,serializer) match {
-        case newChain:Tine if newChain.isEmpty =>
-          localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
-          updateLocalState(localState, (0,genBlockHash)) match {
-            case Some(value:State) => localState = value
-            case _ =>
-              SharedData.throwError(holderIndex)
-              println("error: invalid genesis block")
-          }
-          eta = eta_from_genesis(localChain, 0)
-          println("Adding genesis state to history")
-          history.add((0,genBlockHash),localState,eta)
-          stakingState = getStakingState(currentEpoch,localChain)
-          alphaCache match {
-            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
-              loadingCache.invalidateAll()
-            case None => alphaCache = Some(
-              CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
-                new CacheLoader[ByteArrayWrapper,Ratio] {
-                  def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
-                }
-              )
-            )
-          }
-          updateWallet()
-        case newChain:Tine if !newChain.isEmpty =>
-          localChain = newChain
-          val lastId = localChain.head
-          localSlot = localChain.head._1
-          currentEpoch = localSlot/epochLength
-          val loadState = history.get(lastId).get
-          localState = loadState._1
-          eta = loadState._2
-          stakingState = getStakingState(currentEpoch,localChain)
-          alphaCache match {
-            case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
-              loadingCache.invalidateAll()
-            case None => alphaCache = Some(
-              CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
-                new CacheLoader[ByteArrayWrapper,Ratio] {
-                  def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
-                }
-              )
-            )
-          }
+      println("Configuring wallet...")
+      time {
+        wallet = walletStorage.restore(serializer,keys.pkw)
       }
-      keys.alpha = alphaCache.get.get(keys.pkw)
+      println("Setting up local chain...")
+      time{
+        chainStorage.restore(dataBaseCID,serializer) match {
+          case newChain:Tine if newChain.isEmpty =>
+            localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
+            updateLocalState(localState, (0,genBlockHash)) match {
+              case Some(value:State) => localState = value
+              case _ =>
+                SharedData.throwError(holderIndex)
+                println("error: invalid genesis block")
+            }
+            eta = eta_from_genesis(localChain, 0)
+            println("Adding genesis state to history")
+            history.add((0,genBlockHash),localState,eta)
+            stakingState = getStakingState(currentEpoch,localChain)
+            alphaCache match {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
+                loadingCache.invalidateAll()
+              case None => alphaCache = Some(
+                CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                  new CacheLoader[ByteArrayWrapper,Ratio] {
+                    def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                  }
+                )
+              )
+            }
+            updateWallet()
+          case newChain:Tine if !newChain.isEmpty =>
+            localChain = newChain
+            val lastId = localChain.head
+            localSlot = localChain.head._1
+            currentEpoch = localSlot/epochLength
+            val loadState = history.get(lastId).get
+            localState = loadState._1
+            eta = loadState._2
+            stakingState = getStakingState(currentEpoch,localChain)
+            alphaCache match {
+              case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
+                loadingCache.invalidateAll()
+              case None => alphaCache = Some(
+                CacheBuilder.newBuilder().build[ByteArrayWrapper,Ratio](
+                  new CacheLoader[ByteArrayWrapper,Ratio] {
+                    def load(id:ByteArrayWrapper):Ratio = {relativeStake(id,stakingState)}
+                  }
+                )
+              )
+            }
+        }
+      }
+      println("Setting relative stake...")
+      time{
+        keys.alpha = alphaCache.get.get(keys.pkw)
+      }
       assert(genBlockHash == hash(genesisBlock.get.blockHeader.get,serializer))
-      println("Valid Genesis Block")
+      println("Initialization Complete.")
       sender() ! "done"
 
     /**starts the timer that repeats the update command*/

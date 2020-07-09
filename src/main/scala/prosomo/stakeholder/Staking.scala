@@ -151,14 +151,15 @@ trait Staking extends Members {
 
   /**
     * calculates epoch nonce from previous nonce
-    * @param c local chain to be verified
+    * @param chain local chain
     * @param ep epoch derived from time step
     * @param eta_prev previous eta
+    * @param tine optional tine argument for validation
     * @return hash nonce
     */
-  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta): Eta = {
+  def eta_from_tine(chain:Tine, ep:Int, eta_prev:Eta, tine:Option[Tine]=None): Eta = {
     if(ep == 0) {
-      getBlockHeader(c.get(0).get) match {
+      getBlockHeader(chain.get(0).get) match {
         case Some(b:BlockHeader) => b._1.data
         case _ =>
           println("error: ep 0 eta not recovered")
@@ -167,7 +168,7 @@ trait Staking extends Members {
       }
     } else {
       val prev_two_thirds_epoch:Array[Byte] =
-        c.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
+        chain.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1,tine)
       assert(prev_two_thirds_epoch.nonEmpty)
       val eta_ep = fch.hash(eta_prev ++ serializer.getBytes(ep) ++ prev_two_thirds_epoch)
       eta_ep

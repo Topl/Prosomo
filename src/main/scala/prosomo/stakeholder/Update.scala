@@ -26,10 +26,10 @@ trait Update extends Members {
     * @param chain the tine with vrf nonces to apply
     * @return epoch after slot is tested, epoch nonce after slot is tested
     */
-  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine):(Int,Eta) = {
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]=None):(Int,Eta) = {
     val ep = slot / epochLength
     if (ep > epochIn) {
-      val newEta = eta_from_tine(chain, ep, lastEta)
+      val newEta = eta_from_tine(chain, ep, lastEta, tine)
       (epochIn+1,newEta)
     } else {
       (epochIn,lastEta)
@@ -48,16 +48,33 @@ trait Update extends Members {
     * @param chain tine containing the block ids of at least the previous epoch
     * @return the staking distribution to be used in epoch number ep
     */
-  def getStakingState(ep:Int, chain:Tine):State = if (ep > 1) {
+  def getStakingState(ep:Int, chain:Tine, tine:Option[Tine] = None):State = if (ep > 1) {
     val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
-    history.get(chain.getLastActiveSlot(stakeDistributionSlot).get) match {
-      case Some(value:(State,Eta)) =>
-        value._1
+    tine match {
+      case Some(t) if t.minSlot.get <= stakeDistributionSlot =>
+        history.get(t.getLastActiveSlot(stakeDistributionSlot).get) match {
+          case Some(value:(State,Eta)) =>
+            value._1
+          case _ =>
+            val thisSlot:Slot = t.lastActiveSlot(stakeDistributionSlot).get
+            println(s"Could not recover staking state ep $ep slot $thisSlot id:"
+              +Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data)
+              +" from tine")
+            SharedData.throwError(holderIndex)
+            Map()
+        }
       case _ =>
-        val thisSlot:Slot = chain.lastActiveSlot(stakeDistributionSlot).get
-        println(s"Could not recover staking state ep $ep slot $thisSlot id:"+Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data))
-        SharedData.throwError(holderIndex)
-        Map()
+        history.get(chain.getLastActiveSlot(stakeDistributionSlot).get) match {
+        case Some(value:(State,Eta)) =>
+          value._1
+        case _ =>
+          val thisSlot:Slot = chain.lastActiveSlot(stakeDistributionSlot).get
+          println(s"Could not recover staking state ep $ep slot $thisSlot id:"
+            +Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data)
+            +" from local chain")
+          SharedData.throwError(holderIndex)
+          Map()
+      }
     }
   } else {
     history.get(chain.get(0).get) match {

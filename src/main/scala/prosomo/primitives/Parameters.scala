@@ -27,11 +27,11 @@ import scala.util.Try
 object Parameters {
   val fch = new Fch
   val ecx = new Ecx
-  val localChainId = ByteArrayWrapper(fch.hash("LOCAL_CHAIN"))
+  val dataBaseCID: ByteArrayWrapper = ByteArrayWrapper(fch.hash("LOCAL_CHAIN"))
   val prosomoNodeUID:String = Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
   //tag for identifying ledger entries
-  val genesisBytes = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
-  val declaredAddressFromRemote = Try{
+  val genesisBytes: ByteArrayWrapper = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
+  val declaredAddressFromRemote: Option[String] = Try{
     val whatismyip = new URL("http://checkip.amazonaws.com")
     val in:BufferedReader = new BufferedReader(new InputStreamReader(
       whatismyip.openStream()))
@@ -41,24 +41,28 @@ object Parameters {
   def getConfig:Config = {
     val baseConfig = ConfigFactory.load
     var localConfig = baseConfig
-    Prosomo.input.foreach(str =>
-      Try{
-        val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
-        localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
-      }.toOption match {
-        case None => {
-          Try{
-            localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
-          }.toOption match {
-            case None => println("Error: input not parsed")
-            case _ =>
-          }
+    Prosomo.input match {
+      case input:Array[String] => input.foreach(str =>
+        Try{
+          val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
+          localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
+        }.toOption match {
+          case None =>
+            Try{
+              localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+            }.toOption match {
+              case None => println("Error: input not parsed")
+              case _ =>
+            }
+          case _ =>
         }
-        case _ =>
-      }
-    )
+      )
+      case _ =>
+    }
+
+
     Try{localConfig.getString("scorex.network.agentName")}.toOption match {
-      case Some(name) if name != "bootstrap" => {
+      case Some(name) if name != "bootstrap" =>
         val str = "input{scorex{network{agentName=\""+s"${name}_${prosomoNodeUID.take(8)}"+"\"}}}"
         Try{
           localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
@@ -66,9 +70,8 @@ object Parameters {
           case None => println("Error: input not parsed")
           case _ =>
         }
-      }
       case Some(name) if name == "bootstrap" =>
-      case None => {
+      case None =>
         val str = "input{scorex{network{agentName=\""+s"prosomo_${prosomoNodeUID.take(8)}"+"\"}}}"
         Try{
           localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
@@ -76,7 +79,6 @@ object Parameters {
           case None => println("Error: input not parsed")
           case _ =>
         }
-      }
     }
     localConfig
   }
@@ -89,10 +91,10 @@ object Parameters {
     for (line<-cmdList) {
       val com = line.trim.split(" ")
       com(0) match {
-        case s:String => {
+        case s:String =>
           if (com.length == 2){
             Try{com(1).toInt}.toOption match {
-              case Some(i:Int) => {
+              case Some(i:Int) =>
                 if (out.keySet.contains(i)) {
                   val nl = s::out(i)
                   out -= i
@@ -100,11 +102,9 @@ object Parameters {
                 } else {
                   out += (i->List(s))
                 }
-              }
               case None =>
             }
           }
-        }
         case _ =>
       }
     }

@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{GuiCommand, IssueTxToAddress, Populate}
+import prosomo.cases.{GuiCommand, IssueTxToAddress}
 import prosomo.primitives.Parameters.{inputSeed, prosomoMessageSpecs, useGui}
 import prosomo.primitives.{Fch, SharedData}
 import prosomo.stakeholder.{Coordinator, Router}
@@ -208,7 +208,8 @@ object Prosomo extends App {
   /**
     * input args will be either HOCON *.conf files in execution directory or HOCON formatted strings that add to base config
     */
-  val input = args
+  val input:Array[String] = args
+
   var instance:Option[Prosomo] = None
   if (useGui) {
     val newWindow = Try{new ProsomoWindow(prosomo.primitives.Parameters.config)}.toOption

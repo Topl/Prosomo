@@ -190,8 +190,15 @@ trait ChainSelection extends Members {
                 if (localChain.get(pid._1).contains(pid)) {
                   prefix = Some(pid._1)
                 } else {
-                  tine.update(pid,inputTine.getNonce(pid._1).get)
-                  loop(pid)
+                  inputTine.getNonce(pid._1) match {
+                    case Some(nonce) =>
+                      tine.update(pid,nonce)
+                      loop(pid)
+                    case None =>
+                      val nonce = blocks.get(pid).get.nonce
+                      tine.update(pid,nonce)
+                      loop(pid)
+                  }
                 }
               case None =>
                 println("Error: tine update found no common prefix")
@@ -253,9 +260,9 @@ trait ChainSelection extends Members {
     }
 
     if (bestChain) {
-      if (verifySubChain(tine,prefix)) {
+      if (verifyTine(tine,prefix)) {
         adoptTine()
-        chainStorage.store(localChain,localChainId,serializer)
+        chainStorage.store(localChain,dataBaseCID,serializer)
       } else {
         println("Error: invalid best chain")
         tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
@@ -399,9 +406,9 @@ trait ChainSelection extends Members {
     }
 
     if (bestChain) {
-      if (verifySubChain(tine,prefix)) {
+      if (verifyTine(tine,prefix)) {
         adoptTine()
-        chainStorage.store(localChain,localChainId,serializer)
+        chainStorage.store(localChain,dataBaseCID,serializer)
       } else {
         println("Error: invalid best chain")
         tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)

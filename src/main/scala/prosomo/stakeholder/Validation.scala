@@ -177,19 +177,16 @@ trait Validation extends Members with Types {
   }
 
   /**
-    * Verify a tine, final point of validation for tinepool functionality
-    * @param tine chain to be verified
+    * Verify a tine by validating all headers and state transitions from the prefix to head of tine input,
+    * Final point of validation for tinepool functionality
+    * @param tine the tine to be verified
+    * @param prefix slot of the localChain id that represents the common ancestor of tine and head of localChain
     * @return true if chain is valid, false otherwise
     */
-  def verifySubChain(tine:Tine, prefix:Slot): Boolean = {
+  def verifyTine(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
-    val candidateTine = {
-      val out = localChain.copy()
-      out.reorg(prefix,tine)
-      out
-    }
-
-    history.get(candidateTine.getLastActiveSlot(prefix).get) match {
+    var pid:SlotId = localChain.getLastActiveSlot(prefix).get
+    history.get(pid) match {
       case Some(value:(State,Eta)) =>
         val ep_prefix = prefix/epochLength
         val eta_prefix = value._2
@@ -197,11 +194,10 @@ trait Validation extends Members with Types {
         var ep = ep_prefix
         var eta_tine:Eta = eta_prefix
         var ls:State = ls_prefix
-        var staking_state_tine: State = getStakingState(ep_prefix,candidateTine)
+        var staking_state_tine: State = getStakingState(ep_prefix,localChain)
         var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var currentSlot = prefix+1
-        var pid:SlotId = candidateTine.getLastActiveSlot(prefix).get
         breakable{
           for (id <- tine.ordered) {
             updateLocalState(ls,id) match {
@@ -214,11 +210,11 @@ trait Validation extends Members with Types {
                           val (h0, _, slot, cert, rho, pi, _, pk_kes,bn,ps) = block
                           val (pk_vrf, y, pi_y, pk_sig, tr_c,info) = cert
                           while(currentSlot<=slot) {
-                            updateEpoch(currentSlot,ep,eta_tine,candidateTine) match {
+                            updateEpoch(currentSlot,ep,eta_tine,localChain,Some(tine)) match {
                               case result:(Int,Eta) if result._1 > ep =>
                                 ep = result._1
                                 eta_tine = result._2
-                                staking_state_tine = getStakingState(ep,candidateTine)
+                                staking_state_tine = getStakingState(ep,localChain,Some(tine))
                               case _ =>
                             }
                             currentSlot+=1
