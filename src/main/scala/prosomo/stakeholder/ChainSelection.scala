@@ -7,7 +7,7 @@ import prosomo.components.{Tine, Transaction}
 import prosomo.primitives.{Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
-import scala.util.{Try,Failure}
+import scala.util.{Try,Failure,Success}
 import scala.util.control.Breaks.{break, breakable}
 
 /**
@@ -89,12 +89,16 @@ trait ChainSelection extends Members {
         }
       }
     }
-
     collectStake()
     walletStorage.store(wallet,serializer)
+  } match {
+    case Failure(exception) => {
+      exception.printStackTrace()
+    }
+    case _ =>
   }
 
-  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = {
+  def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = Try{
     val entry = job._2
     var foundAncestor = true
     val tine:Tine = entry._1
@@ -109,6 +113,7 @@ trait ChainSelection extends Members {
           case Some(parentId:SlotId) =>
             if (localChain.get(parentId._1).contains(parentId)) {
               prefix = Some(parentId._1)
+              assert(localChain.get(prefix.get).get == parentId)
               break
             } else {
               getBlockHeader(parentId) match {
@@ -162,23 +167,28 @@ trait ChainSelection extends Members {
       tinePool -= job._1
       if (counter<tineMaxTries) tinePool += (job._1 -> (tine,counter,tine.numActive,totalTries,ref))
     }
+  } match {
+    case Failure(exception) => {
+      exception.printStackTrace()
+    }
+    case _ =>
   }
 
-  def updateTine(inputTine:Tine): Option[(Tine,Slot)] = {
+  def updateTine(inputTine:Tine): Option[(Tine,Slot)] = Try{
     val headIdOpt:Option[SlotId] = Try{inputTine.head}.toOption
     headIdOpt match {
       case Some(headId:SlotId) =>
         if (localChain.get(headId._1).contains(headId)) {
           None
         } else {
-          var prefix = -1
+          var prefix:Option[Slot] = None
           val tine:Tine = Tine(headId,inputTine.getNonce(headId._1).get)
           @scala.annotation.tailrec
           def loop(id:SlotId):Unit = {
             getParentId(id) match {
               case Some(pid:SlotId) =>
                 if (localChain.get(pid._1).contains(pid)) {
-                  prefix = pid._1
+                  prefix = Some(pid._1)
                 } else {
                   tine.update(pid,inputTine.getNonce(pid._1).get)
                   loop(pid)
@@ -188,12 +198,22 @@ trait ChainSelection extends Members {
             }
           }
           loop(headId)
-          Some((tine,prefix))
+          prefix match {
+            case Some(p) => Some((tine,p))
+            case None => None
+          }
+
         }
       case None =>
         println("Error: invalid head id in update tine")
         None
     }
+  } match {
+    case Failure(exception) => {
+      exception.printStackTrace()
+      None
+    }
+    case Success(value) => value
   }
 
   /**
@@ -342,7 +362,6 @@ trait ChainSelection extends Members {
   } match {
     case Failure(exception) => {
       exception.printStackTrace()
-      Thread.sleep(10000)
     }
     case _ =>
   }
@@ -455,7 +474,9 @@ trait ChainSelection extends Members {
         + Base58.encode(newHeadId._2.data) + Console.RESET)
     }
   } match {
-    case Failure(exception) => exception.printStackTrace()
+    case Failure(exception) => {
+      exception.printStackTrace()
+    }
     case _ =>
   }
 

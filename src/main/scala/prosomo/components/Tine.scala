@@ -2,7 +2,7 @@ package prosomo.components
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import prosomo.history.BlockStorage
-import prosomo.primitives.{SimpleTypes, Types}
+import prosomo.primitives.SimpleTypes
 import scorex.util.encode.Base58
 import prosomo.primitives.Types._
 import prosomo.primitives.Parameters.{one_third_epoch, slotWindow}
