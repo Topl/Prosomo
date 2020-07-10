@@ -56,7 +56,7 @@ object SharedData extends Types {
     diskAccess = true
   }
 
-  def throwError(id:Int) = {println(s"Holder $id ---------Error----------")}
+  def throwError(id:Int) = {println(s"Holder $id ---------Error----------");errorFlag=true;killFlag=true}
   def throwError = {println("---------Error----------")}
   def error:Boolean = {errorFlag}
 

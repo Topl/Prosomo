@@ -6,6 +6,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+
 import scala.math.BigInt
 import scala.util.Random
 
@@ -90,8 +91,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG():Unit
   def bootstrapAdoptTine():Unit
-  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine] = None):(Int,Eta)
-  def getStakingState(ep:Int,chain:Tine,tine:Option[Tine] = None):State
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta)
+  def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):State
   def update():Unit
   def scheduleDiffuse():Unit
   def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash
@@ -122,7 +123,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getParentId(bid:SlotId):Option[SlotId]
   def getNonce(id:SlotId):Option[Rho]
   def eta_from_genesis(c:Tine, ep:Int):Eta
-  def eta_from_tine(c:Tine, ep:Int, eta_prev:Eta, tine:Option[Tine] = None):Eta
+  def eta_from_tine(c:Tine,ep:Int,eta_prev:Eta,tine:Option[Tine]):Eta
   def gossipSet(self:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
   def gossipSet(self:ActorRefWrapper,sender:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper]
   def send(sender:ActorRefWrapper, holder:ActorRefWrapper, command: Any):Unit

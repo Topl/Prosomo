@@ -143,7 +143,7 @@ trait Staking extends Members {
       }
     } else {
       val prev_two_thirds_epoch:Array[Byte] =
-        c.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1)
+        c.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1,None)
       assert(prev_two_thirds_epoch.nonEmpty)
       fch.hash(eta_from_genesis(c,ep-1) ++ serializer.getBytes(ep) ++ prev_two_thirds_epoch)
     }
@@ -157,7 +157,7 @@ trait Staking extends Members {
     * @param tine optional tine argument for validation
     * @return hash nonce
     */
-  def eta_from_tine(chain:Tine, ep:Int, eta_prev:Eta, tine:Option[Tine]=None): Eta = {
+  def eta_from_tine(chain:Tine, ep:Int, eta_prev:Eta, tine:Option[Tine]): Eta = {
     if(ep == 0) {
       getBlockHeader(chain.get(0).get) match {
         case Some(b:BlockHeader) => b._1.data

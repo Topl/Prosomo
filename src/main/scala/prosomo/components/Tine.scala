@@ -69,9 +69,10 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
     tineDB match {
       case Left(value) if value.keySet.nonEmpty =>
         tineDB = Right(tineCache)
-        value.foreach(
-          entry => this.update((entry._1,entry._2._1),entry._2._2)
-        )
+        minSlot = None
+        maxSlot = None
+        best = Map()
+        value.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
       case _ => tineDB = Right(tineCache)
     }
   }
@@ -292,27 +293,27 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
     }
   }
 
-  def orderedNonceData(min:Slot,max:Slot,tine:Option[Tine] = None):Array[Byte] = {
+  def orderedNonceData(min:Slot,max:Slot,tine:Option[Tine]):Array[Byte] = {
     if (min < max) {
       tine match {
         case Some(t) if t.minSlot.get <= min =>
-          t.orderedNonceData(min,max)
-        case Some(t) if t.minSlot.get > min =>
+          t.orderedNonceData(min,max,None)
+        case Some(t) if t.minSlot.get <= max =>
           tineDB match {
             case Left(cache) =>
               val newCache = cache.filter(data => data._1 < t.minSlot.get && data._1 >= min)
               Bytes.concat(
                 Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*),
-                t.orderedNonceData(t.minSlot.get,max)
+                t.orderedNonceData(t.minSlot.get,max,None)
               )
             case Right(cache) =>
               var out:Array[Byte] = Array()
               for (index <- min/one_third_epoch to (t.minSlot.get-1)/one_third_epoch) {
                 val cacheKey = BigInt(index)
                 val newCache = cache.get(cacheKey).filter(data => data._1 < t.minSlot.get && data._1 >= min)
-                Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
+                out = Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
               }
-              Bytes.concat(out, t.orderedNonceData(t.minSlot.get,max))
+              Bytes.concat(out, t.orderedNonceData(t.minSlot.get,max,tine))
           }
         case _ =>
           tineDB match {
@@ -324,7 +325,7 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
               for (index <- min/one_third_epoch to max/one_third_epoch) {
                 val cacheKey = BigInt(index)
                 val newCache = cache.get(cacheKey).filter(data => data._1 <= max && data._1 >= min)
-                Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
+                out = Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
               }
               out
           }
@@ -450,7 +451,7 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
         val newCache = cache.filter(data => data._1 <= prefix)
         tineDB = Left(newCache)
         for (id <- tine.ordered) {
-          this.update(id,tine.getNonce(id._1).get)
+          update(id,tine.getNonce(id._1).get)
         }
       case Right(cache) =>
         val prefixKey = BigInt(prefix/one_third_epoch)
@@ -463,7 +464,7 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
         val newBest:SlotId = (newMax,newCache(newMax)._1)
         best += (prefixKey -> newBest)
         for (id <- tine.ordered) {
-          this.update(id,tine.getNonce(id._1).get)
+          update(id,tine.getNonce(id._1).get)
         }
     }
   }

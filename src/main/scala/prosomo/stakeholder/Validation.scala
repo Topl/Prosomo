@@ -116,7 +116,7 @@ trait Validation extends Members with Types {
       while(i<=slot) {
         if (i/epochLength > ep) {
           ep = i/epochLength
-          eta_Ep = eta_from_tine(c, ep, eta_Ep)
+          eta_Ep = eta_from_tine(c, ep, eta_Ep,None)
           val toUpdate:State = if(ep == 0 || ep == 1 || ep == 2) {Map()} else staking_state_tine
           val epochChain = if(ep == 0 || ep == 1) {
             c.slice(0,0)
@@ -194,7 +194,7 @@ trait Validation extends Members with Types {
         var ep = ep_prefix
         var eta_tine:Eta = eta_prefix
         var ls:State = ls_prefix
-        var staking_state_tine: State = getStakingState(ep_prefix,localChain)
+        var staking_state_tine: State = getStakingState(ep_prefix,localChain,None)
         var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var currentSlot = prefix+1
@@ -251,7 +251,8 @@ trait Validation extends Members with Types {
                             ls = newState
                             pid = id
                           } else {
-                            print("Error: Holder "+holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
+                            print("Error: Holder "
+                              +holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
                             println(Seq(
                               hash(parent,serializer) == h0 //1
                               , verifyBlockHeader(block) //2

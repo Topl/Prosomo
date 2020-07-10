@@ -26,7 +26,7 @@ trait Update extends Members {
     * @param chain the tine with vrf nonces to apply
     * @return epoch after slot is tested, epoch nonce after slot is tested
     */
-  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]=None):(Int,Eta) = {
+  def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta) = {
     val ep = slot / epochLength
     if (ep > epochIn) {
       val newEta = eta_from_tine(chain, ep, lastEta, tine)
@@ -48,7 +48,7 @@ trait Update extends Members {
     * @param chain tine containing the block ids of at least the previous epoch
     * @return the staking distribution to be used in epoch number ep
     */
-  def getStakingState(ep:Int, chain:Tine, tine:Option[Tine] = None):State = if (ep > 1) {
+  def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):State = if (ep > 1) {
     val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
     tine match {
       case Some(t) if t.minSlot.get <= stakeDistributionSlot =>
@@ -124,11 +124,11 @@ trait Update extends Members {
         if (dataOutFlag && localSlot % dataOutInterval == 0) {
           coordinatorRef ! WriteFile
         }
-        updateEpoch(localSlot,currentEpoch,eta,localChain) match {
+        updateEpoch(localSlot,currentEpoch,eta,localChain,None) match {
           case result:(Int,Eta) if result._1 > currentEpoch =>
             currentEpoch = result._1
             eta = result._2
-            stakingState = getStakingState(currentEpoch,localChain)
+            stakingState = getStakingState(currentEpoch,localChain,None)
             alphaCache match {
               case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>
                 loadingCache.invalidateAll()

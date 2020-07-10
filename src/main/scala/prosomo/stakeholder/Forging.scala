@@ -54,12 +54,13 @@ trait Forging extends Members with Types {
       )
       val b:BlockHeader = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
-      if (printFlag) {println(s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs")}
+      if (printFlag)
+        println(s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs")
       val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
         case Some(forgedState:State) =>
-          send(selfWrapper,gossipSet(selfWrapper,holders), SendBlock(block,selfWrapper))
+          send(selfWrapper,holders.filter(_ != selfWrapper),SendBlock(block,selfWrapper))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter

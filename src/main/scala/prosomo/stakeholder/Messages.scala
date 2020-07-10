@@ -33,11 +33,14 @@ trait Messages extends Members {
     * @param holders list of holders
     * @return list of gossipers
     */
-  def gossipSet(self:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper] = {
+  def gossipSet(self:ActorRefWrapper,
+                holders:List[ActorRefWrapper]):List[ActorRefWrapper] = {
     rng.shuffle(holders.filter(ref => ref != self)).take(numGossipers)
   }
 
-  def gossipSet(self:ActorRefWrapper,sender:ActorRefWrapper,holders:List[ActorRefWrapper]):List[ActorRefWrapper] = {
+  def gossipSet(self:ActorRefWrapper,
+                sender:ActorRefWrapper,
+                holders:List[ActorRefWrapper]):List[ActorRefWrapper] = {
     rng.shuffle(holders.filter(ref => ref != self && ref != sender)).take(numGossipers)
   }
 
