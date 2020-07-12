@@ -715,8 +715,10 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         val cpuLoad = (0.0 /: loadAverage){_ + _}/loadAverage.length
         if (cpuLoad >= systemLoadThreshold && !actorStalled) {
           actorStalled = true
+          SharedData.throwLimiterWarning("Start")
         } else if (cpuLoad < systemLoadThreshold && actorStalled) {
           actorStalled = false
+          SharedData.throwLimiterWarning("Stop")
         }
       }
     }

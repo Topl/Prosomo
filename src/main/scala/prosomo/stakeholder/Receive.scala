@@ -63,7 +63,7 @@ trait Receive extends Members {
       * when bootstrapping new blocks are added to database but do not enter tinepool
       **/
     case value:SendBlock =>
-      if (!actorStalled) Try{
+      if (!actorStalled && !SharedData.limiterFlag) Try{
         val foundBlock = blocks.knownIfPresent((value.block.slot,value.block.id))
         if (!foundBlock) {
           val b:BlockHeader = value.block.prosomoHeader

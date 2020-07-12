@@ -23,6 +23,7 @@ object SharedData extends Types {
   var t_1:Long = 0
   var timing:Boolean = false
   var diskAccess:Boolean = false
+  var limiterFlag:Boolean = false
   val fch:Fch = new Fch
   var prosomoWindow:Option[ProsomoWindow] = None
   var globalSlot = 0
@@ -54,6 +55,11 @@ object SharedData extends Types {
   def throwDiskWarning(text:String) = if (!diskAccess) {
     println(Console.YELLOW + s"Disk access: $text" + Console.RESET)
     diskAccess = true
+  }
+
+  def throwLimiterWarning(text:String) = if (!diskAccess) {
+    println(Console.YELLOW + s"Limiter: $text" + Console.RESET)
+    if (limiterFlag) {limiterFlag = false} else {limiterFlag = true}
   }
 
   def throwError(id:Int) = {println(s"Holder $id ---------Error----------");errorFlag=true;killFlag=true}

@@ -21,7 +21,7 @@ import scala.util.Try
 trait Forging extends Members with Types {
 
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
-  def forgeBlock(forgerKeys:Keys):Unit = Try{
+  def forgeBlock(forgerKeys:Keys):Unit = if (!SharedData.limiterFlag) Try{
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(
       forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST")
