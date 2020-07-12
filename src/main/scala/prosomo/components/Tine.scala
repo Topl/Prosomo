@@ -491,10 +491,10 @@ object Tine extends SimpleTypes {
   //for loading localChain data from db
   def apply(data:TineData)(implicit blocks:BlockStorage):Tine = {
     val out = new Tine
-    out.best = data._1
-    out.maxSlot = Some(data._2)
-    out.minSlot = Some(data._3)
     out.loadCache()
+    out.best = data._1
+    out.minSlot = Some(data._2)
+    out.maxSlot = Some(data._3)
     out
   }
 

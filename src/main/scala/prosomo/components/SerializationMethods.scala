@@ -693,8 +693,8 @@ trait SerializationMethods extends SimpleTypes {
     val bestData = Bytes.concat(tine.best.toSeq.map(toBytes):_*)
       Ints.toByteArray(tine.best.keySet.size) ++
       bestData ++
-      Ints.toByteArray(tine.maxSlot.get) ++
-      Ints.toByteArray(tine.minSlot.get)
+      Ints.toByteArray(tine.minSlot.get) ++
+      Ints.toByteArray(tine.maxSlot.get)
   }
 
   private def dChain(stream: ByteStream):TineData = {
