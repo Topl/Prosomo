@@ -68,14 +68,14 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
 
   def loadCache():Unit = {
     tineDB match {
-      case Left(value) if value.keySet.nonEmpty =>
+      case Left(cache) if cache.keySet.nonEmpty =>
         tineDB = Right(tineCache)
         minSlot = None
         maxSlot = None
         best = Map()
-        value.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
-      case Left(_) => tineDB = Right(tineCache)
+        cache.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
       case _ =>
+        tineDB = Right(tineCache)
     }
   }
 

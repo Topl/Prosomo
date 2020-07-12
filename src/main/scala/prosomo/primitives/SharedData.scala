@@ -58,8 +58,15 @@ object SharedData extends Types {
   }
 
   def throwLimiterWarning(text:String) = if (!diskAccess) {
-    println(Console.YELLOW + s"Limiter: $text" + Console.RESET)
-    if (limiterFlag) {limiterFlag = false} else {limiterFlag = true}
+    text match {
+      case "Start" if !limiterFlag =>
+        println(Console.YELLOW + s"Limiter: $text" + Console.RESET)
+        limiterFlag = true
+      case "Stop" if limiterFlag =>
+        println(Console.YELLOW + s"Limiter: $text" + Console.RESET)
+        limiterFlag = false
+      case _ =>
+    }
   }
 
   def throwError(id:Int) = {println(s"Holder $id ---------Error----------");errorFlag=true;killFlag=true}

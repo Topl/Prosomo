@@ -9,8 +9,15 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress}
-import prosomo.primitives.Parameters.{inputSeed, prosomoMessageSpecs, useGui}
-import prosomo.primitives.{Fch, SharedData}
+import prosomo.primitives.Parameters.{
+  inputSeed,
+  numAverageLoad,
+  performanceFlag,
+  prosomoMessageSpecs,
+  useGui,
+  systemLoadThreshold
+}
+import prosomo.primitives.{Fch, SharedData, SystemLoadMonitor}
 import prosomo.stakeholder.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import scorex.core.app.{Application, ScorexContext}
@@ -210,6 +217,24 @@ object Prosomo extends App {
     */
   val input:Array[String] = args
 
+  var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
+  val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
+
+  def limiter:Unit = {
+    if (performanceFlag) {
+      val newLoad = sysLoad.cpuLoad
+      if (newLoad>0.0){
+        loadAverage = loadAverage.tail++Array(newLoad)
+      }
+      val cpuLoad = (0.0 /: loadAverage){_ + _}/loadAverage.length
+      if (cpuLoad >= systemLoadThreshold) {
+        SharedData.throwLimiterWarning("Start")
+      } else if (cpuLoad < systemLoadThreshold) {
+        SharedData.throwLimiterWarning("Stop")
+      }
+    }
+  }
+
   var instance:Option[Prosomo] = None
   if (useGui) {
     val newWindow = Try{new ProsomoWindow(prosomo.primitives.Parameters.config)}.toOption
@@ -222,6 +247,7 @@ object Prosomo extends App {
           instance.get.run()
           while (instance.get.runApp) {
             Thread.sleep(100)
+            limiter
           }
           instance.get.stopAll()
         }
@@ -234,6 +260,7 @@ object Prosomo extends App {
             newWindow.get.refreshOutput
             i+=1
             if (i%100==0) {i=0;newWindow.get.refreshPeerList;newWindow.get.refreshWallet()}
+            if (i%10==0) limiter
             Thread.sleep(10)
           }
           instance.get.stopAll()
@@ -246,6 +273,7 @@ object Prosomo extends App {
       instance.get.run()
       while (instance.get.runApp) {
         Thread.sleep(100)
+        limiter
       }
       instance.get.stopAll()
     }

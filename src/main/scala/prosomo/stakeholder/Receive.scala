@@ -419,6 +419,7 @@ trait Receive extends Members {
       time{
         chainStorage.restore(dataBaseCID,serializer) match {
           case newChain:Tine if newChain.isEmpty =>
+            localChain.loadCache()
             localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
             updateLocalState(localState, (0,genBlockHash)) match {
               case Some(value:State) => localState = value

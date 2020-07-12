@@ -206,8 +206,6 @@ object Parameters {
   val numGossipers:Int = config.getInt("params.numGossipers")
   //number of holders to gossip to upon forging
   val numGossipersForge:Int = config.getInt("params.numGossipersForge")
-  //use gossiper protocol
-  val useGossipProtocol:Boolean = config.getBoolean("params.useGossipProtocol")
   //max number of tries for a tine to ask for parent blocks
   val tineMaxTries:Int = config.getInt("params.tineMaxTries")
   //max depth in multiples of confirmation depth that can be returned from an actor

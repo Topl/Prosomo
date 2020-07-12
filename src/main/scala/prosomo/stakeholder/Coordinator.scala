@@ -112,14 +112,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val genBlockKey: Sid = ByteArrayWrapper(fch.hash("GENESIS"))
 
   val coordId:String = Base58.encode(inputSeed)
-  val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
   val eta0:Eta = fch.hash(Base58.encode(inputSeed)+"ETA")
   val (sk_sig,pk_sig) = sig.createKeyPair(seed)
   val (sk_vrf,pk_vrf) = vrf.vrfKeypair(seed)
   val sk_kes:ForgingKey = ForgingKey(kes,seed,0)
   val pk_kes:PublicKey = sk_kes.getPublic(kes)
 
-  var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
+
   var roundDone = true
   var parties: List[List[ActorRefWrapper]] = List()
   var t:Slot = 0
@@ -314,7 +313,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def giveTime:Receive = {
     /**returns offset time to stakeholder that issues GetTime to coordinator*/
     case GetTime =>
-      if (!actorStalled) {
+      if (!actorStalled && !SharedData.limiterFlag) {
         t1 = globalTime
         sender() ! GetTime(t1)
       }
@@ -705,25 +704,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       command(cmdQueue(t))
       cmdQueue -= t
     }
-    if (performanceFlag && !useFencing) {
-      val newLoad = sysLoad.cpuLoad
-      if (newLoad>0.0){
-        loadAverage = loadAverage.tail++Array(newLoad)
-      }
 
-      if (!actorPaused) {
-        val cpuLoad = (0.0 /: loadAverage){_ + _}/loadAverage.length
-        if (cpuLoad >= systemLoadThreshold && !actorStalled) {
-          actorStalled = true
-          SharedData.throwLimiterWarning("Start")
-        } else if (cpuLoad < systemLoadThreshold && actorStalled) {
-          actorStalled = false
-          SharedData.throwLimiterWarning("Stop")
-        }
-      }
-    }
 
-    if (!actorStalled && transactionFlag && !useFencing && t>1 && !SharedData.errorFlag) {
+    if (!actorStalled && transactionFlag && !useFencing && t>1 && !SharedData.errorFlag && !SharedData.limiterFlag) {
       issueRandTx()
     }
 

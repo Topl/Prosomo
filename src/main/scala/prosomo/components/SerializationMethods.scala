@@ -691,6 +691,7 @@ trait SerializationMethods extends SimpleTypes {
   private def sChain(tine:Tine):Array[Byte] = {
     def toBytes(in:(BigInt,SlotId)):Array[Byte] = Bytes.concat(getBytes(in._1.toInt),getBytes(in._2))
     val bestData = Bytes.concat(tine.best.toSeq.map(toBytes):_*)
+    assert(bestData.nonEmpty)
       Ints.toByteArray(tine.best.keySet.size) ++
       bestData ++
       Ints.toByteArray(tine.minSlot.get) ++
