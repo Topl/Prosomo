@@ -122,6 +122,7 @@ trait ChainSelection extends Members {
                   val tineLength = tine.numActive
                   if (tineLength>tineMaxDepth && job._1 >= 0 && !helloLock) {
                     bootStrapLock = true
+                    if (tine.maxSlot.get - tine.minSlot.get > slotWindow) tine.loadCache()
                     bootStrapJob = job._1
                     if (holderIndex == SharedData.printingHolder && printFlag) println(
                       "Holder " + holderIndex.toString

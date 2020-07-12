@@ -26,7 +26,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val seed:Array[Byte]
   val serializer:Serializer
   val storageDir:String
-  var localChain:Tine
+  val localChain:Tine
   val walletStorage:WalletStorage
   val vrf:Vrf
   val kes:Kes

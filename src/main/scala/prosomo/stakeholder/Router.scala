@@ -1021,5 +1021,5 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
 object Router {
   def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef)))
+    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef))).withDispatcher("params.executionContext")
 }

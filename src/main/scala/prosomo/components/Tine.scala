@@ -25,7 +25,6 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
                 var minSlot:Option[Slot] = None
                )(implicit blocks:BlockStorage) {
 
-
   /**
     * Initializing tineCache is resource intensive so the database is handled with Either Left Right logic,
     * The database is started Left with a single SortedMap for all slots,
@@ -34,31 +33,33 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
 
    private lazy val tineCache:LoadingCache[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]] = CacheBuilder.newBuilder()
     .maximumSize(12)
-    .build[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]](new CacheLoader[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]] {
-      def load(epoch3rd:BigInt):mutable.SortedMap[Slot,(BlockId,Rho)] = {
-        if (best.keySet.contains(epoch3rd)) {
-          val bestBlockId = best(epoch3rd)
-          var out:mutable.SortedMap[Slot,(BlockId,Rho)] = mutable.SortedMap()
-          var buildTine = true
-          var testId = bestBlockId
-          while (buildTine) {
-            blocks.restoreHeader(testId) match {
-              case Some(header) =>
-                out += (header._3->(testId._2,header._5))
-                if (header._10 < minSlot.get || BigInt(header._10/one_third_epoch) != epoch3rd) {
-                  buildTine = false
-                } else {
-                  testId = (header._10,header._1)
-                }
-              case None => buildTine = false
+    .build[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]](
+      new CacheLoader[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]] {
+        def load(epoch3rd:BigInt):mutable.SortedMap[Slot,(BlockId,Rho)] = {
+          if (best.keySet.contains(epoch3rd)) {
+            val bestBlockId = best(epoch3rd)
+            var out:mutable.SortedMap[Slot,(BlockId,Rho)] = mutable.SortedMap()
+            var buildTine = true
+            var testId = bestBlockId
+            while (buildTine) {
+              blocks.restoreHeader(testId) match {
+                case Some(header) =>
+                  out += (header._3->(testId._2,header._5))
+                  if (header._10 < minSlot.get || BigInt(header._10/one_third_epoch) != epoch3rd) {
+                    buildTine = false
+                  } else {
+                    testId = (header._10,header._1)
+                  }
+                case None => buildTine = false
+              }
             }
+            out
+          } else {
+            mutable.SortedMap()
           }
-          out
-        } else {
-          mutable.SortedMap()
         }
       }
-    })
+    )
 
   private var tineDB:Either[
     mutable.SortedMap[Slot,(BlockId,Rho)],
@@ -73,7 +74,8 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
         maxSlot = None
         best = Map()
         value.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
-      case _ => tineDB = Right(tineCache)
+      case Left(_) => tineDB = Right(tineCache)
+      case _ =>
     }
   }
 
@@ -90,7 +92,6 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
           case None => Some(slotId._1)
           case Some(slot) => Some(Seq(slot,slotId._1).min)
         }
-        if (maxSlot.get - minSlot.get > slotWindow) loadCache()
       case Right(cache) =>
         val cacheKey = BigInt(slotId._1/one_third_epoch)
         cache.get(cacheKey) += (slotId._1 -> newEntry)
@@ -442,6 +443,12 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
         )
     }
     out
+  }
+
+  def copy(tine:Tine):Unit = {
+    minSlot = tine.minSlot
+    maxSlot = tine.maxSlot
+    best = tine.best
   }
 
   def reorg(prefix:Slot,tine:Tine):Unit = {

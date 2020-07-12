@@ -204,6 +204,8 @@ object Parameters {
   val fee_r:Ratio = Ratio(transactionFee,8)
   //number of holders on gossip list for sending new blocks and transactions
   val numGossipers:Int = config.getInt("params.numGossipers")
+  //number of holders to gossip to upon forging
+  val numGossipersForge:Int = config.getInt("params.numGossipersForge")
   //use gossiper protocol
   val useGossipProtocol:Boolean = config.getBoolean("params.useGossipProtocol")
   //max number of tries for a tine to ask for parent blocks

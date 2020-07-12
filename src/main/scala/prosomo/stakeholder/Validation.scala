@@ -306,8 +306,8 @@ trait Validation extends Members with Types {
     if (SharedData.error) {
       println(s"Prefix: $prefix")
       println(s"Epoch Prefix ${prefix/epochLength}")
-      println("Local chain:")
-      localChain.print()
+      //println("Local chain:")
+      //localChain.print()
       println("Tine:")
       tine.print()
     }

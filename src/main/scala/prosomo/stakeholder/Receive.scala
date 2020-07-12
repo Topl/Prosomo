@@ -444,7 +444,9 @@ trait Receive extends Members {
             }
             updateWallet()
           case newChain:Tine if !newChain.isEmpty =>
-            localChain = newChain
+            localChain.loadCache()
+            localChain.copy(newChain)
+            assert(localChain.oldest._1 == 0)
             val lastId = localChain.head
             localSlot = localChain.head._1
             currentEpoch = localSlot/epochLength

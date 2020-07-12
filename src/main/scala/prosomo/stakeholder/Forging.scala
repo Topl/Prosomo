@@ -23,7 +23,9 @@ trait Forging extends Members with Types {
   /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
   def forgeBlock(forgerKeys:Keys):Unit = Try{
     val slot = globalSlot
-    val pi_y: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST"))
+    val pi_y: Pi = vrf.vrfProof(
+      forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("TEST")
+    )
     val y: Rho = vrf.vrfProofToHash(pi_y)
     val pb:BlockHeader = getBlockHeader(localChain.head).get
     assert(pb._3 != slot)
@@ -36,7 +38,9 @@ trait Forging extends Members with Types {
       }
       val bn:Int = pb._9 + 1
       val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
-      val pi: Pi = vrf.vrfProof(forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE"))
+      val pi: Pi = vrf.vrfProof(
+        forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE")
+      )
       val rho: Rho = vrf.vrfProofToHash(pi)
       val h: Hash = hash(pb,serializer)
       val ledger:Hash = hash(txs,serializer)
@@ -60,7 +64,8 @@ trait Forging extends Members with Types {
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
         case Some(forgedState:State) =>
-          send(selfWrapper,holders.filter(_ != selfWrapper),SendBlock(block,selfWrapper))
+          send(selfWrapper,rng.shuffle(holders.filter(_ != selfWrapper))
+            .take(numGossipersForge),SendBlock(block,selfWrapper))
           history.add((slot,block.id),forgedState,eta)
           blocksForged += 1
           val jobNumber = tineCounter

@@ -54,7 +54,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   val serializer:Serializer = new Serializer
   val storageDir:String = "coordinator"
   implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
-  var localChain:Tine = new Tine
+  val localChain:Tine = new Tine
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -79,7 +79,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var eta:Eta = Array()
   var stakingState:State = Map()
   var memPool:MemPool = Map()
-  var diffuseSent = false
   var holders: List[ActorRefWrapper] = List()
   var gOff = 0
   var numHello = 0
@@ -124,7 +123,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var roundDone = true
   var parties: List[List[ActorRefWrapper]] = List()
   var t:Slot = 0
-  var tp:Long = 0
   var actorPaused = false
   var cmdQueue:Map[Slot,List[String]] = inputCommands
 
@@ -171,16 +169,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             e.printStackTrace()
             SharedData.throwError
         }
-        tp = 0
       case None => Try{
         println("Coordinator loading time data information...")
         val lines = readFile(timeDataFile)
         val t0in:Long = lines.head.toLong
         val tw:Long = lines(1).toLong
-        val tpin:Long = lines(2).toLong
         val offset =  System.currentTimeMillis()-tw
         t0 = t0in + offset
-        tp = tpin
       }.orElse(Try{t0 = System.currentTimeMillis()})
     }
     globalSlot = ((globalTime - t0) / slotT).toInt
@@ -191,7 +186,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     file.getParentFile.mkdirs
     val bw = new BufferedWriter(new FileWriter(file))
     val tw = System.currentTimeMillis()
-    bw.write(s"$t0\n$tw\n$tp\n")
+    bw.write(s"$t0\n$tw\n")
     bw.close()
   }
 
@@ -320,10 +315,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**returns offset time to stakeholder that issues GetTime to coordinator*/
     case GetTime =>
       if (!actorStalled) {
-        t1 = globalTime-tp
+        t1 = globalTime
         sender() ! GetTime(t1)
-      } else {
-        sender() ! GetTime(tp)
       }
   }
 
@@ -403,13 +396,11 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             actorPaused = true
             if (!actorStalled) {
               actorStalled = true
-              tp = globalTime-tp
             }
           } else {
             actorPaused = false
             if (actorStalled) {
               actorStalled = false
-              tp = globalTime-tp
             }
           }
         case "inbox" => sendAssertDone(holders.filterNot(_.remote),Inbox)
@@ -661,10 +652,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def readCommand():Unit = {
     if (!useFencing) {
       if (!actorStalled) {
-        t1 = globalTime-tp
+        t1 = globalTime
         t = ((t1 - t0) / slotT).toInt
-      } else {
-        t = ((tp - t0) / slotT).toInt
       }
     }
     if (t>globalSlot) {
@@ -725,10 +714,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       if (!actorPaused) {
         val cpuLoad = (0.0 /: loadAverage){_ + _}/loadAverage.length
         if (cpuLoad >= systemLoadThreshold && !actorStalled) {
-          tp = globalTime-tp
           actorStalled = true
         } else if (cpuLoad < systemLoadThreshold && actorStalled) {
-          tp = globalTime-tp
           actorStalled = false
         }
       }
@@ -751,10 +738,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   def readCommand(cmd:String):Unit = {
     if (!useFencing) {
       if (!actorStalled) {
-        t1 = globalTime-tp
+        t1 = globalTime
         t = ((t1 - t0) / slotT).toInt
-      } else {
-        t = ((tp - t0) / slotT).toInt
       }
     }
     if (t>globalSlot) {
@@ -804,13 +789,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     if (useFencing) {
       tn = t
     } else {
-      if (!actorStalled) {
-        t1 = globalTime-tp
-        tn = ((t1 - t0) / slotT).toInt
-      } else {
-        t1 = tp
-        tn = ((t1 - t0) / slotT).toInt
-      }
+      tn = ((t1 - t0) / slotT).toInt
     }
     blockTree(holder)
     val positionData:(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long]) = getPositionData(routerRef)
@@ -971,4 +950,5 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 object Coordinator {
   def props(inputSeed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
     Props(new Coordinator(inputSeed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head)))))
+      .withDispatcher("params.executionContext")
 }

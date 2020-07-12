@@ -37,7 +37,6 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
 
 libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "iodb" % "0.3.+",
-//  "org.consensusresearch" %% "scrypto" % "1.2.+",
   "org.iq80.leveldb" % "leveldb" % "0.12"
 )
 

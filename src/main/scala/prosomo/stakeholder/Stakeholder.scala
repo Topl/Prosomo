@@ -56,7 +56,7 @@ class Stakeholder(
     case Some(dir) => dir
   }
   implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
-  var localChain:Tine = new Tine
+  val localChain:Tine = new Tine
   val chainStorage = new ChainStorage(storageDir)
   val walletStorage = new WalletStorage(storageDir)
   val vrf = new Vrf
@@ -147,9 +147,38 @@ class Stakeholder(
 }
 
 object Stakeholder {
+
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),None,None,None,None))
-  def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef],keyFile: KeyFile,dir:String,password:String,kdir:String): Props =
-    Props(new Stakeholder(seed,index,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),Some(keyFile),Some(dir),Some(password),Some(kdir)))
+    Props(
+      new Stakeholder(
+        seed,
+        index,
+        ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),
+        None,
+        None,
+        None,
+        None
+      )
+    ).withDispatcher("params.executionContext")
+
+  def props(
+             seed:Array[Byte],
+             index:Int,
+             ref:Seq[akka.actor.ActorRef],
+             keyFile: KeyFile,
+             dir:String,
+             password:String,
+             kdir:String): Props =
+    Props(
+      new Stakeholder(
+        seed,
+        index,
+        ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),
+        Some(keyFile),
+        Some(dir),
+        Some(password),
+        Some(kdir)
+      )
+    ).withDispatcher("params.executionContext")
 }
 

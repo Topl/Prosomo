@@ -120,6 +120,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
 }
 
 object TineProvider extends SimpleTypes {
+
   case class Info(
     holderIndex:Int,
     ref:ActorRefWrapper,
@@ -130,7 +131,9 @@ object TineProvider extends SimpleTypes {
     nextBlocks:Option[Array[SlotId]],
     inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
   )
+
   case object Done
+
   def props(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit routerRef:ActorRefWrapper):Props =
-    Props(new TineProvider(blockStorage,localRef))
+    Props(new TineProvider(blockStorage,localRef)).withDispatcher("params.executionContext")
 }
