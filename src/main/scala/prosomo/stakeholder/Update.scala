@@ -4,7 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, WriteFile}
 import prosomo.components.Tine
-import prosomo.primitives.Parameters.useGui
+import prosomo.primitives.Parameters.{dataBaseCID, useGui}
 import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
 import scorex.util.encode.Base58
 
@@ -16,7 +16,13 @@ import scala.util.Try
   */
 
 trait Update extends Members {
-  import Parameters.{printFlag,epochLength,dataOutInterval,dataOutFlag,useFencing}
+  import Parameters.{printFlag,
+    epochLength,
+    dataOutInterval,
+    dataOutFlag,
+    useFencing,
+    chainStoreInterval
+  }
 
   /**
     * Epoch update routine, called every time currentEpoch increments, calculates the new epoch nonce
@@ -119,6 +125,7 @@ trait Update extends Members {
         timers.cancelAll
         updating = false
       }
+      if (globalSlot%chainStoreInterval == 0) chainStorage.store(localChain,dataBaseCID,serializer)
       while (globalSlot > localSlot) {
         localSlot += 1
         if (dataOutFlag && localSlot % dataOutInterval == 0) {

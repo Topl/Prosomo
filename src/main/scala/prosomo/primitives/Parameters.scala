@@ -248,7 +248,8 @@ object Parameters {
       config.getString("params.inputSeed")
     }
   }
-
+  //interval in slots between localChain save to disk
+  val chainStoreInterval:Int = config.getInt("params.chainStoreInterval")
   //number of message processors
   val numMessageProcessors:Int = config.getInt("params.numMessageProcessors")
   //node secret for HMAC used in each router actor

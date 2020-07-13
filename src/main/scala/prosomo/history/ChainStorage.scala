@@ -1,10 +1,13 @@
 package prosomo.history
 
-import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Serializer, Tine}
-import prosomo.primitives.{ByteStream, LDBStore, SimpleTypes}
+import java.io.{BufferedWriter, File, FileWriter}
 
-import scala.util.Try
+import prosomo.components.{Serializer, Tine}
+import prosomo.primitives.{ByteStream, SimpleTypes}
+import scorex.util.encode.Base58
+import scala.io.Source
+
+import scala.util.{Try,Success,Failure}
 
 /**
   * AMS 2020:
@@ -15,29 +18,41 @@ import scala.util.Try
 class ChainStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer.DeserializeChain
 
-  var chainStore:LDBStore = LDBStore(s"$dir/history/chain")
-
-  def refresh():Unit = {
-    chainStore.refresh()
+  def readFile(file:File): String = {
+    val bufferedSource = scala.io.Source.fromFile(file)
+    val lines = (for (line <- bufferedSource.getLines()) yield line).toList
+    bufferedSource.close
+    lines.head
   }
 
-  def restore(cid:Hash,serializer: Serializer)(implicit blocks: BlockStorage):Tine = {
-    chainStore.get(cid) match {
-      case Some(bytes: ByteArrayWrapper) =>
-        val byteStream: ByteStream = new ByteStream(bytes.data,DeserializeChain)
-        Try{serializer.fromBytes(byteStream)}.toOption match {
-          case Some(data:TineData@unchecked) => Tine(data)
-          case _ =>
-            new Tine
-        }
-      case None =>
-        new Tine
+  def restore(cid:Hash,serializer: Serializer)(implicit blocks: BlockStorage):Option[Tine] = {
+    Try{
+      val file = new File(s"$dir/history/chain/${Base58.encode(cid.data)}")
+      println(s"Local Chain file exists: ${file.exists()}")
+      val chainTxt : String = readFile(file)
+      val cBytes:Array[Byte] = Base58.decode(chainTxt).get
+      serializer.fromBytes(new ByteStream(cBytes,DeserializeChain)) match {
+        case data:TineData@unchecked =>
+          println("Recovered Local Chain")
+          Tine(data)
+        case _ =>
+          println("Error: tine not loaded")
+          new Tine
+      }
+    } match {
+      case Success(value) => Some(value)
+      case Failure(_) =>
+        None
     }
   }
 
-  def store(chain:Tine, cid:Hash, serializer: Serializer):Unit  = {
+  def store(chain:Tine, cid:Hash, serializer: Serializer):Unit = {
     val cBytes = serializer.getBytes(chain)
-    chainStore.update(Seq(),Seq(cid -> ByteArrayWrapper(cBytes)))
+    val file = new File(s"$dir/history/chain/${Base58.encode(cid.data)}")
+    file.getParentFile.mkdirs
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(Base58.encode(cBytes))
+    bw.close()
   }
 
 }

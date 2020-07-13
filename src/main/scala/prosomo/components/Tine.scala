@@ -446,9 +446,15 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
   }
 
   def copy(tine:Tine):Unit = {
-    minSlot = tine.minSlot
-    maxSlot = tine.maxSlot
-    best = tine.best
+    tineDB match {
+      case Left(_) =>
+        this.minSlot = tine.minSlot
+        this.maxSlot = tine.maxSlot
+      case Right(_) =>
+        this.minSlot = tine.minSlot
+        this.maxSlot = tine.maxSlot
+        this.best = tine.best
+    }
   }
 
   def verify:Boolean = Try{

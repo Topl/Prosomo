@@ -262,7 +262,6 @@ trait ChainSelection extends Members {
       if (bestChain) {
         if (verifyTine(tine,prefix)) {
           adoptTine()
-          chainStorage.store(localChain,dataBaseCID,serializer)
         } else {
           println("Error: invalid best chain")
           tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
@@ -412,7 +411,6 @@ trait ChainSelection extends Members {
     if (bestChain) {
       if (verifyTine(tine,prefix)) {
         adoptTine()
-        chainStorage.store(localChain,dataBaseCID,serializer)
       } else {
         println("Error: invalid best chain")
         tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)

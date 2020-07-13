@@ -293,6 +293,7 @@ trait Receive extends Members {
               gossipSet(selfWrapper,holders).take(1),
               Hello(lastSlot+1, selfWrapper)
             )
+            chainStorage.store(localChain,dataBaseCID,serializer)
             timers.startSingleTimer(BootstrapJob,BootstrapJob,10*slotT.millis)
           } else {
             bootStrapLock = false
@@ -420,7 +421,7 @@ trait Receive extends Members {
       println("Setting up local chain...")
       time{
         chainStorage.restore(dataBaseCID,serializer) match {
-          case newChain:Tine if newChain.isEmpty =>
+          case None =>
             localChain.loadCache()
             localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
             updateLocalState(localState, (0,genBlockHash)) match {
@@ -446,11 +447,14 @@ trait Receive extends Members {
               )
             }
             updateWallet()
-          case newChain:Tine if !newChain.isEmpty =>
+          case Some(newChain:Tine) =>
             localChain.loadCache()
             localChain.copy(newChain)
             val lastId = localChain.head
             localSlot = localChain.head._1
+            val newHead = getBlockHeader(lastId)
+            println(Console.CYAN + "Local Slot = " + globalSlot.toString + s" on block ${newHead.get._9} "
+              + Base58.encode(lastId._2.data) + Console.RESET)
             currentEpoch = localSlot/epochLength
             val loadState = history.get(lastId).get
             localState = loadState._1
@@ -493,7 +497,6 @@ trait Receive extends Members {
 
     case Refresh =>
       blocks.refresh()
-      chainStorage.refresh()
       history.refresh()
       walletStorage.refresh()
       scheduleDiffuse()

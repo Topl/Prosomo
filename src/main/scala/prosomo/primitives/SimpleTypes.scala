@@ -2,8 +2,6 @@ package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.Transaction
-
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.math.BigInt
 
