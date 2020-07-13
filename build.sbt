@@ -8,12 +8,12 @@ trapExit := false
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.8",
   organization := "co.topl",
-  version := "0.7.6"
+  version := "0.7.7"
 )
 
 scalaVersion := "2.12.8"
 organization := "co.topl"
-version := "0.7.6"
+version := "0.7.7"
 
 mainClass in (Compile, run) := Some("prosomo.Prosomo")
 mainClass in runMain := Some("prosomo.Prosomo")

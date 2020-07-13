@@ -524,17 +524,23 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           update(id,tine.getNonce(id._1).get)
         }
       case Right(cache) =>
-        val prefixKey = BigInt(prefix/one_third_epoch)
-        val newCache = cache.get(prefixKey).filter(data => data._1 <= prefix)
-        best.keySet.filter(key => key >= prefixKey).foreach(key => cache.invalidate(key))
-        best = best.filter(data => data._1 < prefixKey)
-        cache.put(prefixKey,newCache)
-        val newMax = newCache.keySet.max
-        maxSlot = Some(newMax)
-        val newBest:SlotId = (newMax,newCache(newMax)._1)
-        best += (prefixKey -> newBest)
-        for (id <- tine.ordered) {
-          update(id,tine.getNonce(id._1).get)
+        if (maxSlot.get < tine.head._1 && tine.numActive == 1) {
+          for (id <- tine.ordered) {
+            update(id,tine.getNonce(id._1).get)
+          }
+        } else {
+          val prefixKey = BigInt(prefix/one_third_epoch)
+          val newCache = cache.get(prefixKey).filter(data => data._1 <= prefix)
+          best.keySet.filter(key => key >= prefixKey).foreach(key => cache.invalidate(key))
+          best = best.filter(data => data._1 < prefixKey)
+          cache.put(prefixKey,newCache)
+          val newMax = newCache.keySet.max
+          maxSlot = Some(newMax)
+          val newBest:SlotId = (newMax,newCache(newMax)._1)
+          best += (prefixKey -> newBest)
+          for (id <- tine.ordered) {
+            update(id,tine.getNonce(id._1).get)
+          }
         }
     }
   }

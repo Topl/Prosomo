@@ -88,7 +88,7 @@ trait Update extends Members {
   }
 
   /*********************************************************************************************************************
-    * The main update procedure that carries out consensus and forges, by default carried out up to 100 times a second
+    * The main update procedure that carries out consensus and forges, called up to 100 times a second
     *
     * This should execute the procedure given by LedgerMaintenance given in Ouroboros Genesis
     *
@@ -184,7 +184,8 @@ trait Update extends Members {
         case _ =>
       }
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
-        SharedData.walletInfo = (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
+        SharedData.walletInfo =
+          (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
         SharedData.issueTxInfo = Some((keys.pkw,inbox))
         SharedData.selfWrapper = Some(selfWrapper)
         SharedData.blockTime = {
