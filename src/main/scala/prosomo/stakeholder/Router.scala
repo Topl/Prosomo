@@ -102,6 +102,8 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString
+  val delayRng = new Random(BigInt(hash(uuid,serializer).data).toLong)
+
   var systemTime:Long = System.nanoTime()
   var messageTime:Long = 0
 
@@ -811,7 +813,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
               serializer.sendTxToBytes(content)
             case _ => Array()
           }
-          r.actorRef ! DelayModelMessage(delay(s,r,msgBytes.length),hash(uuid,serializer),msg)
+          r.actorRef ! DelayModelMessage(delay(s,r,msgBytes.length),hash(delayRng.nextString(8),serializer),msg)
         case _ => localRoutees(roundRobinCount) ! MessageFromLocalToLocal(s,r,msg)
       }
 
@@ -1021,5 +1023,5 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
 object Router {
   def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef))).withDispatcher("params.executionContext")
+    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef))).withDispatcher("params.router")
 }

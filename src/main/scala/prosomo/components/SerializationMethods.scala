@@ -5,6 +5,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
 import prosomo.primitives._
 
+import scala.collection.mutable
 import scala.math.BigInt
 
 /**
@@ -700,7 +701,7 @@ trait SerializationMethods extends SimpleTypes {
 
   private def dChain(stream: ByteStream):TineData = {
     val numEntries = stream.getInt
-    var out1:Map[BigInt,SlotId] = Map()
+    var out1:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap()
     var i = 0
     while (i < numEntries) {
       val index = stream.getInt

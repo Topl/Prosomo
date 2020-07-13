@@ -360,7 +360,9 @@ trait Receive extends Members {
 
     /**sends holder information for populating inbox*/
     case Diffuse =>
-      send(selfWrapper,gossipSet(selfWrapper,holders),DiffuseData(hash(uuid,serializer),selfWrapper,keys.publicKeys,selfWrapper))
+      send(selfWrapper,gossipSet(selfWrapper,holders),
+        DiffuseData(hash(rng.nextString(8),serializer),selfWrapper,keys.publicKeys,selfWrapper)
+      )
 
     /**allocation and vars of simulation*/
     case Initialize(gs,inputPassword) =>
@@ -447,7 +449,6 @@ trait Receive extends Members {
           case newChain:Tine if !newChain.isEmpty =>
             localChain.loadCache()
             localChain.copy(newChain)
-            assert(localChain.oldest._1 == 0)
             val lastId = localChain.head
             localSlot = localChain.head._1
             currentEpoch = localSlot/epochLength

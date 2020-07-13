@@ -18,13 +18,7 @@ trait Messages extends Members {
   import Parameters._
 
   override def scheduleDiffuse(): Unit = {
-    var t = 0
-    t += rng.nextInt(10)+1
-    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
-    t += rng.nextInt(10)+1
-    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
-    t += rng.nextInt(10)+1
-    timers.startSingleTimer(t,Diffuse,t*slotT.millis)
+    timers.startSingleTimer(Diffuse,Diffuse,10*slotT.millis)
   }
 
   /**

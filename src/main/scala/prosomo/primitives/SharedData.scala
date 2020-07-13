@@ -30,14 +30,14 @@ object SharedData extends Types {
 
   val outText = new ByteArrayOutputStream
   val printStream = new PrintStream(outText)
-  val oldOut = System.out
+  val oldOut: PrintStream = System.out
 
-  def time0 = {
+  def time0(): Unit = {
     timing = true
     t_0 = System.nanoTime()
   }
 
-  def time1 = if (timing) {
+  def time1(): Unit = if (timing) {
     t_1 = System.nanoTime()
     timing = false
     val outTime = (t_1 - t_0)*1.0e-9
@@ -52,12 +52,12 @@ object SharedData extends Types {
     out
   }
 
-  def throwDiskWarning(text:String) = if (!diskAccess) {
+  def throwDiskWarning(text:String): Unit = if (!diskAccess) {
     println(Console.YELLOW + s"Disk access: $text" + Console.RESET)
     diskAccess = true
   }
 
-  def throwLimiterWarning(text:String) = if (!diskAccess) {
+  def throwLimiterWarning(text:String): Unit = if (!diskAccess) {
     text match {
       case "Start" if !limiterFlag =>
         println(Console.YELLOW + s"Limiter: $text" + Console.RESET)
@@ -69,9 +69,9 @@ object SharedData extends Types {
     }
   }
 
-  def throwError(id:Int) = {println(s"Holder $id ---------Error----------");errorFlag=true;killFlag=true}
-  def throwError = {println("---------Error----------")}
-  def error:Boolean = {errorFlag}
+  def throwError(id:Int): Unit = {println(s"Holder $id ---------Error----------");errorFlag=true;killFlag=true}
+  def throwError(): Unit = {println("---------Error----------")}
+  def error:Boolean = errorFlag
 
   var scorexSettings:Option[ScorexSettings] = None
 

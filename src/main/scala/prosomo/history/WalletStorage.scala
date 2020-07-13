@@ -46,8 +46,6 @@ class WalletStorage(dir:String) extends SimpleTypes {
     components.Wallet(pkw)
   }
 
-  def uuid: String = java.util.UUID.randomUUID.toString
-
   def store(wallet:Wallet,serializer: Serializer):Unit  = if (storageFlag) {
     val wBytes = serializer.getBytes(wallet)
     val key = ByteArrayWrapper(fch.hash(wallet.pkw.data))

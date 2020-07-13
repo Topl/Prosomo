@@ -3,6 +3,8 @@ package prosomo.stakeholder
 import prosomo.components.Tine
 import prosomo.primitives.{Ratio, SharedData}
 import com.google.common.cache.{CacheBuilder, CacheLoader}
+import scorex.util.encode.Base58
+
 import scala.math.BigInt
 
 /**
@@ -169,7 +171,6 @@ trait Staking extends Members {
     } else {
       val prev_two_thirds_epoch:Array[Byte] =
         chain.orderedNonceData((ep-1)*epochLength,ep*epochLength-epochLength/3-1,tine)
-      assert(prev_two_thirds_epoch.nonEmpty)
       val eta_ep = fch.hash(eta_prev ++ serializer.getBytes(ep) ++ prev_two_thirds_epoch)
       eta_ep
     }

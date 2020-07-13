@@ -159,7 +159,7 @@ object Stakeholder {
         None,
         None
       )
-    ).withDispatcher("params.executionContext")
+    ).withDispatcher("params.stakeholder")
 
   def props(
              seed:Array[Byte],
@@ -179,6 +179,6 @@ object Stakeholder {
         Some(password),
         Some(kdir)
       )
-    ).withDispatcher("params.executionContext")
+    ).withDispatcher("params.stakeholder")
 }
 

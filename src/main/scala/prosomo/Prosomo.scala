@@ -56,7 +56,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
   protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.nodeName)
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("params.networkController")
 
   protected val features: Seq[PeerFeature] = Seq()
   protected val additionalMessageSpecs: Seq[MessageSpec[_]] = prosomoMessageSpecs

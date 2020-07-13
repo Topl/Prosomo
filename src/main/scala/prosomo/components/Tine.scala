@@ -9,7 +9,7 @@ import prosomo.primitives.Types._
 import prosomo.primitives.Parameters.{one_third_epoch, slotWindow}
 
 import scala.collection.mutable
-import scala.util.Try
+import scala.util.{Try,Success,Failure}
 
 /**
   * AMS 2020:
@@ -20,7 +20,7 @@ import scala.util.Try
   * @param blocks the database of all blocks
   */
 
-case class Tine(var best:Map[BigInt,SlotId] = Map(),
+case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
                 var maxSlot:Option[Slot] = None,
                 var minSlot:Option[Slot] = None
                )(implicit blocks:BlockStorage) {
@@ -72,7 +72,7 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
         tineDB = Right(tineCache)
         minSlot = None
         maxSlot = None
-        best = Map()
+        best = mutable.SortedMap()
         cache.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
       case _ =>
         tineDB = Right(tineCache)
@@ -451,6 +451,69 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
     best = tine.best
   }
 
+  def verify:Boolean = Try{
+    tineDB match {
+      case Left(cache) =>
+        assert(best.isEmpty)
+        if (cache.nonEmpty) {
+          assert(maxSlot.get == cache.keySet.max)
+          assert(minSlot.get == cache.keySet.min)
+          var id:SlotId = toSlotId(cache.keySet.max,cache(cache.keySet.max))
+          for (entry <- cache.toArray.reverse.tail) {
+            val block = blocks.get(id).get
+            assert(block.nonce sameElements cache(id._1)._2)
+            if (id._1 > 0) {
+              val pid = block.parentSlotId
+              assert(toSlotId(entry) == pid)
+              id = pid
+            }
+          }
+        } else {
+          assert(maxSlot == None)
+          assert(minSlot == None)
+        }
+      case Right(loaderCache) =>
+        if (best.isEmpty) {
+          assert(maxSlot == None)
+          assert(minSlot == None)
+        } else {
+          var id:SlotId = best(best.keySet.max)
+          var cpid:Option[SlotId] = None
+          assert(id._1 == maxSlot.get)
+          for (value <- best.toArray.reverse) {
+            val cache = loaderCache.get(value._1)
+            id = toSlotId(cache.keySet.max,cache(cache.keySet.max))
+            assert(cpid match {
+              case None => true
+              case Some(cid) => cid == id
+            })
+            assert(id == best(value._1))
+            for (entry <- cache.toArray.reverse.tail) {
+              val block = blocks.get(id).get
+              assert(block.nonce sameElements cache(id._1)._2)
+              if (id._1 > 0) {
+                val pid = block.parentSlotId
+                if (toSlotId(entry) != pid) {
+                  val thisId = toSlotId(entry)
+                  println(pid._1.toString+":"+Base58.encode(pid._2.data))
+                  println(id._1.toString+":"+Base58.encode(id._2.data))
+                  println(thisId._1.toString+":"+Base58.encode(thisId._2.data))
+                }
+                assert(toSlotId(entry) == pid)
+                id = pid
+              }
+            }
+            if (id._1 > 0) cpid = Some(blocks.get(id).get.parentSlotId)
+          }
+        }
+    }
+  } match {
+    case Success(_) => true
+    case Failure(exception) =>
+      exception.printStackTrace()
+      false
+  }
+
   def reorg(prefix:Slot,tine:Tine):Unit = {
     assert(prefix >= minSlot.get)
     tineDB match {
@@ -463,7 +526,7 @@ case class Tine(var best:Map[BigInt,SlotId] = Map(),
       case Right(cache) =>
         val prefixKey = BigInt(prefix/one_third_epoch)
         val newCache = cache.get(prefixKey).filter(data => data._1 <= prefix)
-        cache.invalidate(prefixKey)
+        best.keySet.filter(key => key >= prefixKey).foreach(key => cache.invalidate(key))
         best = best.filter(data => data._1 < prefixKey)
         cache.put(prefixKey,newCache)
         val newMax = newCache.keySet.max

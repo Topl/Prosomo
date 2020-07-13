@@ -369,6 +369,7 @@ trait ChainSelection extends Members {
     } match {
       case Failure(exception) =>
         exception.printStackTrace()
+        if (!localChain.verify) SharedData.throwError(holderIndex)
         if (tinePoolWithPrefix.nonEmpty) {
           if (tinePoolWithPrefix.last._3 == job) tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
         }
