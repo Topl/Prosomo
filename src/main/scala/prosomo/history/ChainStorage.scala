@@ -5,7 +5,6 @@ import java.io.{BufferedWriter, File, FileWriter}
 import prosomo.components.{Serializer, Tine}
 import prosomo.primitives.{ByteStream, SimpleTypes}
 import scorex.util.encode.Base58
-import scala.io.Source
 
 import scala.util.{Try,Success,Failure}
 
