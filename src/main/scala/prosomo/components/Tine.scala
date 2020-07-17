@@ -24,6 +24,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
                 var maxSlot:Option[Slot] = None,
                 var minSlot:Option[Slot] = None
                )(implicit blocks:BlockStorage) {
+  import Tine._
 
   /**
     * Initializing tineCache is resource intensive so the database is handled with Either Left Right logic,
@@ -31,20 +32,20 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     * Once the Left database expands the update method will turn it Right and load the tineCache
     */
 
-   private lazy val tineCache:LoadingCache[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]] = CacheBuilder.newBuilder()
+   private lazy val tineCache:LoadingCache[BigInt,TineCache] = CacheBuilder.newBuilder()
     .maximumSize(12)
-    .build[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]](
-      new CacheLoader[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]] {
-        def load(epoch3rd:BigInt):mutable.SortedMap[Slot,(BlockId,Rho)] = {
+    .build[BigInt,TineCache](
+      new CacheLoader[BigInt,TineCache] {
+        def load(epoch3rd:BigInt):TineCache = {
           if (best.keySet.contains(epoch3rd)) {
             val bestBlockId = best(epoch3rd)
-            var out:mutable.SortedMap[Slot,(BlockId,Rho)] = mutable.SortedMap()
+            var out:TineCache = emptyTineCache
             var buildTine = true
             var testId = bestBlockId
             while (buildTine) {
               blocks.restoreHeader(testId) match {
                 case Some(header) =>
-                  out += (header._3->(testId._2,header._5))
+                  out =  append(out,(header._3,testId._2,header._5))
                   if (header._10 < minSlot.get || BigInt(header._10/one_third_epoch) != epoch3rd) {
                     buildTine = false
                   } else {
@@ -55,76 +56,112 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
             }
             out
           } else {
-            mutable.SortedMap()
+            emptyTineCache
           }
         }
       }
     )
 
   private var tineDB:Either[
-    mutable.SortedMap[Slot,(BlockId,Rho)],
-    LoadingCache[BigInt,mutable.SortedMap[Slot,(BlockId,Rho)]]
-  ] = Left(mutable.SortedMap())
+    TineCache,
+    LoadingCache[BigInt,TineCache]
+  ] = Left(emptyTineCache)
 
   def loadCache():Unit = {
     tineDB match {
-      case Left(cache) if cache.keySet.nonEmpty =>
+      case Left(cache) if cache.nonEmpty =>
         tineDB = Right(tineCache)
         minSlot = None
         maxSlot = None
         best = mutable.SortedMap()
-        cache.foreach(entry => update((entry._1,entry._2._1),entry._2._2))
+        cache.foreach(entry => this.update((entry._1,entry._2),entry._3))
       case _ =>
         tineDB = Right(tineCache)
     }
   }
 
-  def update(slotId:SlotId,nonce:Rho):Unit = {
-    val newEntry:(BlockId,Rho) = (slotId._2,nonce)
+  def update(slotId:SlotId,nonce:Rho):Unit = Try{
+    val newEntry = (slotId._1,slotId._2,nonce)
     tineDB match {
       case Left(cache) =>
-        cache += (slotId._1 -> newEntry)
-        maxSlot = maxSlot match {
-          case None => Some(slotId._1)
-          case Some(slot) => Some(Seq(slot,slotId._1).max)
+        if (cache.isEmpty) {
+          maxSlot = Some(slotId._1)
+          minSlot = Some(slotId._1)
+          tineDB = Left(append(cache,newEntry))
+        } else {
+          maxSlot match {
+            case Some(slot) if slotId._1 > slot =>
+              assert(toSlotId(cache.last) == blocks.get(slotId).get.parentSlotId)
+              tineDB = Left(append(cache,newEntry))
+              maxSlot = Some(slotId._1)
+            case _ =>
+          }
+          minSlot match {
+            case Some(slot) if slotId._1 < slot =>
+              assert(slotId == blocks.get(toSlotId(cache.head)).get.parentSlotId)
+              tineDB = Left(prepend(cache,newEntry))
+              minSlot = Some(slotId._1)
+            case _ =>
+          }
         }
-        minSlot = minSlot match {
-          case None => Some(slotId._1)
-          case Some(slot) => Some(Seq(slot,slotId._1).min)
-        }
-      case Right(cache) =>
+      case Right(loadingCache) =>
         val cacheKey = BigInt(slotId._1/one_third_epoch)
-        cache.get(cacheKey) += (slotId._1 -> newEntry)
-        best.get(cacheKey) match {
-          case None => best += (cacheKey -> slotId)
-          case Some(bestId) =>
-            if (slotId._1 > bestId._1) {
+        val cache:TineCache = loadingCache.get(cacheKey)
+        if (cache.isEmpty) {
+          maxSlot match {
+            case Some(slot) if slotId._1 > slot => maxSlot = Some(slotId._1)
+            case None => maxSlot = Some(slotId._1)
+            case _ =>
+          }
+          minSlot match {
+            case Some(slot) if slotId._1 < slot => minSlot = Some(slotId._1)
+            case None => minSlot = Some(slotId._1)
+            case _ =>
+          }
+          loadingCache.invalidate(cacheKey)
+          loadingCache.put(cacheKey,append(cache,newEntry))
+          best += (cacheKey -> slotId)
+        } else {
+          maxSlot match {
+            case Some(slot) if slotId._1 > slot =>
+              loadingCache.invalidate(cacheKey)
+              loadingCache.put(cacheKey,append(cache,newEntry))
+              maxSlot = Some(slotId._1)
+            case _ =>
+          }
+          minSlot match {
+            case Some(slot) if slotId._1 < slot =>
+              loadingCache.invalidate(cacheKey)
+              loadingCache.put(cacheKey,prepend(cache,newEntry))
+              minSlot = Some(slotId._1)
+            case _ =>
+          }
+          best.get(cacheKey) match {
+            case Some(bestId) if slotId._1 >= bestId._1 =>
               best -= cacheKey
               best += (cacheKey -> slotId)
-            }
-        }
-        maxSlot = maxSlot match {
-          case None => Some(slotId._1)
-          case Some(slot) => Some(Seq(slot,slotId._1).max)
-        }
-        minSlot = minSlot match {
-          case None => Some(slotId._1)
-          case Some(slot) => Some(Seq(slot,slotId._1).min)
+            case Some(bestId) if slotId._1 < bestId._1 =>
+            case None =>
+              best += (cacheKey -> slotId)
+          }
         }
     }
+  } match {
+    case Failure(e) => e.printStackTrace()
+    case _ =>
   }
 
   def get(slot:Slot):Option[SlotId] = {
     tineDB match {
       case Left(cache) =>
-        cache.get(slot) match {
-          case Some(data) => Some((slot,data._1))
+        cache.find(entry => entry._1 == slot) match {
+          case Some(data) => Some((slot,data._2))
           case None => None
         }
       case Right(cache) =>
         val cacheKey = BigInt(slot/one_third_epoch)
-        cache.get(cacheKey).get(slot) match {
-          case Some(data) => Some((slot,data._1))
+        cache.get(cacheKey).find(entry => entry._1 == slot) match {
+          case Some(data) => Some((slot,data._2))
           case None => None
         }
     }
@@ -133,14 +170,14 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
   def getNonce(slot:Slot):Option[Rho] = {
     tineDB match {
       case Left(cache) =>
-        cache.get(slot) match {
-          case Some(data) => Some(data._2)
+        cache.find(entry => entry._1 == slot)  match {
+          case Some(data) => Some(data._3)
           case None => None
         }
       case Right(cache) =>
         val cacheKey = BigInt(slot/one_third_epoch)
-        cache.get(cacheKey).get(slot) match {
-          case Some(data) => Some(data._2)
+        cache.get(cacheKey).find(entry => entry._1 == slot)  match {
+          case Some(data) => Some(data._3)
           case None => None
         }
     }
@@ -150,8 +187,8 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     tineDB match {
       case Left(cache) =>
         var out:Array[SlotId] = Array()
-        val newCache = cache.filter(entry => entry._1 >= start)
-        newCache.foreach(entry =>
+        val filtered = cache.filter(entry => entry._1 >= start)
+        filtered.foreach(entry =>
           if (out.length < n) {
             out = out ++ Array(toSlotId(entry))
           }
@@ -164,8 +201,8 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         while (!done) {
           val cacheKey = BigInt(index)
           if (best.keySet.contains(cacheKey)) {
-            val newCache = cache.get(cacheKey).filter(entry => entry._1 >= start)
-            newCache.foreach(entry =>
+            val filtered = cache.get(cacheKey).filter(entry => entry._1 >= start)
+            filtered.foreach(entry =>
               if (out.length < n) {
                 out = out ++ Array(toSlotId(entry))
               } else {
@@ -183,26 +220,45 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
 
   def getLastActiveSlot(slot:Slot):Option[SlotId] = get(lastActiveSlot(slot).get)
 
-  def lastActiveSlot(slot:Slot): Option[Slot] = {
+  def lastActiveSlot(slot:Slot): Option[Slot] = Try{
     if (slot >= maxSlot.get) {
-      maxSlot
+      maxSlot.get
     } else if (slot == minSlot.get) {
-      minSlot
+      minSlot.get
     } else if (slot < minSlot.get) {
-      None
+      None.get
     } else {
       tineDB match {
         case Left(cache) =>
           Try{
-            cache.keySet.filter(s => s <= slot).max
-          }.toOption
+            cache.filter(data => data._1 <= slot).last._1
+          }.toOption.get
         case Right(cache) =>
-          val cacheKey = BigInt(slot/one_third_epoch)
-          Try{
-            cache.get(cacheKey).keySet.filter(s => s <= slot).max
-          }.toOption
+          var index = slot/one_third_epoch
+          var done = false
+          var out:Option[Slot] = None
+          while(!done) {
+            val cacheKey = BigInt(index)
+            cache.get(cacheKey).filter(data => data._1 <= slot) match {
+              case filtered if filtered.isEmpty =>
+                if (index>0) {
+                  index -= 1
+                } else {
+                  done = true
+                }
+              case filtered if filtered.nonEmpty =>
+                out = Some(filtered.last._1)
+                done = true
+            }
+          }
+          out.get
       }
     }
+  } match {
+    case Success(slot) => Some(slot)
+    case Failure(e) =>
+      e.printStackTrace()
+      None
   }
 
   def head:SlotId = {
@@ -220,28 +276,28 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           val out = new Tine
           val newCache = cache.filter(data => data._1 <= max && data._1 >= min)
           out.tineDB = Left(newCache)
-          out.minSlot = Try{newCache.keySet.min}.toOption
-          out.maxSlot = Try{newCache.keySet.max}.toOption
+          out.minSlot = Try{newCache.head._1}.toOption
+          out.maxSlot = Try{newCache.last._1}.toOption
           out
         case Right(cache) => if (max - min > slotWindow) {
           var minOut:Option[Slot] = None
           var maxOut:Option[Slot] = None
           val out = new Tine
-          if (!this.isEmpty) for (index <- min/one_third_epoch to max/one_third_epoch) {
+          for (index <- min/one_third_epoch to max/one_third_epoch) {
             val cacheKey = BigInt(index)
             val newCache = cache.get(cacheKey).filter(data => data._1 <= max && data._1 >= min)
             if (newCache.nonEmpty) {
-              val cacheMin = newCache.keySet.min
-              val cacheMax = newCache.keySet.max
+              val cacheMin = newCache.head._1
+              val cacheMax = newCache.last._1
               minOut = minOut match {
                 case None => Some(cacheMin)
-                case _ => Some(Seq(cacheMin,minOut.get).min)
+                case _ => Some(Array(cacheMin,minOut.get).min)
               }
               maxOut = maxOut match {
                 case None => Some(cacheMax)
-                case _ => Some(Seq(cacheMax,maxOut.get).max)
+                case _ => Some(Array(cacheMax,maxOut.get).max)
               }
-              val bestId:SlotId = (cacheMax,newCache(cacheMax)._1)
+              val bestId:SlotId = toSlotId(newCache.last)
               out.best += (cacheKey -> bestId)
               out.loadCache()
               out.tineCache.put(cacheKey,newCache)
@@ -254,20 +310,20 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           var minOut:Option[Slot] = None
           var maxOut:Option[Slot] = None
           val out = new Tine
-          val outCache:mutable.SortedMap[Slot,(BlockId,Rho)] = mutable.SortedMap()
+          var outCache:TineCache = emptyTineCache
           if (!this.isEmpty) for (index <- min/one_third_epoch to max/one_third_epoch) {
             val cacheKey = BigInt(index)
             val newCache = cache.get(cacheKey).filter(data => data._1 <= max && data._1 >= min)
             if (newCache.nonEmpty) {
-              val cacheMin = newCache.keySet.min
-              val cacheMax = newCache.keySet.max
+              val cacheMin = newCache.head._1
+              val cacheMax = newCache.last._1
               minOut = minOut match {
                 case None => Some(cacheMin)
-                case _ => Some(Seq(cacheMin,minOut.get).min)
+                case _ => Some(Array(cacheMin,minOut.get).min)
               }
               maxOut = maxOut match {
                 case None => Some(cacheMax)
-                case _ => Some(Seq(cacheMax,maxOut.get).max)
+                case _ => Some(Array(cacheMax,maxOut.get).max)
               }
               outCache ++= newCache
             }
@@ -302,9 +358,9 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         case Some(t) if t.minSlot.get <= max =>
           tineDB match {
             case Left(cache) =>
-              val newCache = cache.filter(data => data._1 < t.minSlot.get && data._1 >= min)
+              val filtered = cache.filter(data => data._1 < t.minSlot.get && data._1 >= min)
               Bytes.concat(
-                Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*),
+                Bytes.concat(filtered.map(entry => entry._3):_*),
                 t.orderedNonceData(t.minSlot.get,max,None)
               )
             case Right(cache) =>
@@ -312,7 +368,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
               for (index <- min/one_third_epoch to (t.minSlot.get-1)/one_third_epoch) {
                 val cacheKey = BigInt(index)
                 val newCache = cache.get(cacheKey).filter(data => data._1 < t.minSlot.get && data._1 >= min)
-                out = Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
+                out = Bytes.concat(out, Bytes.concat(newCache.map(entry => entry._3):_*))
               }
               Bytes.concat(out, t.orderedNonceData(t.minSlot.get,max,tine))
           }
@@ -320,13 +376,13 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           tineDB match {
             case Left(cache) =>
               val newCache = cache.filter(data => data._1 <= max && data._1 >= min)
-              Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*)
+              Bytes.concat(newCache.map(entry => entry._3):_*)
             case Right(cache) =>
               var out:Array[Byte] = Array()
               for (index <- min/one_third_epoch to max/one_third_epoch) {
                 val cacheKey = BigInt(index)
                 val newCache = cache.get(cacheKey).filter(data => data._1 <= max && data._1 >= min)
-                out = Bytes.concat(out, Bytes.concat(newCache.toArray.map(entry => entry._2._2):_*))
+                out = Bytes.concat(out, Bytes.concat(newCache.map(entry => entry._3):_*))
               }
               out
           }
@@ -349,16 +405,16 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     }
   }
 
-  private def toSlotId(data:(Slot,(BlockId,Rho))):SlotId = (data._1,data._2._1)
+  private def toSlotId(data:(Slot,BlockId,Rho)):SlotId = (data._1,data._2)
 
   def ordered:Array[SlotId] = {
     var out:Array[SlotId] = Array()
     tineDB match {
       case Left(cache) =>
-        cache.toArray.map(toSlotId)
+        cache.map(toSlotId)
       case Right(cache) =>
-        for (index <- best.keySet.toSeq.sorted) {
-          out = out ++ cache.get(index).toArray.map(toSlotId)
+        for (index <- best.keySet) {
+          out = out ++ cache.get(index).map(toSlotId)
         }
         out
     }
@@ -368,7 +424,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     var foundSlot = false
     tineDB match {
       case Left(cache) =>
-        cache.keySet.find(slot => slot > prefix && slot < prefix + slotWindow) match {
+        cache.find(data => data._1 > prefix && data._1 < prefix + slotWindow) match {
           case None =>
           case _ => foundSlot = true
         }
@@ -376,7 +432,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         for (index <- (prefix+1)/one_third_epoch to (prefix+slotWindow)/one_third_epoch) {
           if (!foundSlot) {
             val cacheKey = BigInt(index)
-            cache.get(cacheKey).keySet.find(slot => slot > prefix && slot < prefix + slotWindow) match {
+            cache.get(cacheKey).find(data => data._1 > prefix && data._1 < prefix + slotWindow) match {
               case None =>
               case _ => foundSlot = true
             }
@@ -389,9 +445,9 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
   def isEmpty:Boolean = {
     tineDB match {
       case Left(cache) =>
-        cache.keySet.isEmpty
+        cache.isEmpty
       case Right(_) =>
-        best.keySet.isEmpty
+        best.isEmpty
     }
   }
 
@@ -406,11 +462,11 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
               1
             } else {
               tineDB match {
-                case Left(cache) => cache.keySet.size
+                case Left(cache) => cache.length
                 case Right(cache) =>
                   var out = 0
                   for (index <- best.keySet) {
-                    out += cache.get(index).keySet.size
+                    out += cache.get(index).length
                   }
                   out
               }
@@ -437,7 +493,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         out.loadCache()
         cache.asMap.keySet().forEach( key =>
           cache.getIfPresent(key) match {
-            case value:mutable.SortedMap[Slot,(BlockId,Rho)] => out.tineCache.put(key,value)
+            case value:TineCache => out.tineCache.put(key,value)
             case _ =>
           }
         )
@@ -462,17 +518,25 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
       case Left(cache) =>
         assert(best.isEmpty)
         if (cache.nonEmpty) {
-          assert(maxSlot.get == cache.keySet.max)
-          assert(minSlot.get == cache.keySet.min)
-          var id:SlotId = toSlotId(cache.keySet.max,cache(cache.keySet.max))
-          for (entry <- cache.toArray.reverse.tail) {
-            val block = blocks.get(id).get
-            assert(block.nonce sameElements cache(id._1)._2)
-            if (id._1 > 0) {
-              val pid = block.parentSlotId
-              assert(toSlotId(entry) == pid)
-              id = pid
+          assert(minSlot.get == cache.head._1)
+          assert(maxSlot.get == cache.last._1)
+          var id:SlotId = toSlotId(cache.last)
+          var block:Block = blocks.get(id).get
+          var nonce:Rho = block.nonce
+          assert(nonce sameElements cache.last._3)
+          for (entry <- cache.reverse.tail) {
+            val pid = block.parentSlotId
+            if (toSlotId(entry) != pid) {
+              val thisId = toSlotId(entry)
+              println(pid._1.toString+":"+Base58.encode(pid._2.data))
+              println(id._1.toString+":"+Base58.encode(id._2.data))
+              println(thisId._1.toString+":"+Base58.encode(thisId._2.data))
             }
+            assert(toSlotId(entry) == pid)
+            id = pid
+            block = blocks.get(id).get
+            nonce = block.nonce
+            assert(nonce sameElements entry._3)
           }
         } else {
           assert(maxSlot == None)
@@ -484,32 +548,34 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           assert(minSlot == None)
         } else {
           var id:SlotId = best(best.keySet.max)
-          var cpid:Option[SlotId] = None
+          var cachePid:Option[SlotId] = None
           assert(id._1 == maxSlot.get)
           for (value <- best.toArray.reverse) {
             val cache = loaderCache.get(value._1)
-            id = toSlotId(cache.keySet.max,cache(cache.keySet.max))
-            assert(cpid match {
+            id = toSlotId(cache.last)
+            assert(cachePid match {
               case None => true
               case Some(cid) => cid == id
             })
             assert(id == best(value._1))
-            for (entry <- cache.toArray.reverse.tail) {
-              val block = blocks.get(id).get
-              assert(block.nonce sameElements cache(id._1)._2)
-              if (id._1 > 0) {
-                val pid = block.parentSlotId
-                if (toSlotId(entry) != pid) {
-                  val thisId = toSlotId(entry)
-                  println(pid._1.toString+":"+Base58.encode(pid._2.data))
-                  println(id._1.toString+":"+Base58.encode(id._2.data))
-                  println(thisId._1.toString+":"+Base58.encode(thisId._2.data))
-                }
-                assert(toSlotId(entry) == pid)
-                id = pid
+            var block:Block = blocks.get(id).get
+            var nonce:Rho = block.nonce
+            assert(nonce sameElements cache.last._3)
+            for (entry <- cache.reverse.tail) {
+              val pid = block.parentSlotId
+              if (toSlotId(entry) != pid) {
+                val thisId = toSlotId(entry)
+                println(pid._1.toString+":"+Base58.encode(pid._2.data))
+                println(id._1.toString+":"+Base58.encode(id._2.data))
+                println(thisId._1.toString+":"+Base58.encode(thisId._2.data))
               }
+              assert(toSlotId(entry) == pid)
+              id = pid
+              block = blocks.get(id).get
+              nonce = block.nonce
+              assert(nonce sameElements entry._3)
             }
-            if (id._1 > 0) cpid = Some(blocks.get(id).get.parentSlotId)
+            if (id._1 > 0) cachePid = Some(blocks.get(id).get.parentSlotId)
           }
         }
     }
@@ -520,39 +586,53 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
       false
   }
 
-  def reorg(prefix:Slot,tine:Tine):Unit = {
-    assert(prefix >= minSlot.get)
-    tineDB match {
-      case Left(cache) =>
-        val newCache = cache.filter(data => data._1 <= prefix)
-        tineDB = Left(newCache)
-        for (id <- tine.ordered) {
-          update(id,tine.getNonce(id._1).get)
-        }
-      case Right(cache) =>
-        if (maxSlot.get < tine.head._1 && tine.numActive == 1) {
+  def reorg(prefix:Slot,tine:Tine):Unit = Try{
+    if (maxSlot.get == prefix && prefix < tine.minSlot.get) {
+      for (id <- tine.ordered) {
+        this.update(id,tine.getNonce(id._1).get)
+      }
+    } else {
+      tineDB match {
+        case Left(cache) =>
+          val newCache = cache.filter(data => data._1 <= prefix)
+          tineDB = Left(newCache)
+          val newMax = newCache.last._1
+          maxSlot = Some(newMax)
           for (id <- tine.ordered) {
-            update(id,tine.getNonce(id._1).get)
+            this.update(id,tine.getNonce(id._1).get)
           }
-        } else {
+        case Right(cache) =>
           val prefixKey = BigInt(prefix/one_third_epoch)
           val newCache = cache.get(prefixKey).filter(data => data._1 <= prefix)
           best.keySet.filter(key => key >= prefixKey).foreach(key => cache.invalidate(key))
           best = best.filter(data => data._1 < prefixKey)
           cache.put(prefixKey,newCache)
-          val newMax = newCache.keySet.max
+          val newMax = newCache.last._1
           maxSlot = Some(newMax)
-          val newBest:SlotId = (newMax,newCache(newMax)._1)
+          val newBest:SlotId = toSlotId(newCache.last)
           best += (prefixKey -> newBest)
           for (id <- tine.ordered) {
-            update(id,tine.getNonce(id._1).get)
+            this.update(id,tine.getNonce(id._1).get)
           }
-        }
+      }
     }
+
+  } match {
+    case Failure(exception) => exception.printStackTrace()
+    case _ =>
   }
 }
 
 object Tine extends SimpleTypes {
+
+  type SlotData = (Slot,BlockId,Rho)
+  type TineCache = Array[SlotData]
+  def emptyTineCache:TineCache = Array.empty
+  def append(tineCache: TineCache,input:SlotData):Array[SlotData] =
+    tineCache ++ Array(input)
+  def prepend(tineCache:TineCache,input:SlotData):Array[SlotData] =
+    Array(input) ++ tineCache
+
 
   def apply()(implicit blocks:BlockStorage):Tine = new Tine
 

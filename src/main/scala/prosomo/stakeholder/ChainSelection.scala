@@ -232,7 +232,6 @@ trait ChainSelection extends Members {
     val job:Int = tinePoolWithPrefix.last._3
     Try{
       val prefix:Slot = tinePoolWithPrefix.last._2
-      assert(localChain.lastActiveSlot(prefix).get == prefix)
       val tine:Tine = tinePoolWithPrefix.last._1
       assert(!tine.isEmpty)
       val headId = localChain.head
@@ -368,7 +367,6 @@ trait ChainSelection extends Members {
     } match {
       case Failure(exception) =>
         exception.printStackTrace()
-        if (!localChain.verify) SharedData.throwError(holderIndex)
         if (tinePoolWithPrefix.nonEmpty) {
           if (tinePoolWithPrefix.last._3 == job) tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
         }
@@ -383,7 +381,6 @@ trait ChainSelection extends Members {
     */
   def bootstrapAdoptTine(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
-    assert(localChain.lastActiveSlot(prefix).get == prefix)
     val tine:Tine = tinePoolWithPrefix.last._1
     assert(!tine.isEmpty)
     val job:Int = tinePoolWithPrefix.last._3
