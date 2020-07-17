@@ -45,7 +45,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
             while (buildTine) {
               blocks.restoreHeader(testId) match {
                 case Some(header) =>
-                  out =  append(out,(header._3,testId._2,header._5))
+                  out = prepend(out,(header._3,testId._2,header._5))
                   if (header._10 < minSlot.get || BigInt(header._10/one_third_epoch) != epoch3rd) {
                     buildTine = false
                   } else {
@@ -91,14 +91,12 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         } else {
           maxSlot match {
             case Some(slot) if slotId._1 > slot =>
-              assert(toSlotId(cache.last) == blocks.get(slotId).get.parentSlotId)
               tineDB = Left(append(cache,newEntry))
               maxSlot = Some(slotId._1)
             case _ =>
           }
           minSlot match {
             case Some(slot) if slotId._1 < slot =>
-              assert(slotId == blocks.get(toSlotId(cache.head)).get.parentSlotId)
               tineDB = Left(prepend(cache,newEntry))
               minSlot = Some(slotId._1)
             case _ =>
@@ -616,7 +614,6 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           }
       }
     }
-
   } match {
     case Failure(exception) => exception.printStackTrace()
     case _ =>
