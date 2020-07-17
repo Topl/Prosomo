@@ -450,13 +450,13 @@ trait Receive extends Members {
           case Some(newChain:Tine) =>
             localChain.loadCache()
             localChain.copy(newChain)
-            val lastId = localChain.head
-            localSlot = lastId._1
-            val newHead = getBlockHeader(lastId)
+            val headId = localChain.head
+            localSlot = headId._1
+            val newHead = getBlockHeader(headId)
             println(Console.CYAN + "Local Slot = " + localSlot.toString + s" on block ${newHead.get._9} "
-              + Base58.encode(lastId._2.data) + Console.RESET)
+              + Base58.encode(headId._2.data) + Console.RESET)
             currentEpoch = localSlot/epochLength
-            val loadState = history.get(lastId).get
+            val loadState = history.get(headId).get
             localState = loadState._1
             eta = loadState._2
             stakingState = getStakingState(currentEpoch,localChain,None)
