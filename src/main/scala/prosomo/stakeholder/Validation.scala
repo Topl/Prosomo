@@ -251,7 +251,7 @@ trait Validation extends Members with Types {
                             ls = newState
                             pid = id
                           } else {
-                            print("Error: Holder "
+                            println("Error: Holder "
                               +holderIndex.toString+s" invalid block, id = ${Base58.encode(id._2.data)}")
                             println(Seq(
                               hash(parent,serializer) == h0 //1

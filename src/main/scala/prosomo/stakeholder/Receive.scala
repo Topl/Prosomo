@@ -368,7 +368,7 @@ trait Receive extends Members {
     /**allocation and vars of simulation*/
     case Initialize(gs,inputPassword) =>
       globalSlot = gs
-      println("Holder "+holderIndex.toString+s" starting on global slot $globalSlot")
+      println("Holder "+holderIndex.toString+s" setting up")
       println("Configuring key...")
       time{
         inputPassword match {
@@ -451,9 +451,9 @@ trait Receive extends Members {
             localChain.loadCache()
             localChain.copy(newChain)
             val lastId = localChain.head
-            localSlot = localChain.head._1
+            localSlot = lastId._1
             val newHead = getBlockHeader(lastId)
-            println(Console.CYAN + "Local Slot = " + globalSlot.toString + s" on block ${newHead.get._9} "
+            println(Console.CYAN + "Local Slot = " + localSlot.toString + s" on block ${newHead.get._9} "
               + Base58.encode(lastId._2.data) + Console.RESET)
             currentEpoch = localSlot/epochLength
             val loadState = history.get(lastId).get
