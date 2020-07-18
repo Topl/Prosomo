@@ -121,23 +121,39 @@ trait Receive extends Members {
       if (!actorStalled) Try{
         def blockToId(b:Block):SlotId = (b.slot,b.id)
         for (block <- value.blocks) {
-          if (!blocks.knownIfPresent(blockToId(block))) {
-            if (verifyBlock(block)) {
-              if (holderIndex == SharedData.printingHolder && printFlag) {
-                println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
-              }
-              blocks.add(block)
-            } else {println("Error: invalid returned block")}
-          }
           if (value.job >= 0 && tinePool.keySet.contains(value.job) && !helloLock) {
             if (bootStrapLock) {
+              if (!blocks.knownIfPresent(blockToId(block))) {
+                if (verifyBlock(block)) {
+                  if (holderIndex == SharedData.printingHolder && printFlag) {
+                    println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
+                  }
+                  blocks.add(block)
+                } else {println("Error: invalid returned block")}
+              }
               if (value.job == bootStrapJob) {
                 timers.startSingleTimer(BootstrapJob,BootstrapJob,1*slotT.millis)
               }
             } else {
+              if (!blocks.knownInCache(blockToId(block))) {
+                if (verifyBlock(block)) {
+                  if (holderIndex == SharedData.printingHolder && printFlag) {
+                    println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
+                  }
+                  blocks.add(block)
+                } else {println("Error: invalid returned block")}
+              }
               buildTine((value.job,tinePool(value.job)))
             }
           } else if (value.job == -1 && helloLock) {
+            if (!blocks.knownInCache(blockToId(block))) {
+              if (verifyBlock(block)) {
+                if (holderIndex == SharedData.printingHolder && printFlag) {
+                  println("Holder " + holderIndex.toString + " Got Block "+Base58.encode(block.id.data))
+                }
+                blocks.add(block)
+              } else {println("Error: invalid returned block")}
+            }
             val b = block.prosomoHeader
             val bHash = hash(b,serializer)
             val bSlot = b._3

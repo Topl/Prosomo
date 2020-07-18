@@ -51,6 +51,7 @@ trait Update extends Members {
   def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):State = if (ep > 1) {
     val stakeDistMaxSlot:Slot = (ep-1)*epochLength-1
     val stakeDistId:SlotId = localChain.best(ep-2)
+    assert(localChain.getLastActiveSlot(stakeDistMaxSlot).get == stakeDistId)
     tine match {
       case Some(t) if t.minSlot.get <= stakeDistMaxSlot =>
         history.get(t.getLastActiveSlot(stakeDistMaxSlot).get) match {
@@ -68,7 +69,7 @@ trait Update extends Members {
         history.getStakeDist(stakeDistId)
     }
   } else {
-    history.getStakeDist(chain.get(0).get)
+    history.getStakeDist((0,genBlockHash))
   }
 
   /*********************************************************************************************************************

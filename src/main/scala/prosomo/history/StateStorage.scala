@@ -48,7 +48,7 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
   }
 
   private val epochStakeDistCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
-    .maximumSize(2)
+    .maximumSize(4)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
       def load(id:SlotId):(State,Eta) = {
         stateCache.get(id)
