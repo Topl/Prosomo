@@ -125,7 +125,6 @@ trait Update extends Members {
         timers.cancelAll
         updating = false
       }
-      if (globalSlot%chainStoreInterval == 0) chainStorage.store(localChain,dataBaseCID,serializer)
       while (globalSlot > localSlot) {
         localSlot += 1
         if (dataOutFlag && localSlot % dataOutInterval == 0) {
@@ -155,6 +154,7 @@ trait Update extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
+              assert(localChain.verify)
             }
             inbox = Map()
             scheduleDiffuse()
@@ -169,6 +169,7 @@ trait Update extends Members {
             forgeBlock(keys)
           }
           keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
+          if (globalSlot%chainStoreInterval == 0) chainStorage.store(localChain,dataBaseCID,serializer)
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {

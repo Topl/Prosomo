@@ -7,7 +7,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.components.Serializer
 import prosomo.primitives.{Distance, Ecx, Fch, Mac, Parameters, SharedData, Types}
-import prosomo.remote.{DiffuseDataSpec, _}
+import prosomo.remote._
 import scorex.util.encode.Base58
 
 import scala.collection.immutable.ListMap
@@ -19,17 +19,7 @@ import scorex.core.network._
 import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
-
-import prosomo.remote.SpecTypes.{
-  DiffuseDataType,
-  HelloDataType,
-  HoldersType,
-  RequestBlockType,
-  RequestTineType,
-  ReturnBlocksType,
-  SendBlockType,
-  SendTxType
-}
+import prosomo.remote.SpecTypes._
 
 /**
   * AMS 2020:
@@ -48,7 +38,20 @@ import prosomo.remote.SpecTypes.{
 class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
   with Types
   with Timers {
-  import Parameters._
+  val waitTime = Parameters.waitTime
+  val delay_ms_byte = Parameters.delay_ms_byte
+  val delay_ms_km = Parameters.delay_ms_km
+  val delay_ms_noise = Parameters.delay_ms_noise
+  val commandUpdateTime = Parameters.commandUpdateTime
+  val txProbability = Parameters.txProbability
+  val maxTransfer = Parameters.maxTransfer
+  val slotT = Parameters.slotT
+  val sk_ecx = Parameters.sk_ecx
+  val pk_ecx = Parameters.pk_ecx
+  val useFencing = Parameters.useFencing
+  val useGui = Parameters.useGui
+  val numMessageProcessors = Parameters.numMessageProcessors
+  val prosomoMessageSpecs = Parameters.prosomoMessageSpecs
   val networkController:ActorRefWrapper = inputRef.head
   val peerManager:ActorRefWrapper = inputRef(1)
   implicit val routerRef: ActorRefWrapper = {
