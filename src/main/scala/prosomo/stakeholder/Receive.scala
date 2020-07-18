@@ -64,7 +64,7 @@ trait Receive extends Members {
     case value:SendBlock =>
       if (!actorStalled && !SharedData.limiterFlag) Try{
         val foundBlock = blocks.knownInCache((value.block.slot,value.block.id))
-        if (!foundBlock && getBlockHeader(localChain.head).get._9 < value.block.number) {
+        if (!foundBlock) {
           val b:BlockHeader = value.block.prosomoHeader
           val bHash = hash(b,serializer)
           val bSlot = b._3
