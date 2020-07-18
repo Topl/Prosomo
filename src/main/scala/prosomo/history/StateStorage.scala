@@ -51,7 +51,6 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     .maximumSize(2)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
       def load(id:SlotId):(State,Eta) = {
-        println("Error: stake dist cache miss")
         stateCache.get(id)
       }
     })
