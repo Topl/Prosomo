@@ -185,7 +185,7 @@ trait Receive extends Members {
         if (holderIndex == SharedData.printingHolder && printFlag) {
           println("Holder " + holderIndex.toString + " Was Requested Block")
         }
-        blocks.getIfPresent(value.id) match {
+        blocks.getIfInCache(value.id) match {
           case Some(returnedBlock:Block) =>
             send(selfWrapper,value.sender,ReturnBlocks(List(returnedBlock),value.job,selfWrapper))
             if (holderIndex == SharedData.printingHolder && printFlag) {

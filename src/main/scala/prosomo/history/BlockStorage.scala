@@ -172,4 +172,11 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
 
   def knownInCache(id:SlotId):Boolean = blockCache.asMap().keySet().contains(id)
 
+  def getIfInCache(id:SlotId):Option[Block] = {
+    blockCache.getIfPresent(id) match {
+      case b:Block => Some(b)
+      case _ => None
+    }
+  }
+
 }
