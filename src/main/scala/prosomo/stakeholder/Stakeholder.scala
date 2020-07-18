@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
+import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer, Tine, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
@@ -46,7 +46,6 @@ class Stakeholder(
   with Utilities
   with Validation
 {
-  import Parameters.dataFileDir
   implicit val routerRef:ActorRefWrapper = inputRef.head
   val localRef:ActorRefWrapper = inputRef(1)
   val seed:Array[Byte] = inputSeed

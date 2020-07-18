@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.{Parameters, SharedData}
+import prosomo.primitives.SharedData
 import scorex.util.encode.Base58
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
@@ -15,13 +15,14 @@ import scala.util.control.Breaks.{break, breakable}
   */
 
 trait Ledger extends Members {
-  import Parameters._
+
   /**
     * apply each block in chain to passed local state
     * @param ls old local state to be updated
     * @param c chain of block ids
     * @return updated localstate
     */
+
   def updateLocalState(ls:State, c:Tine): Option[State] = {
     var nls:State = ls
     var isValid = true
@@ -178,6 +179,7 @@ trait Ledger extends Members {
     * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
     * @param c chain to collect transactions
     */
+
   def collectLedger(c:Tine): Unit = {
     for (id <- c.ordered) {
       for (trans <- blocks.get(id).get.blockBody.get) {
@@ -193,6 +195,7 @@ trait Ledger extends Members {
     * @param pkw public key triad of forger
     * @return list of transactions
     */
+
   def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSet = {
     var ledger: List[Transaction] = List()
     var ls: State = s

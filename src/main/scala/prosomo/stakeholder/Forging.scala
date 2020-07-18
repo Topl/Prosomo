@@ -3,7 +3,6 @@ package prosomo.stakeholder
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
 import prosomo.components.{Block, Tine}
-import prosomo.primitives.Parameters._
 import prosomo.primitives.{Keys, ForgingKey, Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 import scala.math.BigInt
@@ -20,7 +19,9 @@ import scala.util.Try
 
 trait Forging extends Members with Types {
 
-  /**determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables */
+  /**
+    * Determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables
+    * */
   def forgeBlock(forgerKeys:Keys):Unit = if (!SharedData.limiterFlag) Try{
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(

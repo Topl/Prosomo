@@ -14,13 +14,12 @@ import scala.math.BigInt
 
 trait Staking extends Members {
 
-  import prosomo.primitives.Parameters._
-
   /**
     * Aggregate staking function used for calculating threshold per epoch, fixed difficulty
     * @param a relative stake
     * @return probability of being elected slot leader
     */
+
   def phi(a:Ratio): Ratio = {
     var out = Ratio(0)
     val base = m_f_root * a
@@ -36,6 +35,7 @@ trait Staking extends Members {
     * @param m_f coefficient log(1-f(slot-parentSlot))
     * @return probability of being elected slot leader
     */
+
   def phi(a:Ratio,m_f:Ratio): Ratio = {
     var out = Ratio(0)
     val base = m_f * a

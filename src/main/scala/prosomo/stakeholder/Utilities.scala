@@ -9,8 +9,6 @@ import prosomo.primitives.Types
 
 trait Utilities extends Members with Types {
 
-  import prosomo.primitives.Parameters._
-
   def uuid: String = java.util.UUID.randomUUID.toString
 
   def bytes2hex(b: Array[Byte]): String = {

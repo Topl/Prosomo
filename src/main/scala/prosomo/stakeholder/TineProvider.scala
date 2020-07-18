@@ -5,7 +5,7 @@ import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, Messag
 import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
 import prosomo.primitives.{Fch, SharedData, Sig, SimpleTypes, Types}
-import prosomo.primitives.Parameters.{printFlag, useFencing, useRouting, requestTineInterval}
+import prosomo.primitives.Parameters
 
 import scala.math.BigInt
 import scala.util.control.Breaks.{break, breakable}
@@ -25,6 +25,10 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
   val rng:Random = new Random
   val serializer:Serializer = new Serializer
   override val fch = new Fch
+  val useRouting = Parameters.useRouting
+  val useFencing = Parameters.useFencing
+  val printFlag = Parameters.printFlag
+  val requestTineInterval = Parameters.requestTineInterval
   rng.setSeed(0L)
 
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any): Unit = {

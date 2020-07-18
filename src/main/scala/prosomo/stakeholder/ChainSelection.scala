@@ -4,7 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.{Parameters, Ratio, SharedData}
+import prosomo.primitives.{Ratio, SharedData}
 import scorex.util.encode.Base58
 
 import scala.util.{Try,Failure,Success}
@@ -23,7 +23,6 @@ import scala.util.control.Breaks.{break, breakable}
   */
 
 trait ChainSelection extends Members {
-  import Parameters._
 
   def updateWallet():Unit = Try{
     var id = localChain.getLastActiveSlot(globalSlot).get

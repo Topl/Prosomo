@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Tine, Transaction}
-import prosomo.primitives.{Parameters, Ratio, SharedData, Types}
+import prosomo.primitives.{Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
@@ -15,12 +15,13 @@ import scala.util.control.Breaks.{break, breakable}
   */
 
 trait Validation extends Members with Types {
-  import Parameters._
+
   /**
     * Block verify using key evolving signature
     * @param b input block
     * @return true if signature is valid, false otherwise
     */
+
   def verifyBlockHeader(b:BlockHeader): Boolean = {
     val (hash, ledger, slot, cert, rho, pi, sig, pk_kes, bn, ps) = b
     kes.verify(sig._5, hash.data
@@ -76,6 +77,7 @@ trait Validation extends Members with Types {
     * @param gh genesis block hash
     * @return true if chain is valid, false otherwise
     */
+
   def verifyChain(c:Tine, gh:Hash): Boolean = {
     var bool = true
     var ep = -1
@@ -183,6 +185,7 @@ trait Validation extends Members with Types {
     * @param prefix slot of the localChain id that represents the common ancestor of tine and head of localChain
     * @return true if chain is valid, false otherwise
     */
+
   def verifyTine(tine:Tine, prefix:Slot): Boolean = {
     var isValid = true
     var pid:SlotId = localChain.getLastActiveSlot(prefix).get
@@ -317,6 +320,7 @@ trait Validation extends Members with Types {
     * @param t transaction
     * @return true if valid, false otherwise
     */
+
   def verifyTransaction(t:Transaction):Boolean = {
     verifyTX(t,sig,serializer)
   }

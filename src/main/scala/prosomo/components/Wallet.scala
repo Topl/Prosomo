@@ -3,6 +3,7 @@ package prosomo.components
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{Fch, Sig, Types}
 import prosomo.stakeholder.Transactions
+import prosomo.primitives.Parameters
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
 import scala.util.Random
@@ -14,7 +15,7 @@ import scala.util.Random
   */
 
 case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
-  import prosomo.primitives.Parameters.fee_r
+  val fee_r = Parameters.fee_r
   var pendingTxsOut:Map[Sid,Transaction] = Map()
   var availableBalance:BigInt = 0
   var totalBalance:BigInt = 0

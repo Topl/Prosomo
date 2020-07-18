@@ -22,7 +22,6 @@ import scala.util.{Failure, Success, Try}
   */
 
 trait Receive extends Members {
-  import Parameters._
   def receive: Receive = {
 
     /** Updates time, the kes key, and resets variables

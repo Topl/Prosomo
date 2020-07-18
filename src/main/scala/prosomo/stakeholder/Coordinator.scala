@@ -46,7 +46,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     with Utilities
     with Validation
 {
-  import Parameters._
   implicit val routerRef:ActorRefWrapper = inputRef.head
   val localRef:ActorRefWrapper = inputRef(1)
   override val holderIndex: Slot = -1
@@ -123,7 +122,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var parties: List[List[ActorRefWrapper]] = List()
   var t:Slot = 0
   var actorPaused = false
-  var cmdQueue:Map[Slot,List[String]] = inputCommands
+  var cmdQueue:Map[Slot,List[String]] = Parameters.inputCommands
 
   var fileWriter:Any = 0
   var graphWriter:Any = 0
@@ -137,7 +136,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   self ! NewDataFile
   self ! Populate
   println("*****************************************************************")
-  println("Coordinator Seed: ["+prosomo.primitives.Parameters.inputSeed+"]")
+  println("Coordinator Seed: ["+inputSeedString+"]")
   println("*****************************************************************")
   def readFile(file:File): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(file)

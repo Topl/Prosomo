@@ -241,7 +241,7 @@ object Parameters {
   //toggle for action based round execution
   val useFencing:Boolean = config.getBoolean("params.useFencing")
   //seed for pseudo random runs
-  val inputSeed:String = {
+  val inputSeedString:String = {
     if (randomFlag) {
       Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
     } else {
@@ -258,7 +258,7 @@ object Parameters {
   val pk_ecx:Array[Byte] = ecx.scalarMultBasePoint(sk_ecx)
 
   //path for data output files
-  val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeed
+  val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString
   val storageFlag:Boolean = config.getBoolean("params.storageFlag")
   val cacheSize:Int = config.getInt("params.cacheSize")
   val refreshInterval:Int = config.getInt("params.refreshInterval")

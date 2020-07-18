@@ -9,14 +9,7 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress}
-import prosomo.primitives.Parameters.{
-  inputSeed,
-  numAverageLoad,
-  performanceFlag,
-  prosomoMessageSpecs,
-  useGui,
-  systemLoadThreshold
-}
+import prosomo.primitives.Parameters
 import prosomo.primitives.{Fch, SharedData, SystemLoadMonitor}
 import prosomo.stakeholder.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
@@ -51,6 +44,8 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   implicit val settings: ScorexSettings = ScorexSettings.fromConfig(config)
   SharedData.scorexSettings = Some(settings)
   val apiRoutes: Seq[ApiRoute] = Seq()
+  val prosomoMessageSpecs = Parameters.prosomoMessageSpecs
+  val inputSeed = Parameters.inputSeedString
 
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
@@ -76,8 +71,10 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   }
 
   /**
-    * Note AMS June 2020: This time NTP time provider is not used in consensus and is to be only used for logging and network information,
-    * a separate NTP functionality with additional security properties and resilience is to be developed for tracking the global slot in Ouroboros Genesis
+    * Note AMS June 2020: This time NTP time provider is not used in consensus
+    * and is to be only used for logging and network information,
+    * a separate NTP functionality with additional security properties
+    * and resilience is to be developed for tracking the global slot in Ouroboros Genesis
     */
   val timeProvider = new NetworkTimeProvider(settings.ntp)
 
@@ -131,13 +128,26 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, scorexContext)
   val swaggerConfig:String = ""
-  lazy val combinedRoute: Route = CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
+  lazy val combinedRoute: Route =
+    CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
 
   log.info(s"Starting application with settings \n$settings")
   log.info("Using seed: "+inputSeed)
-  val routerRef:ActorRef = actorSystem.actorOf(Router.props(fch.hash(inputSeed+"remote"),Seq(networkControllerRef,peerManagerRef)), "Remote")
-  val localRef:ActorRef = actorSystem.actorOf(Router.props(fch.hash(inputSeed+"local"),Seq(networkControllerRef,peerManagerRef)), "Local")
-  val coordinatorRef:ActorRef = actorSystem.actorOf(Coordinator.props(fch.hash(inputSeed),Seq(routerRef,localRef)), "Coordinator")
+  val routerRef:ActorRef =
+    actorSystem.actorOf(
+      Router.props(fch.hash(inputSeed+"remote"),Seq(networkControllerRef,peerManagerRef)),
+      "Remote"
+    )
+  val localRef:ActorRef =
+    actorSystem.actorOf(
+    Router.props(fch.hash(inputSeed+"local"),Seq(networkControllerRef,peerManagerRef)),
+    "Local"
+  )
+  val coordinatorRef:ActorRef =
+    actorSystem.actorOf(
+    Coordinator.props(fch.hash(inputSeed),Seq(routerRef,localRef)),
+      "Coordinator"
+    )
 
   window match {
     case None =>
@@ -213,12 +223,17 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
 
 object Prosomo extends App {
   /**
-    * input args will be either HOCON *.conf files in execution directory or HOCON formatted strings that add to base config
+    * input args will be either HOCON *.conf files in execution directory
+    * or HOCON formatted strings that add to base config
     */
   val input:Array[String] = args
-
+  val numAverageLoad = Parameters.numAverageLoad
   var loadAverage:Array[Double] = Array.fill(numAverageLoad){0.0}
   val sysLoad:SystemLoadMonitor = new SystemLoadMonitor
+  val performanceFlag = Parameters.performanceFlag
+  val useGui = Parameters.useGui
+  val systemLoadThreshold = Parameters.systemLoadThreshold
+  val config = Parameters.config
 
   def limiter:Unit = {
     if (performanceFlag) {
@@ -237,12 +252,12 @@ object Prosomo extends App {
 
   var instance:Option[Prosomo] = None
   if (useGui) {
-    val newWindow = Try{new ProsomoWindow(prosomo.primitives.Parameters.config)}.toOption
+    val newWindow = Try{new ProsomoWindow(config)}.toOption
     //shared reference to window so stakeholder can enable buttons when started
     SharedData.prosomoWindow = newWindow
     newWindow match {
       case None =>
-        instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
+        instance = Try{new Prosomo(config,None)}.toOption
         Try{
           instance.get.run()
           while (instance.get.runApp) {
@@ -268,7 +283,7 @@ object Prosomo extends App {
       case _ =>
     }
   } else {
-    instance = Try{new Prosomo(prosomo.primitives.Parameters.config,None)}.toOption
+    instance = Try{new Prosomo(config,None)}.toOption
     Try{
       instance.get.run()
       while (instance.get.runApp) {

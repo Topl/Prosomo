@@ -15,7 +15,6 @@ import scala.math.BigInt
   */
 
 trait Messages extends Members {
-  import Parameters._
 
   override def scheduleDiffuse(): Unit = {
     timers.startSingleTimer(Diffuse,Diffuse,10*slotT.millis)
@@ -27,6 +26,7 @@ trait Messages extends Members {
     * @param holders list of holders
     * @return list of gossipers
     */
+
   def gossipSet(self:ActorRefWrapper,
                 holders:List[ActorRefWrapper]):List[ActorRefWrapper] = {
     rng.shuffle(holders.filter(ref => ref != self)).take(numGossipers)
@@ -43,6 +43,7 @@ trait Messages extends Members {
     * @param ref actor list
     * @param command object to be sent
     */
+
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any): Unit = {
     if (useRouting && !useFencing) {
       if (ref.remote) {
@@ -62,6 +63,7 @@ trait Messages extends Members {
     * @param holders actor list
     * @param command object to be sent
     */
+
   def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any): Unit = {
     for (holder <- holders){
       if (useRouting && !useFencing) {
@@ -83,6 +85,7 @@ trait Messages extends Members {
     * @param holders actor list
     * @param command object to be sent
     */
+
   def sendAssertDone(holders:List[ActorRefWrapper], command: Any): Unit = {
     for (holder <- holders){
       implicit val timeout:Timeout = Timeout(waitTime)
@@ -97,6 +100,7 @@ trait Messages extends Members {
     * @param holder to send to
     * @param command any command
     */
+
   def sendAssertDone(holder:ActorRefWrapper, command: Any): Unit = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? command
@@ -109,6 +113,7 @@ trait Messages extends Members {
     * @param holder holder to return
     * @return
     */
+
   def getStakingState(holder:ActorRefWrapper):State = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestState
@@ -123,6 +128,7 @@ trait Messages extends Members {
     * sets the local chain history and block data to the holders
     * @param holder actor to get data from
     */
+
   def blockTree(holder:ActorRefWrapper): Unit = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestBlockTree

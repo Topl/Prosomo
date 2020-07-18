@@ -14,7 +14,6 @@ import scala.util.Try
 
 class WalletStorage(dir:String) extends SimpleTypes {
   import prosomo.components.Serializer._
-  import prosomo.primitives.Parameters.storageFlag
   val fch = new Fch
   var walletStore:LDBStore = LDBStore(s"$dir/wallet")
 
@@ -22,7 +21,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
     walletStore.refresh()
   }
 
-  def restore(serializer: Serializer,pkw:ByteArrayWrapper):Wallet = if (storageFlag) {
+  def restore(serializer: Serializer,pkw:ByteArrayWrapper):Wallet = {
     def newWallet:Wallet = {
       println("New wallet")
       val out = components.Wallet(pkw)
@@ -41,12 +40,9 @@ class WalletStorage(dir:String) extends SimpleTypes {
       }
       case _ => newWallet
     }
-  } else {
-    println("New wallet")
-    components.Wallet(pkw)
   }
 
-  def store(wallet:Wallet,serializer: Serializer):Unit  = if (storageFlag) {
+  def store(wallet:Wallet,serializer: Serializer):Unit = {
     val wBytes = serializer.getBytes(wallet)
     val key = ByteArrayWrapper(fch.hash(wallet.pkw.data))
     walletStore.update(Seq(),Seq(key -> ByteArrayWrapper(wBytes)))

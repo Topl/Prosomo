@@ -4,8 +4,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, WriteFile}
 import prosomo.components.Tine
-import prosomo.primitives.Parameters.{dataBaseCID, useGui}
-import prosomo.primitives.{KeyFile, Parameters, Ratio, SharedData}
+import prosomo.primitives.{KeyFile, Ratio, SharedData}
 import scorex.util.encode.Base58
 
 import scala.util.Try
@@ -16,13 +15,6 @@ import scala.util.Try
   */
 
 trait Update extends Members {
-  import Parameters.{printFlag,
-    epochLength,
-    dataOutInterval,
-    dataOutFlag,
-    useFencing,
-    chainStoreInterval
-  }
 
   /**
     * Epoch update routine, called every time currentEpoch increments, calculates the new epoch nonce
@@ -32,6 +24,7 @@ trait Update extends Members {
     * @param chain the tine with vrf nonces to apply
     * @return epoch after slot is tested, epoch nonce after slot is tested
     */
+
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta) = {
     val ep = slot / epochLength
     if (ep > epochIn) {
@@ -54,6 +47,7 @@ trait Update extends Members {
     * @param chain tine containing the block ids of at least the previous epoch
     * @return the staking distribution to be used in epoch number ep
     */
+
   def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):State = if (ep > 1) {
     val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
     tine match {
