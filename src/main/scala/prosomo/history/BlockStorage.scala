@@ -169,4 +169,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
         headerStoreCache.get(id._1/one_third_epoch).known(id._2)
     }
   }
+
+  def knownInCache(id:SlotId):Boolean = blockCache.asMap().keySet().contains(id)
+
 }

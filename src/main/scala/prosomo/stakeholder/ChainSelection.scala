@@ -114,36 +114,50 @@ trait ChainSelection extends Members {
               assert(localChain.get(prefix.get).get == parentId)
               break
             } else {
-              getBlockHeader(parentId) match {
-                case Some(pbh:BlockHeader) =>
-                  tine.update(parentId,pbh._5)
-                case None =>
-                  val tineLength = tine.numActive
-                  if (tineLength>tineMaxDepth && job._1 >= 0 && !helloLock) {
-                    bootStrapLock = true
-                    if (tine.maxSlot.get - tine.minSlot.get > slotWindow) tine.loadCache()
-                    bootStrapJob = job._1
-                    if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString
-                        + " Looking for Parent Tine, Job:"+job._1
-                        +" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
-                    )
-                    val depth:Int = if (tineLength < tineMaxDepth) {
-                      tineLength
-                    } else {
-                      tineMaxDepth
-                    }
-                    send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
-                  } else {
-                    if (holderIndex == SharedData.printingHolder && printFlag) println(
-                      "Holder " + holderIndex.toString
-                        + " Looking for Parent Block, Job:"+job._1
-                        +" Tries:"+counter.toString+" Length:"+tine.numActive+" Tines:"+tinePool.keySet.size
-                    )
-                    send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
+              if (blocks.knownInCache(parentId)) {
+                getBlockHeader(parentId) match {
+                  case Some(pbh:BlockHeader) =>
+                    tine.update(parentId,pbh._5)
+                  case None =>
+                    println("Error: cache error in blocks database in buildTine")
+                    tinePool -= job._1
+                }
+              } else {
+                val tineLength = tine.numActive
+                if (tineLength>tineMaxDepth) {
+                  getBlockHeader(parentId) match {
+                    case Some(pbh:BlockHeader) =>
+                      tine.update(parentId,pbh._5)
+                    case None =>
+                      if (job._1 >= 0 && !helloLock) {
+                        bootStrapLock = true
+                        if (tine.maxSlot.get - tine.minSlot.get > slotWindow) tine.loadCache()
+                        bootStrapJob = job._1
+                        if (holderIndex == SharedData.printingHolder && printFlag) println(
+                          "Holder " + holderIndex.toString
+                            + " Looking for Parent Tine, Job:"+job._1
+                            +" Tries:"+counter.toString+" Length:"+tineLength+" Tines:"+tinePool.keySet.size
+                        )
+                        val depth:Int = if (tineLength < tineMaxDepth) {
+                          tineLength
+                        } else {
+                          tineMaxDepth
+                        }
+                        send(selfWrapper,ref, RequestTine(parentId,depth,job._1,selfWrapper))
+                        if (tine.numActive == previousLen) {counter+=1} else {counter=0}
+                        foundAncestor = false
+                      }
                   }
+                } else {
+                  if (holderIndex == SharedData.printingHolder && printFlag) println(
+                    "Holder " + holderIndex.toString
+                      + " Looking for Parent Block, Job:"+job._1
+                      +" Tries:"+counter.toString+" Length:"+tine.numActive+" Tines:"+tinePool.keySet.size
+                  )
+                  send(selfWrapper,ref,RequestBlock(parentId,job._1,selfWrapper))
                   if (tine.numActive == previousLen) {counter+=1} else {counter=0}
                   foundAncestor = false
+                }
               }
             }
           case None =>
