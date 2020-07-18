@@ -685,7 +685,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
           var id:SlotId = best(best.keySet.max)
           var cachePid:Option[SlotId] = None
           assert(id._1 == maxSlot.get)
-          for (value <- best.toArray.reverse.take(12)) {
+          for (value <- best.toArray.reverse) {
             val cache = loaderCache.get(value._1)
             id = toSlotId(cache.last)
             assert(cachePid match {

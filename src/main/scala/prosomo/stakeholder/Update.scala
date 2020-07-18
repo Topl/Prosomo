@@ -148,7 +148,6 @@ trait Update extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Current Epoch = " + currentEpoch.toString)
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
-              assert(localChain.verify)
             }
             inbox = Map()
             scheduleDiffuse()
