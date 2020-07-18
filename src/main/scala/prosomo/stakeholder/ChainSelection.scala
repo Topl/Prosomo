@@ -316,7 +316,9 @@ trait ChainSelection extends Members {
           updateEpoch(slot,epoch,eta,localChain,None) match {
             case result:(Int,Eta) if result._1 > epoch =>
               epoch = result._1
-              history.cacheStakeDist(localChain.best(BigInt(epoch-1)))
+              val stakeDistMaxSlot:Slot = epoch*epochLength-1
+              val stakeDistId:SlotId = localChain.getLastActiveSlot(stakeDistMaxSlot).get
+              history.cacheStakeDist(stakeDistId)
               eta = result._2
               stakingState = getStakingState(epoch,localChain,None)
               alphaCache match {
@@ -449,7 +451,9 @@ trait ChainSelection extends Members {
         updateEpoch(slot,epoch,eta,localChain,None) match {
           case result:(Int,Eta) if result._1 > epoch =>
             epoch = result._1
-            history.cacheStakeDist(localChain.best(BigInt(epoch-1)))
+            val stakeDistMaxSlot:Slot = epoch*epochLength-1
+            val stakeDistId:SlotId = localChain.getLastActiveSlot(stakeDistMaxSlot).get
+            history.cacheStakeDist(stakeDistId)
             eta = result._2
             stakingState = getStakingState(epoch,localChain,None)
             alphaCache match {
