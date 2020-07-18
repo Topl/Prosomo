@@ -433,6 +433,7 @@ trait Receive extends Members {
             println(s"Eta 0: ${Base58.encode(eta)}")
             println("Adding genesis state to history")
             history.add((0,genBlockHash),localState,eta)
+            history.cacheStakeDist((0,genBlockHash))
             stakingState = getStakingState(currentEpoch,localChain,None)
             alphaCache match {
               case Some(loadingCache:LoadingCache[ByteArrayWrapper,Ratio]) =>

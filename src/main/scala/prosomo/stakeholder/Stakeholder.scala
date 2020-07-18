@@ -25,6 +25,7 @@ import scala.util.Random
   * @param inputPassword UI password
   * @param inputKeyDir UI key dir for updates
   */
+
 class Stakeholder(
                    inputSeed:Array[Byte],
                    override val holderIndex:Int,

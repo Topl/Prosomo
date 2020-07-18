@@ -49,42 +49,26 @@ trait Update extends Members {
     */
 
   def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):State = if (ep > 1) {
-    val stakeDistributionSlot:Slot = (ep-1)*epochLength-1
+    val stakeDistMaxSlot:Slot = (ep-1)*epochLength-1
+    val stakeDistId:SlotId = localChain.best(ep-2)
     tine match {
-      case Some(t) if t.minSlot.get <= stakeDistributionSlot =>
-        history.get(t.getLastActiveSlot(stakeDistributionSlot).get) match {
+      case Some(t) if t.minSlot.get <= stakeDistMaxSlot =>
+        history.get(t.getLastActiveSlot(stakeDistMaxSlot).get) match {
           case Some(value:(State,Eta)) =>
             value._1
           case _ =>
-            val thisSlot:Slot = t.lastActiveSlot(stakeDistributionSlot).get
+            val thisSlot:Slot = t.lastActiveSlot(stakeDistMaxSlot).get
             println(s"Could not recover staking state ep $ep slot $thisSlot id:"
-              +Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data)
+              +Base58.encode(localChain.getLastActiveSlot(stakeDistMaxSlot).get._2.data)
               +" from tine")
             SharedData.throwError(holderIndex)
             Map()
         }
       case _ =>
-        history.get(chain.getLastActiveSlot(stakeDistributionSlot).get) match {
-        case Some(value:(State,Eta)) =>
-          value._1
-        case _ =>
-          val thisSlot:Slot = chain.lastActiveSlot(stakeDistributionSlot).get
-          println(s"Could not recover staking state ep $ep slot $thisSlot id:"
-            +Base58.encode(localChain.getLastActiveSlot(stakeDistributionSlot).get._2.data)
-            +" from local chain")
-          SharedData.throwError(holderIndex)
-          Map()
-      }
+        history.getStakeDist(stakeDistId)
     }
   } else {
-    history.get(chain.get(0).get) match {
-      case Some(value:(State,Eta)) =>
-        value._1
-      case _ =>
-        println("Could not recover staking state ep 0")
-        SharedData.throwError(holderIndex)
-        Map()
-    }
+    history.getStakeDist(chain.get(0).get)
   }
 
   /*********************************************************************************************************************
@@ -127,6 +111,7 @@ trait Update extends Members {
         updateEpoch(localSlot,currentEpoch,eta,localChain,None) match {
           case result:(Int,Eta) if result._1 > currentEpoch =>
             currentEpoch = result._1
+            history.cacheStakeDist(localChain.best(BigInt(currentEpoch-1)))
             eta = result._2
             stakingState = getStakingState(currentEpoch,localChain,None)
             alphaCache match {

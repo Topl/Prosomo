@@ -47,6 +47,21 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     stateStoreCache.asMap().keySet().forEach(stateStoreCache.get(_).refresh())
   }
 
+  private val epochStakeDistCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
+    .maximumSize(2)
+    .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
+      def load(id:SlotId):(State,Eta) = {
+        println("Error: stake dist cache miss")
+        stateCache.get(id)
+      }
+    })
+
+  def getStakeDist(id:SlotId):State = {
+    epochStakeDistCache.get(id)._1
+  }
+
+  def cacheStakeDist(id:SlotId):Unit = epochStakeDistCache.refresh(id)
+
   private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
     .maximumSize(cacheSize)
     .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
