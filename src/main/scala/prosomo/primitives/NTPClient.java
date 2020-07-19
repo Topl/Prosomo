@@ -139,7 +139,7 @@ public class NTPClient
         return offsetValue;
     }
 
-    public long getOffset(String[] args)
+    public long getOffset(String[] args) throws Exception
     {
         long offsetValue = 0;
         if (args.length == 0) {
@@ -147,7 +147,7 @@ public class NTPClient
             System.exit(1);
         }
         NTPUDPClient client = new NTPUDPClient();
-        client.setDefaultTimeout(10000);
+        client.setDefaultTimeout(5000);
         try {
             client.open();
             for (String arg : args)
@@ -160,10 +160,12 @@ public class NTPClient
                     offsetValue = processResponse(info);
                 } catch (IOException ioe) {
                     ioe.printStackTrace();
+                    throw new Exception();
                 }
             }
         } catch (SocketException e) {
             e.printStackTrace();
+            throw new Exception();
         }
         client.close();
         return offsetValue;

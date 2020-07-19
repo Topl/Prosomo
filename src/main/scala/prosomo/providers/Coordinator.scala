@@ -167,9 +167,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           case Success(value) =>
             localClockOffset = value
             notSynced = false
-          case Failure(exception) =>
+          case Failure(_) =>
             println("Error: could not fetch global time, trying again...")
-            exception.printStackTrace()
         }
       case None => Try{
         println("Coordinator loading local time data...")
