@@ -13,7 +13,7 @@ import prosomo.remote._
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
-import scala.util.Try
+import scala.util.{Try,Success,Failure}
 
 /**
   * AMS 2020:
@@ -42,14 +42,14 @@ object Parameters {
     val baseConfig = ConfigFactory.load
     var localConfig = baseConfig
     Prosomo.input match {
-      case input:Array[String] => input.foreach(str =>
+      case input:Array[String] if input.nonEmpty => input.foreach(str =>
         Try{
           val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
-          localConfig = ConfigFactory.parseFile(inputConfigFile).getConfig("input").withFallback(localConfig)
+          localConfig = ConfigFactory.parseFile(inputConfigFile).withFallback(localConfig)
         }.toOption match {
           case None =>
             Try{
-              localConfig = ConfigFactory.parseString(str).getConfig("input").withFallback(localConfig)
+              localConfig = ConfigFactory.parseString(str).withFallback(localConfig)
             }.toOption match {
               case None => println("Error: input not parsed")
               case _ =>
@@ -58,6 +58,13 @@ object Parameters {
         }
       )
       case _ =>
+        Try{
+          val inputConfigFile = new File("input.conf")
+          localConfig = ConfigFactory.parseFile(inputConfigFile).withFallback(localConfig)
+        } match {
+          case Success(_) =>
+          case Failure(e) =>
+        }
     }
 
 

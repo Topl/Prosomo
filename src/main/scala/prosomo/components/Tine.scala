@@ -420,7 +420,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     } else if (slot == minSlot.get) {
       minSlot
     } else if (slot < minSlot.get) {
-      None
+      minSlot
     } else {
       tineDB match {
         case Left(cache) =>

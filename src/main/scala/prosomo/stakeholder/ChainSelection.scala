@@ -4,10 +4,10 @@ import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
 import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.{Ratio, SharedData}
+import prosomo.primitives.{ActorRefWrapper, Ratio, SharedData}
 import scorex.util.encode.Base58
 
-import scala.util.{Try,Failure,Success}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks.{break, breakable}
 
 /**

@@ -1,5 +1,6 @@
 package prosomo
 
+import java.io.File
 import java.net.InetSocketAddress
 
 import akka.actor.{ActorRef, ActorSystem}
@@ -8,10 +9,10 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.cases.{GuiCommand, IssueTxToAddress}
-import prosomo.primitives.Parameters
-import prosomo.primitives.{Fch, SharedData, SystemLoadMonitor}
-import prosomo.stakeholder.{Coordinator, Router}
+import prosomo.cases.{GuiCommand, IssueTxToAddress, NewDataFile, NewHolderFromUI, Populate, Register, Run}
+import prosomo.components.Serializer
+import prosomo.primitives.{Fch, Kes, KeyFile, Parameters, SharedData, Sig, SystemLoadMonitor, Vrf}
+import prosomo.providers.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import scorex.core.app.{Application, ScorexContext}
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
@@ -25,7 +26,7 @@ import scorex.util.encode.Base58
 
 import scala.concurrent.ExecutionContext
 import scala.swing._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * AMS 2020:
@@ -46,6 +47,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
   val apiRoutes: Seq[ApiRoute] = Seq()
   val prosomoMessageSpecs = Parameters.prosomoMessageSpecs
   val inputSeed = Parameters.inputSeedString
+  val prosomoNodeUID = Parameters.prosomoNodeUID
 
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
@@ -148,9 +150,67 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
     Coordinator.props(fch.hash(inputSeed),Seq(routerRef,localRef)),
       "Coordinator"
     )
-
+  coordinatorRef ! NewDataFile
+  coordinatorRef ! Populate
+  coordinatorRef ! Register
+  coordinatorRef ! Run
   window match {
     case None =>
+      Try{config.getString("params.password")}.toOption match {
+        case Some(pwd) =>
+          val keyFileDir = Try{config.getString("params.keyFileDir")}.toOption
+          val dataDir = Try{config.getString("params.dataFileDir")}.toOption
+          val yourName = Try{config.getString("params.yourName")}.toOption
+          def getMostRecentDir(dir: String):Option[File] = {
+            val d = new File(dir)
+            if (d.exists && d.isDirectory) {
+              Try{d.listFiles.filter(_.isDirectory).sortBy(f => f.lastModified()).toList.last} match {
+                case Success(r) => Some(r)
+                case Failure(e) =>
+                  println("Error: could not find directory")
+                  e.printStackTrace()
+                  None
+              }
+            } else {
+              None
+            }
+          }
+          val dataLocation:Option[String] = Try{
+            getMostRecentDir(dataDir.get).get.getPath
+          }.toOption
+          val keyLocation:Option[String] = Try{
+            getMostRecentDir(keyFileDir.get).get.getPath
+          }.toOption
+          val agentName:Option[String] = Try{
+            yourName.get + "_" + prosomoNodeUID.take(8)
+          }.toOption
+          val keyFile = Try {
+            val kf:KeyFile = KeyFile.restore(keyLocation.get).get
+            val keys = kf.getKeys(pwd, new Serializer, new Sig, new Vrf, new Kes)
+            kf
+          } match {
+            case Success(kf) => Some(kf)
+            case Failure(e) =>
+              println("Error: could not load key")
+              e.printStackTrace()
+              None
+          }
+          Try{
+            coordinatorRef ! NewHolderFromUI(
+              keyFile.get,
+              dataLocation.get,
+              pwd,
+              agentName.get,
+              keyLocation.get
+            )
+          } match {
+            case Success(_) =>
+            case Failure(e) =>
+              println("Error: could not load node information from given user input")
+              e.printStackTrace()
+          }
+        case None =>
+      }
     case Some(_) => if (!upnpFailed) Try{
       System.setOut(SharedData.printStream)
       window.get.declaredAddressField.get.peer.setOpaque(false)

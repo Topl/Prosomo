@@ -3,9 +3,10 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorPath, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{Fch, Kes, KeyFile, Keys, Ratio, Sig, SimpleTypes, Vrf, Parameters}
+import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, SimpleTypes, Vrf}
 import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+
 import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.Random
@@ -212,8 +213,10 @@ trait Members extends SimpleTypes with Actor with Timers {
   def bootstrapAdoptTine():Unit
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):State
+  def stakingTestStrategy(y:Rho,ps:Slot,bn:Int):Rho
   def update():Unit
   def scheduleDiffuse():Unit
+  def Sha512(bytes: Array[Byte]):Array[Byte]
   def hash(input:ActorRefWrapper,slot:Slot, serializer: Serializer): Hash
   def hash(input:Slot,serializer: Serializer):Hash
   def hash(input:(ActorRefWrapper,PublicKeys), serializer: Serializer):Hash

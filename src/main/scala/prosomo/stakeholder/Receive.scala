@@ -1,8 +1,10 @@
 package prosomo.stakeholder
 
 import java.io.BufferedWriter
+
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import prosomo.primitives.{ Kes, KeyFile, Parameters, Ratio, SharedData, Sig, Vrf}
+import prosomo.primitives.{ActorRefWrapper, Kes, KeyFile, Ratio, SharedData, Sig, Vrf}
+import prosomo.providers.TineProvider
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
@@ -37,6 +39,7 @@ trait Receive extends Members {
       * Primary transaction passing method, each Tx signature is validated and the Tx is statefully checked
       * Newly encountered Txs are sent to gossipers
       **/
+
     case value:SendTx =>
       if (!actorStalled) Try{
         if (!memPool.keySet.contains(value.transaction.sid) && localState.keySet.contains(value.transaction.sender)) {
@@ -61,6 +64,7 @@ trait Receive extends Members {
       * if bootstrapping no new tines are made until the job is done or the connection is lost,
       * when bootstrapping new blocks are added to database but do not enter tinepool
       **/
+
     case value:SendBlock =>
       if (!actorStalled && !SharedData.limiterFlag) Try{
         val foundBlock = blocks.knownInCache((value.block.slot,value.block.id))
@@ -117,6 +121,7 @@ trait Receive extends Members {
     /**
       * Block passing for tinepool functionality, returned blocks are added to block database
       **/
+
     case value:ReturnBlocks =>
       if (!actorStalled) Try{
         def blockToId(b:Block):SlotId = (b.slot,b.id)
@@ -180,6 +185,7 @@ trait Receive extends Members {
     /**
       * Block requesting for tinepool functionality, parent ids that are not found are requested from peers
       **/
+
     case value:RequestBlock =>
       if (!actorStalled) Try{
         if (holderIndex == SharedData.printingHolder && printFlag) {
@@ -204,6 +210,7 @@ trait Receive extends Members {
       * this message is sent as a result of a tine in tinepool becoming long enough to trigger bootstrapping mode,
       * Spins up a provider to search database for blocks
       **/
+
     case value:RequestTine =>
       if (!actorStalled) Try{
         tineProvider match {
@@ -243,6 +250,7 @@ trait Receive extends Members {
       * Greeting message for bootstrapping nodes,
       * contains the last known slot, triggers tine recovery up to current head
       **/
+
     case value:Hello =>
       if (!actorStalled) Try{
         tineProvider match {
@@ -276,6 +284,7 @@ trait Receive extends Members {
     /**
       * Validates diffused keys from other holders and stores in inbox
       **/
+
     case value:DiffuseData => if (!inbox.keySet.contains(value.sid)){
       val pkwNew = ByteArrayWrapper(value.pks._1++value.pks._2++value.pks._3)
       if (pkwNew != keys.pkw) {

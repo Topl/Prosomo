@@ -135,17 +135,12 @@ trait Validation extends Members with Types {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
+      val test:Rho = stakingTestStrategy(y,ps,bn)
       if (f_dynamic) {
         tr_Ep = threshold(alpha_Ep,slot-ps)
       } else {
         tr_Ep = phi(alpha_Ep)
       }
-      val test:Rho = testStrategy match {
-        case "vrf" => y
-        case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
-        case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(bn))
-      }
-
       bool &&= (
         hash(parent,serializer) == h0
           && verifyBlockHeader(block)
@@ -228,12 +223,7 @@ trait Validation extends Members with Types {
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }
-                          val test = testStrategy match {
-                            case "vrf" => y
-                            case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
-                            case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer
-                              .getBytes(bn))
-                          }
+                          val test = stakingTestStrategy(y,ps,bn)
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)

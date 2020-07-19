@@ -1,6 +1,6 @@
-package prosomo.stakeholder
+package prosomo.providers
 
-import java.io.{BufferedWriter, File, FileWriter, IOException}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -15,12 +15,13 @@ import prosomo.components.Serializer.DeserializeGenesisBlock
 import prosomo.components._
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.primitives._
+import prosomo.stakeholder._
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
-import scala.util.{Random, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 
 /**
@@ -133,8 +134,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var genesisBlock:Option[Block] = None
 
   syncGlobalClock()
-  self ! NewDataFile
-  self ! Populate
+
   println("*****************************************************************")
   println("Coordinator Seed: ["+inputSeedString+"]")
   println("*****************************************************************")
@@ -156,19 +156,23 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }.toOption
     timeGenesis match {
       case Some(lines) =>
-        println("Coordinator loading genesis time information...")
+        println("Coordinator fetching global time...")
         val t0in:Long = lines(0).toLong
         t0 = t0in
-        try {
+        var notSynced = true
+        while (notSynced) Try{
           val ntpClient = new NTPClient
-          localClockOffset = ntpClient.getOffset(Array(timeServer))
-        } catch {
-          case e: IOException =>
-            e.printStackTrace()
-            SharedData.throwError
+          ntpClient.getOffset(Array(timeServer))
+        } match {
+          case Success(value) =>
+            localClockOffset = value
+            notSynced = false
+          case Failure(exception) =>
+            println("Error: could not fetch global time, trying again...")
+            exception.printStackTrace()
         }
       case None => Try{
-        println("Coordinator loading time data information...")
+        println("Coordinator loading local time data...")
         val lines = readFile(timeDataFile)
         val t0in:Long = lines.head.toLong
         val tw:Long = lines(1).toLong
@@ -212,7 +216,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
       sendAssertDone(routerRef,HoldersFromLocal(holders,printInfo = true))
       sendAssertDone(localRef,HoldersFromLocal(holders.filterNot(_.remote),printInfo = false))
-      self ! Register
   }
 
   def receiveRemoteHolders: Receive = {
@@ -291,7 +294,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     sendAssertDone(holders.filterNot(_.remote),CoordRef(selfWrapper))
     println("Send GenBlock")
     sendAssertDone(holders.filterNot(_.remote),GenBlock(genesisBlock.get))
-    self ! Run
+
   }
 
   def run:Receive = {

@@ -31,7 +31,7 @@ Outline:
  GUI elements in 4 tabs:
     * Active peers on network
     * Network stats, number of peers, active stake, tine qualities, block time
-    * Node view management
+    * Node database management
     * Secure key creation, key management
   * Terminal output, max 2000 lines
 
@@ -295,7 +295,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           enabled = false
           txWin match {
             case None =>
-            case Some(win) => txWin = None
+            case Some(_) => txWin = None
           }
           txWin = Try{
             new IssueTxWindow(SharedData.issueTxInfo match {
@@ -568,7 +568,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           keysFileChooser.get.peer.rescanCurrentDirectory()
           keyWin match {
             case None =>
-            case Some(win) => keyWin = None
+            case Some(_) => keyWin = None
           }
           keyWin = Try{new KeyManagerWindow(true)}.toOption
           keyWin.get.window.get.open()
@@ -723,50 +723,50 @@ class ProsomoWindow(config:Config) extends ActionListener {
           case scala.swing.event.ButtonClicked(_) =>
             keyFileDir = keysFileChooser.get.selectedFile.getPath
             if (newKey) {
-            if (bip39.validateInputPhrase(bip39Field.get.text)) {
-              Try {
-                val keyFile:KeyFile = KeyFile.fromSeed(
-                  passwordField.get.peer.getPassword.mkString,keyFileDir,
-                  new Serializer,
-                  new Sig,
-                  new Vrf,
-                  new Kes,
-                  SharedData.globalSlot,
-                  fch.hash(hex2bytes(bip39.phraseToHex(bip39Field.get.text))),
-                  windowEntropy2,
-                  windowEntropy3
+              if (bip39.validateInputPhrase(bip39Field.get.text)) {
+                Try {
+                  val keyFile:KeyFile = KeyFile.fromSeed(
+                    passwordField.get.peer.getPassword.mkString,keyFileDir,
+                    new Serializer,
+                    new Sig,
+                    new Vrf,
+                    new Kes,
+                    SharedData.globalSlot,
+                    fch.hash(hex2bytes(bip39.phraseToHex(bip39Field.get.text))),
+                    windowEntropy2,
+                    windowEntropy3
+                  )
+                  val keys = keyFile.getKeys(passwordField.get.peer.getPassword.mkString, new Serializer, new Sig, new Vrf, new Kes)
+                  keyFile
+                }.toOption match {
+                  case None =>
+                    JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE,logo.get)
+                  case Some(kf) =>
+                    windowKeyFile = kf
+                    listener.actionPerformed(new ActionEvent(this,4,"4"))
+                }
+              } else {
+                JOptionPane.showMessageDialog(
+                  this.peer,
+                  "Invalid BIP39 mnemonic phrase.\nA valid phrase can have 12, 15, 18, 21, or 24 words.\nTry generating a new phrase.",
+                  "Invalid Phrase",
+                  JOptionPane.WARNING_MESSAGE,
+                  logo.get
                 )
+              }
+            } else {
+              Try {
+                val keyFile:KeyFile = KeyFile.restore(keyFileDir).get
                 val keys = keyFile.getKeys(passwordField.get.peer.getPassword.mkString, new Serializer, new Sig, new Vrf, new Kes)
                 keyFile
               }.toOption match {
                 case None =>
-                  JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE,logo.get)
+                  JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE,logo.get)
                 case Some(kf) =>
                   windowKeyFile = kf
                   listener.actionPerformed(new ActionEvent(this,4,"4"))
               }
-            } else {
-              JOptionPane.showMessageDialog(
-                this.peer,
-                "Invalid BIP39 mnemonic phrase.\nA valid phrase can have 12, 15, 18, 21, or 24 words.\nTry generating a new phrase.",
-                "Invalid Phrase",
-                JOptionPane.WARNING_MESSAGE,
-                logo.get
-              )
             }
-          } else {
-            Try {
-              val keyFile:KeyFile = KeyFile.restore(keyFileDir).get
-              val keys = keyFile.getKeys(passwordField.get.peer.getPassword.mkString, new Serializer, new Sig, new Vrf, new Kes)
-              keyFile
-            }.toOption match {
-              case None =>
-                JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE,logo.get)
-              case Some(kf) =>
-                windowKeyFile = kf
-                listener.actionPerformed(new ActionEvent(this,4,"4"))
-            }
-          }
         }
         pack()
         centerOnScreen()
@@ -813,14 +813,14 @@ class ProsomoWindow(config:Config) extends ActionListener {
       listenTo(mouse.wheel)
       listenTo(keys)
       reactions += {
-        case event: InputEvent => listener.actionPerformed(new ActionEvent(this,1,"1"))
+        case _: InputEvent => listener.actionPerformed(new ActionEvent(this,1,"1"))
         case _ =>
       }
     }
   }
 
   val newNodeViewButton = Try{
-    new Button ("Create Node View") {
+    new Button ("Create Database") {
       reactions += {
         case ButtonClicked(_) => {
           val file = new File(dataDir+"/"+agentNameField.get.text+"_"+System.currentTimeMillis().toString+"/")
@@ -834,7 +834,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   }.toOption
 
   val openNodeViewButton = Try {
-    new Button ("Load Node View") {
+    new Button ("Load Database") {
       enabled = false
       reactions += {
         case ButtonClicked(_) => {
@@ -848,7 +848,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val nodeViewFileElem = Try {
     new BoxPanel(Orientation.Vertical) {
       contents += new BoxPanel(Orientation.Horizontal) {
-        contents += new TextField("   Select the directory of your node view data, including block and state databases   "){
+        contents += new TextField("   Select the directory of your node data, including block and state databases   "){
           editable = false
           border=BorderFactory.createEmptyBorder()
           peer.setOpaque(false)
@@ -945,7 +945,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     new TabbedPane {
       pages += new TabbedPane.Page("Network Info",netStatsElem.get)
       pages += new TabbedPane.Page("Active Peers",peerListElem.get)
-      pages += new TabbedPane.Page("Manage Node View",nodeViewFileElem.get)
+      pages += new TabbedPane.Page("Manage Database",nodeViewFileElem.get)
       pages += new TabbedPane.Page("Manage Keys",keysFileElem.get)
       tooltip = "Select a tab"
     }

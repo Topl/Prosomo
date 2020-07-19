@@ -22,6 +22,7 @@ trait Forging extends Members with Types {
   /**
     * Determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables
     * */
+
   def forgeBlock(forgerKeys:Keys):Unit = if (!SharedData.limiterFlag) Try{
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(
@@ -78,17 +79,14 @@ trait Forging extends Members with Types {
       }
     }
 
-    if (f_dynamic) {
-      val test = testStrategy match {
-        case "vrf" => y
-        case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
-        case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(pb._9 + 1))
+    if (!bootStrapLock && slot - ps < slotWindow) {
+      val test = stakingTestStrategy(y,ps,pb._9+1)
+      if (f_dynamic) {
+        testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
+      } else {
+        testThenForge(test,phi(forgerKeys.alpha))
       }
-      if (!bootStrapLock && slot - ps < slotWindow) testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
-    } else {
-      if (!bootStrapLock && slot - ps < slotWindow) testThenForge(y,phi(forgerKeys.alpha))
     }
-
   }
 
   def forgeGenBlock(eta0:Eta,

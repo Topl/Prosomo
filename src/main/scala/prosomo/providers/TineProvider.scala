@@ -1,15 +1,14 @@
-package prosomo.stakeholder
+package prosomo.providers
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
-import prosomo.cases.{MessageFromLocalToLocal, MessageFromLocalToLocalId, MessageFromLocalToRemote, ReturnBlocks, DiffuseData}
+import prosomo.cases._
 import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
-import prosomo.primitives.{Fch, SharedData, Sig, SimpleTypes, Types}
-import prosomo.primitives.Parameters
+import prosomo.primitives._
 
 import scala.math.BigInt
-import scala.util.control.Breaks.{break, breakable}
 import scala.util.Random
+import scala.util.control.Breaks.{break, breakable}
 
 /**
   * AMS 2020:

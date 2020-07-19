@@ -1,13 +1,18 @@
-package prosomo.stakeholder
+package prosomo.providers
 
 import akka.actor.{Actor, ActorPath, Props, Timers}
-import com.google.common.primitives.Bytes
 import akka.util.Timeout
+import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
 import prosomo.components.Serializer
-import prosomo.primitives.{Distance, Ecx, Fch, Mac, Parameters, SharedData, Types}
+import prosomo.primitives.{ActorRefWrapper, _}
+import prosomo.remote.SpecTypes._
 import prosomo.remote._
+import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
+import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
+import scorex.core.network._
+import scorex.core.network.message.{Message, MessageSpec}
 import scorex.util.encode.Base58
 
 import scala.collection.immutable.ListMap
@@ -15,11 +20,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.math.BigInt
 import scala.util.{Random, Success, Try}
-import scorex.core.network._
-import scorex.core.network.message.{Message, MessageSpec}
-import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
-import scorex.core.network.NetworkController.ReceivableMessages.{RegisterMessageSpecs, SendToNetwork}
-import prosomo.remote.SpecTypes._
 
 /**
   * AMS 2020:

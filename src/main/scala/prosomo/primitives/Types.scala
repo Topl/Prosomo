@@ -2,7 +2,6 @@ package prosomo.primitives
 
 import java.security.MessageDigest
 
-import prosomo.stakeholder.ActorRefWrapper
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Serializer, Transaction}

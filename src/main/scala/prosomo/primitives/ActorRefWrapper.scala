@@ -1,8 +1,9 @@
-package prosomo.stakeholder
+package prosomo.primitives
 
 import akka.pattern.ask
 import akka.util.Timeout
 import prosomo.cases.MessageFromLocalToRemote
+
 import scala.concurrent.Future
 
 /**
