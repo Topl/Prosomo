@@ -192,6 +192,7 @@ object Parameters {
     config.getInt("params.epochLength")
   }
   val one_third_epoch:Int = epochLength/3
+  val one_ninth_epoch:Int = epochLength/9
   // slot window for chain selection, s = k/4f
   val slotWindow:Int = if (useDelayParam) {
     (k_s*0.25/f_s).toInt
