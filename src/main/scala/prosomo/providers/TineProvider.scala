@@ -1,11 +1,13 @@
 package prosomo.providers
 
 import akka.actor.{Actor, PoisonPill, Props, Timers}
+import akka.util.Timeout
 import prosomo.cases._
 import prosomo.components.{Block, Serializer}
 import prosomo.history.BlockStorage
 import prosomo.primitives._
 
+import scala.concurrent.Await
 import scala.math.BigInt
 import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
@@ -19,41 +21,33 @@ import scala.util.control.Breaks.{break, breakable}
 
 class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit routerRef:ActorRefWrapper)
   extends Actor with Timers with Types {
-  import TineProvider.Info
   val sig:Sig = new Sig
-  val rng:Random = new Random
   val serializer:Serializer = new Serializer
   override val fch = new Fch
-  val useRouting = Parameters.useRouting
-  val useFencing = Parameters.useFencing
   val printFlag = Parameters.printFlag
-  val requestTineInterval = Parameters.requestTineInterval
-  rng.setSeed(0L)
+  val waitTime = Parameters.waitTime
 
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any): Unit = {
-    if (useRouting && !useFencing) {
-      if (ref.remote) {
-        routerRef ! MessageFromLocalToRemote(sender,ref.path, command)
-      } else {
-        localRef ! MessageFromLocalToLocal(sender, ref, command)
-      }
-    } else if (useFencing) {
-      routerRef ! MessageFromLocalToLocalId(BigInt(fch.hash(rng.nextString(64))),sender,ref,command)
+    implicit val timeout:Timeout = Timeout(waitTime)
+    val future = if (ref.remote) {
+      routerRef ? TineProvider.Egress(Left(MessageFromLocalToRemote(sender,ref.path, command)))
     } else {
-      ref ! command
+      localRef ? TineProvider.Egress(Right(MessageFromLocalToLocal(sender, ref, command)))
     }
+    val result = Await.result(future, timeout.duration)
+    assert(result == "done")
   }
 
   override def receive: Receive = {
-    case Info(
-    holderIndex:Int,
-    ref:ActorRefWrapper,
-    holderRef:ActorRefWrapper,
-    startId:SlotId,
-    depth:Int,
-    job:Int,
-    nextBlocks:Option[Array[SlotId]],
-    inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
+    case TineProvider.Info(
+      holderIndex:Int,
+      ref:ActorRefWrapper,
+      holderRef:ActorRefWrapper,
+      startId:SlotId,
+      depth:Int,
+      job:Int,
+      nextBlocks:Option[Array[SlotId]],
+      inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
     ) =>
       if (holderIndex == SharedData.printingHolder && printFlag) {
         println("Holder " + holderIndex.toString + " Was Requested Tine")
@@ -75,12 +69,12 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
                   )
                 case None => break
               }
-              if (!useFencing) Thread.sleep(requestTineInterval)
             } else {
               break
             }
           }
         }
+        //sends new bootstrappers inbox info so they have the diffused messages when they come to the head
         inbox match {
           case Some(data) =>
             for (entry <- data) {
@@ -89,7 +83,6 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
                 ref,
                 DiffuseData(entry._1,entry._2._1,entry._2._2,holderRef)
               )
-              Thread.sleep(requestTineInterval)
             }
           case None =>
         }
@@ -107,7 +100,6 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
                 id = block.parentSlotId
               case None => break
             }
-            if (!useFencing) Thread.sleep(requestTineInterval)
           }
         }
       }
@@ -134,6 +126,8 @@ object TineProvider extends SimpleTypes {
     nextBlocks:Option[Array[SlotId]],
     inbox:Option[Map[Sid,(ActorRefWrapper,PublicKeys)]]
   )
+
+  case class Egress(content:Either[MessageFromLocalToRemote,MessageFromLocalToLocal])
 
   case object Done
 

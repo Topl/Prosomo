@@ -913,6 +913,15 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
             case _ =>
           }
       }
+    case TineProvider.Egress(content) =>
+      content match {
+        case Left(msg:MessageFromLocalToRemote) =>
+          self ! msg
+          sender() ! "done"
+        case Right(msg:MessageFromLocalToLocal) =>
+          self ! msg
+          sender() ! "done"
+      }
   }
 
   private def sendToNetwork[Content,Spec<:MessageSpec[Content]](spec:Spec,c:Content,r:ActorPath):Unit = {
