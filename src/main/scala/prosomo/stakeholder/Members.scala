@@ -55,6 +55,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val numGossipersForge:Int = Parameters.numGossipersForge
   val tineMaxTries:Int = Parameters.tineMaxTries
   val tineMaxDepth:Int = Parameters.tineMaxDepth
+  val tineBootstrappingDepth:Int = Parameters.tineBootstrappingDepth
   val dataOutInterval:Int = Parameters.dataOutInterval
   val waitTime:FiniteDuration = Parameters.waitTime
   val updateTime:FiniteDuration = Parameters.updateTime

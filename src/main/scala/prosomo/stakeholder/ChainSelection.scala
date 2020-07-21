@@ -24,78 +24,6 @@ import scala.util.control.Breaks.{break, breakable}
 
 trait ChainSelection extends Members {
 
-  def updateWallet():Unit = Try{
-    var id = localChain.getLastActiveSlot(globalSlot).get
-    val bn:Int = getBlockHeader(id).get._9
-    if (bn == 0) {
-      wallet.update(history.get(id).get._1)
-      if (holderIndex == SharedData.printingHolder) {
-        SharedData.walletInfo = (
-          wallet.getNumPending,
-          wallet.getConfirmedTxCounter,
-          wallet.getConfirmedBalance,
-          wallet.getPendingBalance
-        )
-        SharedData.issueTxInfo = Some((keys.pkw,inbox))
-        SharedData.selfWrapper = Some(selfWrapper)
-      }
-    } else {
-      breakable{
-        while (true) {
-          id = getParentId(id).get
-          getBlockHeader(id) match {
-            case Some(b:BlockHeader) =>
-              val bni = b._9
-              if (bni <= bn-confirmationDepth || bni == 0) {
-                wallet.update(history.get(id).get._1)
-                if (holderIndex == SharedData.printingHolder) {
-                  SharedData.walletInfo = (
-                    wallet.getNumPending,
-                    wallet.getConfirmedTxCounter,
-                    wallet.getConfirmedBalance,
-                    wallet.getPendingBalance
-                  )
-                  SharedData.issueTxInfo = Some((keys.pkw,inbox))
-                  SharedData.selfWrapper = Some(selfWrapper)
-                }
-                break
-              }
-            case None =>
-              println("Error: invalid id in wallet")
-              break
-          }
-        }
-      }
-    }
-    for (trans:Transaction <- wallet.getPending(localState)) {
-      if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
-    }
-
-    def collectStake():Unit = Try{
-      for (entry<-wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
-        if (wallet.isSameLedgerId(entry._1) && entry._2._1 > 0) {
-          wallet.issueTx(entry._1,wallet.pkw,entry._2._1,keys.sk_sig,sig,rng,serializer) match {
-            case Some(trans:Transaction) =>
-              if (holderIndex == SharedData.printingHolder && printFlag)
-                println("Holder " + holderIndex.toString + " Reallocated Stake")
-              txCounter += 1
-              memPool += (trans.sid->(trans,0))
-              send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
-              wallet.reallocated += (entry._1->trans.nonce)
-            case _ =>
-          }
-        }
-      }
-    }
-    collectStake()
-    walletStorage.store(wallet,serializer)
-  } match {
-    case Failure(exception) =>
-      exception.printStackTrace()
-    case _ =>
-  }
-
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))): Unit = Try{
     val entry = job._2
     var foundAncestor = true
@@ -124,7 +52,7 @@ trait ChainSelection extends Members {
                 }
               } else {
                 val tineLength = tine.numActive
-                if (tineLength>tineMaxDepth) {
+                if (tineLength>tineBootstrappingDepth) {
                   getBlockHeader(parentId) match {
                     case Some(pbh:BlockHeader) =>
                       tine.update(parentId,pbh._5)

@@ -218,6 +218,8 @@ object Parameters {
   val tineMaxTries:Int = config.getInt("params.tineMaxTries")
   //max depth in multiples of confirmation depth that can be returned from an actor
   val tineMaxDepth:Int = config.getInt("params.tineMaxDepth")
+  //max depth to trigger bootstrapping
+  val tineBootstrappingDepth:Int = config.getInt("params.tineBootstrappingDepth")
   //data write interval in slots
   val dataOutInterval:Int = epochLength
   //time out for dropped messages from coordinator
