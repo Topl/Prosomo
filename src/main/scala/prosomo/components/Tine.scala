@@ -145,8 +145,11 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         }
         minSlot match {
           case Some(slot) if slotId._1 < slot =>
-            assert(cache.nonEmpty)
-            assert(slotId == blocks.get(toSlotId(cache.head)).get.parentSlotId)
+            if (cache.nonEmpty) {
+              assert(slotId == blocks.get(toSlotId(cache.head)).get.parentSlotId)
+            } else {
+              assert(slotId ==  blocks.get(toSlotId(loadingCache.get(BigInt(index + 1)).head)).get.parentSlotId)
+            }
             loadingCache.invalidate(cacheKey)
             loadingCache.put(cacheKey,prepend(cache,newEntry))
             minSlot = Some(slotId._1)
