@@ -87,7 +87,8 @@ class PeerConnectionHandler(val settings: NetworkSettings,
       networkControllerRef ! Handshaked(peerInfo)
       handshakeTimeoutCancellableOpt.map(_.cancel())
       connection ! ResumeReading
-      context become workingCycleWriting
+      //context become workingCycleWriting
+      context become workingCycleBuffering
     } orElse handshakeTimeout orElse fatalCommands
   }
 
@@ -168,10 +169,10 @@ class PeerConnectionHandler(val settings: NetworkSettings,
     case ReceivableMessages.Ack(id) =>
       outMessagesBuffer -= id
       if (outMessagesBuffer.nonEmpty) writeFirst()
-      else {
-        log.info("Buffered messages processed, exiting buffering mode")
-        context become workingCycleWriting
-      }
+//      else {
+//        log.info("Buffered messages processed, exiting buffering mode")
+//        context become workingCycleWriting
+//      }
 
     case CloseConnection =>
       log.info(s"Enforced to abort communication with: " + connectionId + s", switching to closing mode")

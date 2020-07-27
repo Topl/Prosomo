@@ -26,6 +26,8 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
                )(implicit blocks:BlockStorage) {
   import Tine._
 
+  val tineCacheSize = 12
+
   /**
     * LoadingCache for restoring segments of tine from the block database,
     * Max size is 12 to accommodate 2 epochs total,
@@ -33,7 +35,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     */
 
    private lazy val tineCache:LoadingCache[BigInt,TineCache] = CacheBuilder.newBuilder()
-    .maximumSize(12)
+    .maximumSize(tineCacheSize)
     .build[BigInt,TineCache](
       new CacheLoader[BigInt,TineCache] {
         def load(epoch3rd:BigInt):TineCache = {
@@ -86,6 +88,24 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
         cache.foreach(entry => this.update((entry._1,entry._2),entry._3))
       case _ =>
         tineDB = Right(tineCache)
+    }
+  }
+
+  /**
+    * Loads data into the tine during initialization, and populates the blocks database cache with latest blocks
+    */
+
+  def populateCache():Unit = {
+    println("Loading tine info from database...")
+    tineDB match {
+      case Left(_) => assert(false)
+      case Right(loadingCache) =>
+        assert(best.nonEmpty)
+        val indexBest = best.keySet.max
+        for (i <- BigInt(Array(0,indexBest.toInt-tineCacheSize).max) to indexBest) {
+          loadingCache.refresh(i)
+        }
+        blocks.populateCache(best(indexBest))
     }
   }
 
@@ -726,13 +746,18 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
 }
 
 object Tine extends SimpleTypes {
+
   val databaseInterval: Slot = Parameters.one_third_epoch
   val slotWindow: Slot = Parameters.slotWindow
+
   type SlotData = (Slot,BlockId,Rho)
   type TineCache = Array[SlotData]
+
   def emptyTineCache:TineCache = Array.empty
+
   def append(tineCache: TineCache,input:SlotData):TineCache =
     tineCache ++ Array(input)
+
   def prepend(tineCache:TineCache,input:SlotData):TineCache =
     Array(input) ++ tineCache
 
@@ -745,7 +770,7 @@ object Tine extends SimpleTypes {
     out
   }
 
-  //for loading localChain data from db
+  //for loading localChain data from disk
   def apply(data:TineData)(implicit blocks:BlockStorage):Tine = {
     val out = new Tine
     out.loadCache()

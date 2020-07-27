@@ -179,4 +179,14 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
     }
   }
 
+  def populateCache(id:SlotId):Unit = {
+    var i = 0
+    var loadId = id
+    while (i < cacheSize) {
+      blockCache.refresh(loadId)
+      loadId = blockCache.get(loadId).parentSlotId
+      i += 1
+    }
+  }
+
 }
