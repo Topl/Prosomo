@@ -26,6 +26,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
   override val fch = new Fch
   val printFlag = Parameters.printFlag
   val waitTime = Parameters.waitTime
+  val requestTineInterval = Parameters.requestTineInterval
 
   def send(sender:ActorRefWrapper, ref:ActorRefWrapper, command: Any): Unit = {
     implicit val timeout:Timeout = Timeout(waitTime)
@@ -72,6 +73,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
             } else {
               break
             }
+            Thread.sleep(requestTineInterval)
           }
         }
         //sends new bootstrappers inbox info so they have the diffused messages when they come to the head
@@ -100,6 +102,7 @@ class TineProvider(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit
                 id = block.parentSlotId
               case None => break
             }
+            Thread.sleep(requestTineInterval)
           }
         }
       }

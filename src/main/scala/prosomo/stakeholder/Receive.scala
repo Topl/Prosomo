@@ -391,7 +391,7 @@ trait Receive extends Members {
 
     /**allocation and vars of simulation*/
     case Initialize(gs,inputPassword) =>
-      globalSlot = gs
+      globalSlot = if (gs > 0) {gs} else {0}
       println("Holder "+holderIndex.toString+s" setting up")
       println("Configuring key...")
       time{
