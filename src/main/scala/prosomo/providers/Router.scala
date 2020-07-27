@@ -466,7 +466,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                                 pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                                 r.actorRef ! DiffuseData(msg._4,ActorRefWrapper(ref),msg._5,s)
                               } else {
-                                println("Error: Diffuse MAC failed")
+                                println(s"Error: Diffuse MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                               }
                             }
                             case _ => println("Error: Diffuse message path not valid")
@@ -499,7 +499,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! Hello(msg._3,s)
                           } else {
-                            println("Error: Hello MAC failed")
+                            println(s"Error: Hello MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: Hello message not parsed")
@@ -530,7 +530,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! RequestBlock(msg._3,msg._4,s)
                           } else {
-                            println("Error: RequestBlock MAC failed")
+                            println(s"Error: RequestBlock MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: RequestBlock message not parsed")
@@ -563,7 +563,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! RequestTine(msg._3,msg._4,msg._5,s)
                           } else {
-                            println("Error: RequestTine MAC failed")
+                            println(s"Error: RequestTine MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: RequestTine message not parsed")
@@ -595,7 +595,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! ReturnBlocks(msg._3,msg._4,s)
                           } else {
-                            println("Error: ReturnBlocks MAC failed")
+                            println(s"Error: ReturnBlocks MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: ReturnBlocks message not parsed")
@@ -626,7 +626,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! SendBlock(msg._3,s)
                           } else {
-                            println("Error: SendBlock MAC failed")
+                            println(s"Error: SendBlock MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: SendBlock message not parsed")
@@ -658,7 +658,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                             pathToPeer += (s.actorPath->(peerInfo._1,peerInfo._2,mac.time))
                             r.actorRef ! SendTx(msg._3,s)
                           } else {
-                            println("Error: SendTx MAC failed")
+                            println(s"Error: SendTx MAC failed with code ${Base58.encode(mac.hash.data)} time ${mac.time}")
                           }
                         }
                         case None => println("Error: SendTx paths not valid")
