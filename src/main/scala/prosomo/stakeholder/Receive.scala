@@ -475,6 +475,7 @@ trait Receive extends Members {
           case Some(newChain:Tine) =>
             localChain.loadCache()
             localChain.copy(newChain)
+            localChain.populateCache()
             val headId = localChain.head
             localSlot = headId._1
             val newHead = getBlockHeader(headId)
