@@ -9,4 +9,6 @@
 -XX:ConcGCThreads=8
 -XX:InitiatingHeapOccupancyPercent=90
 -XX:G1HeapRegionSize=2
+-Dawt.useSystemAAFontSettings=on
+-Dswing.aatext=true
 -Dprosomo

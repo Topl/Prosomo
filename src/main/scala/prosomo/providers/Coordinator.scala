@@ -156,7 +156,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     }.toOption
     timeGenesis match {
       case Some(lines) =>
-        println("Coordinator fetching global time...")
+        println("\nCoordinator fetching global time...")
         val t0in:Long = lines(0).toLong
         t0 = t0in
         var notSynced = true
@@ -171,7 +171,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
             println("Error: could not fetch global time, trying again...")
         }
       case None => Try{
-        println("Coordinator loading local time data...")
+        println("\nCoordinator loading local time data...")
         val lines = readFile(timeDataFile)
         val t0in:Long = lines.head.toLong
         val tw:Long = lines(1).toLong
@@ -818,14 +818,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       }
   }
 
-  override def receive:Receive = giveTime orElse
-    newHolderFromUI orElse
-    run orElse
-    populate orElse
-    receiveRemoteHolders orElse
-    restoreOrGenerateGenBlock orElse
-    nextSlot orElse
-    dataFile orElse {
+  def auxCoordFunc:Receive = {
     /**tells actors to print their inbox */
     case Inbox => sendAssertDone(holders.filterNot(_.remote),Inbox)
     /**passes fileWriter to actor who requests it with WriteFile*/
@@ -839,11 +832,21 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
     /**command interpretation from config and cmd script*/
     case ReadCommand => readCommand()
     case GuiCommand(s) => readCommand(s)
-    case unknown:Any => if (!actorStalled) {
+    case any:Any => {
       print("Error: Coordinator received unknown message ")
-      println(unknown.getClass.toString+" "+unknown.toString)
+      println(any.getClass.toString+" "+any.toString)
     }
   }
+
+  override def receive:Receive = giveTime orElse
+    newHolderFromUI orElse
+    run orElse
+    populate orElse
+    receiveRemoteHolders orElse
+    restoreOrGenerateGenBlock orElse
+    nextSlot orElse
+    dataFile orElse
+    auxCoordFunc
 }
 
 object Coordinator {

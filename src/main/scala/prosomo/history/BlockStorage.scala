@@ -182,10 +182,15 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
   def populateCache(id:SlotId):Unit = {
     var i = 0
     var loadId = id
-    while (i < cacheSize) {
+    var done = false
+    while (i < cacheSize && !done) {
       blockCache.refresh(loadId)
-      loadId = blockCache.get(loadId).parentSlotId
-      i += 1
+      if (loadId._1 > 0) {
+        loadId = blockCache.get(loadId).parentSlotId
+        i += 1
+      } else {
+        done = true
+      }
     }
   }
 

@@ -497,6 +497,7 @@ trait Receive extends Members {
                 )
               )
             }
+            updateWallet()
         }
       }
       println("Setting relative stake...")

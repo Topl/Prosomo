@@ -215,8 +215,6 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
       System.setOut(SharedData.printStream)
       window.get.declaredAddressField.get.peer.setOpaque(false)
       window.get.declaredAddressField.get.text = externalSocketAddress.get.toString
-      window.get.activePane.get.pages(1).enabled = true
-      window.get.activePane.get.pages(2).enabled = true
       window.get.connectButton.get.text = "Connected"
       window.get.window.get.reactions += {
         case event.WindowClosed(_) =>
@@ -226,11 +224,13 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
           System.setOut(SharedData.oldOut)
       }
       window.get.cmdButton.get.reactions += {
-        case event.ButtonClicked(_) =>
+        case event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _)
+          if window.get.cmdButton.get.hasFocus && window.get.cmdButton.get.enabled =>
           coordinatorRef ! GuiCommand(window.get.cmdField.get.text)
       }
       window.get.sendTxButton.get.reactions += {
-        case scala.swing.event.ButtonClicked(_) =>
+        case scala.swing.event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _)
+          if window.get.sendTxButton.get.hasFocus && window.get.sendTxButton.get.enabled =>
           SharedData.selfWrapper match {
             case Some(actorRefWrapper) =>
               Base58.decode(window.get.txWin.get.recipField.get.text).toOption match {
@@ -294,6 +294,8 @@ object Prosomo extends App {
   val useGui = Parameters.useGui
   val systemLoadThreshold = Parameters.systemLoadThreshold
   val config = Parameters.config
+
+  
 
   def limiter:Unit = {
     if (performanceFlag) {
