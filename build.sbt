@@ -8,12 +8,12 @@ trapExit := false
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.8",
   organization := "co.topl",
-  version := "0.7.8"
+  version := "0.7.9"
 )
 
 scalaVersion := "2.12.8"
 organization := "co.topl"
-version := "0.7.8"
+version := "0.7.9"
 
 mainClass in (Compile, run) := Some("prosomo.Prosomo")
 mainClass in runMain := Some("prosomo.Prosomo")
@@ -34,7 +34,7 @@ val akkaHttpVersion = "10.1.9"
 resolvers ++= Seq("Bintray" at "https://jcenter.bintray.com/")
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
-libraryDependencies += "com.formdev" % "flatlaf" % "0.38" % "compile"
+libraryDependencies += "com.formdev" % "flatlaf" % "0.38"
 libraryDependencies ++= Seq(
   "org.scorexfoundation" %% "iodb" % "0.3.+",
   "org.iq80.leveldb" % "leveldb" % "0.12"
@@ -127,15 +127,17 @@ pomIncludeRepository := { _ => false }
 
 homepage := Some(url("https://github.com/Topl/Prosomo"))
 
-assemblyMergeStrategy in assembly ~= { old: ((String) => MergeStrategy) => {
+assemblyMergeStrategy in assembly := {
     case ps if ps.endsWith(".SF")      => MergeStrategy.discard
     case ps if ps.endsWith(".DSA")     => MergeStrategy.discard
     case ps if ps.endsWith(".RSA")     => MergeStrategy.discard
     case ps if ps.endsWith(".xml")     => MergeStrategy.first
     case PathList("module-info.class") => MergeStrategy.discard
+    case "META-INF/versions/9/module-info.class" => MergeStrategy.discard
     case PathList("module-info.java")  => MergeStrategy.discard
     case "META-INF/truffle/instrument" => MergeStrategy.concat
     case "META-INF/truffle/language"   => MergeStrategy.rename
-    case x => old(x)
-  }
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
 }
