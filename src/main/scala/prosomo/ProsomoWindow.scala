@@ -20,7 +20,6 @@ import scala.util.{Failure, Success, Try}
 import com.formdev.flatlaf
 import javax.swing.UIManager
 import javax.swing.plaf.ColorUIResource
-import com.formdev.flatlaf.util.DerivedColor
 
 /**
   * AMS 2020:
@@ -62,6 +61,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
   Try{
     System.setProperty("apple.laf.useScreenMenuBar", "true")
     System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prosomo")
+    System.setProperty("awt.useSystemAAFontSettings","on")
+    System.setProperty("swing.aatext", "true")
     flatlaf.FlatDarkLaf.install()
     UIManager.setLookAndFeel(new flatlaf.FlatDarkLaf())
     val uidef = UIManager.getLookAndFeelDefaults()
@@ -850,19 +851,19 @@ class ProsomoWindow(config:Config) extends ActionListener {
       new Frame {
         title = if (newKey) {"Create Key"} else {"Load Key"}
         iconImage = icon.get.getImage
-        contents = new BoxPanel(Orientation.Vertical) {
-          border = Swing.EmptyBorder(10, 10, 10, 10)
-          contents += new BoxPanel(Orientation.Horizontal) {
+        val thisBoxRef = new BoxPanel(Orientation.Vertical) {border = Swing.EmptyBorder(10, 10, 10, 10)}
+        contents = {
+          thisBoxRef.contents += new BoxPanel(Orientation.Horizontal) {
             contents += passwordHelp.get
             contents += passwordField.get
             border = Swing.EmptyBorder(0, 0, 10, 0)
           }
-          if (newKey) contents += new BoxPanel(Orientation.Horizontal) {
+          if (newKey) thisBoxRef.contents += new BoxPanel(Orientation.Horizontal) {
             contents += confirmHelp.get
             contents += confirmPasswordField.get
             border = Swing.EmptyBorder(0, 0, 10, 0)
           }
-          if (newKey) contents += {
+          if (newKey) thisBoxRef.contents += {
             new BoxPanel(Orientation.Horizontal) {
               contents += bip39Help.get
               contents += new Button ("Seed New Phrase") {
@@ -875,7 +876,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
                     windowEntropy3 = fch.hash(uuid)
                     bip39Field.get.editable = false
                     JOptionPane.showMessageDialog(
-                      this.peer,
+                      thisBoxRef.peer,
                       "A new mnemonic phrase has been generated for you.\nWrite it down, it will not be shown again.\nYou may use it to recover your account in the future.",
                       "New Phrase",
                       JOptionPane.INFORMATION_MESSAGE,
@@ -886,8 +887,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
               border = Swing.EmptyBorder(10, 0, 10, 0)
             }
           }
-          if (newKey) contents += bip39Field.get
-          contents += new BoxPanel(Orientation.Horizontal) {
+          if (newKey) thisBoxRef.contents += bip39Field.get
+          thisBoxRef.contents += new BoxPanel(Orientation.Horizontal) {
             contents += readyButton.get
             peer.add(Box.createHorizontalStrut(10))
             contents += new Button ("Cancel") {
@@ -901,6 +902,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
             maximumSize = new Dimension(200,30)
             border = Swing.EmptyBorder(10, 10, 10, 10)
           }
+          thisBoxRef
         }
         if (newKey) {
           minimumSize = new Dimension(800,200)
@@ -927,14 +929,14 @@ class ProsomoWindow(config:Config) extends ActionListener {
                   keyFile
                 }.toOption match {
                   case None =>
-                    JOptionPane.showMessageDialog(this.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE,logo.get)
+                    JOptionPane.showMessageDialog(thisBoxRef.peer, "Key generation failed", "Error", JOptionPane.WARNING_MESSAGE,logo.get)
                   case Some(kf) =>
                     windowKeyFile = kf
                     listener.actionPerformed(new ActionEvent(this,4,"4"))
                 }
               } else {
                 JOptionPane.showMessageDialog(
-                  this.peer,
+                  thisBoxRef.peer,
                   "Invalid BIP39 mnemonic phrase.\nA valid phrase can have 12, 15, 18, 21, or 24 words.\nTry generating a new phrase.",
                   "Invalid Phrase",
                   JOptionPane.WARNING_MESSAGE,
@@ -948,7 +950,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
                 keyFile
               }.toOption match {
                 case None =>
-                  JOptionPane.showMessageDialog(this.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE,logo.get)
+                  JOptionPane.showMessageDialog(thisBoxRef.peer, "Password is incorrect.\nTry again.", "Invalid Password", JOptionPane.WARNING_MESSAGE,logo.get)
                 case Some(kf) =>
                   windowKeyFile = kf
                   listener.actionPerformed(new ActionEvent(this,4,"4"))
