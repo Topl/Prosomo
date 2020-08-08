@@ -63,7 +63,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     System.setProperty("awt.useSystemAAFontSettings","on")
     System.setProperty("swing.aatext", "true")
     flatlaf.FlatDarkLaf.install()
-    UIManager.setLookAndFeel(new flatlaf.FlatDarkLaf())
+    //UIManager.setLookAndFeel(new flatlaf.FlatDarkLaf())
     val uidef = UIManager.getLookAndFeelDefaults()
 //    uidef.entrySet().forEach(p => p.getValue match {
 //      case c:Color => System.err.println(p.getKey.toString+": "+p.getKey.getClass.toString+" = "+c.toString)
@@ -179,8 +179,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   def peerSeq:Seq[String] = {
     var out:Seq[String] = Seq()
     for (entry<-SharedData.guiPeerInfo) {
-      out ++= Seq(entry._1)
-      out ++= entry._2.map("  "+_.actorPath.toString)
+      out ++= entry._2.map(_.actorPath.toString)
     }
     out
   }
@@ -190,11 +189,11 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val peerList = Try{
     new ListView[String] {
       peer.setModel(peerListModel)
-      font = swing.Font("Monospaced",Style.Plain,14)
+      font = swing.Font("Monospaced",Style.Plain,16)
       focusable = false
       renderer = ListView.Renderer(entry=>{
         val padlen = 30
-        var out = entry.padTo(60,' ').take(60)
+        var out = entry.split('/').last.padTo(60,' ').take(60)
         if (SharedData.stakingAlpha.isDefinedAt(entry.trim)) {
           out += f"Epoch Stake ${SharedData.stakingAlpha(entry.trim)}%1.8f".padTo(padlen,' ').take(padlen)
         }
@@ -209,7 +208,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
         }
         out
       })
-
     }
   }.toOption
 
