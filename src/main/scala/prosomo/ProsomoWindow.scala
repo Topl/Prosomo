@@ -1132,7 +1132,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
       contents += nameElem.get
       contents += agentNameElem.get
       maximumSize = new Dimension(2000,2000)
-      preferredSize = new Dimension(800,500)
+      preferredSize = new Dimension(800,365)
       minimumSize = new Dimension(100,100)
       focusable = false
     }
@@ -1296,17 +1296,28 @@ class ProsomoWindow(config:Config) extends ActionListener {
         nameField.get.enabled = false
         nameNetBoxElem.get.contents -= nameElem.get
         nameNetBoxElem.get.contents -= agentNameElem.get
+        var lastSeparator:Option[Component] = None
         netStats.foreach(f => {
-          nameNetBoxElem.get.contents += new Separator()
           nameNetBoxElem.get.contents += {
             new BoxPanel(Orientation.Vertical) {
               contents += f
               focusable = false
-              border = Swing.EmptyBorder(0, 20, 0, 0)
+              border = Swing.EmptyBorder(0, 20, 0, 20)
             }
           }
+          nameNetBoxElem.get.contents += {
+            lastSeparator = Some(new BoxPanel(Orientation.Horizontal) {
+              contents += new Separator()
+              focusable = false
+              border = Swing.EmptyBorder(0, 10, 0, 10)
+            })
+            lastSeparator.get
+          }
         })
-        nameNetBoxElem.get.contents += new Separator()
+        lastSeparator match {
+          case Some(ref) => nameNetBoxElem.get.contents -= ref
+          case None =>
+        }
         connectButton.get.enabled = false
         connectButton.get.text = "Connecting..."
         knownAddressField.get.editable = false
