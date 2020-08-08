@@ -98,8 +98,14 @@ trait ChainSelection extends Members {
 
     if (foundAncestor) {
       if (tine.notSparsePast(prefix.get)) {
-        if (holderIndex == SharedData.printingHolder && printFlag)
-          println(s"Tine length = ${tine.numActive} Common prefix slot = ${prefix.get}")
+        if (holderIndex == SharedData.printingHolder && printFlag) {
+          val tl = tine.numActive
+          println(s"Tine length = ${tl} Common prefix slot = ${prefix.get}")
+          tineLengthList ::= tl.toDouble
+          if (tineLengthList.size > 100) tineLengthList.take(100)
+          SharedData.averageTineLength = average(tineLengthList)
+          SharedData.maxTineLength = Array(SharedData.maxTineLength,tl).max
+        }
         tinePoolWithPrefix = Array((tine,prefix.get,job._1)) ++ tinePoolWithPrefix
       }
       tinePool -= job._1

@@ -6,7 +6,7 @@ import java.io.File
 
 import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigFactory}
-import javax.swing.{BorderFactory, Box, JOptionPane, SwingUtilities}
+import javax.swing.{BorderFactory, Box, DefaultListModel, JOptionPane, SwingUtilities, UIManager}
 import prosomo.cases.NewHolderFromUI
 import prosomo.components.Serializer
 import prosomo.primitives.Parameters.{devMode, fch}
@@ -18,7 +18,6 @@ import scala.swing._
 import scala.swing.event.{ButtonClicked, InputEvent, KeyReleased}
 import scala.util.{Failure, Success, Try}
 import com.formdev.flatlaf
-import javax.swing.UIManager
 import javax.swing.plaf.ColorUIResource
 
 /**
@@ -186,8 +185,11 @@ class ProsomoWindow(config:Config) extends ActionListener {
     out
   }
 
-  var peerList = Try{
-    new ListView(peerSeq) {
+  val peerListModel = new DefaultListModel[String]()
+
+  val peerList = Try{
+    new ListView[String] {
+      peer.setModel(peerListModel)
       font = swing.Font("Monospaced",Style.Plain,14)
       focusable = false
       renderer = ListView.Renderer(entry=>{
@@ -463,41 +465,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
-  val sendToNetworkButton = Try{
-    new Button ("Send To Network") {
-      listenTo(keys)
-      reactions += {
-        case scala.swing.event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _) if hasFocus && enabled =>
-          confirmSendToNetworkWindow.get.open()
-      }
-    }
-  }.toOption
-
   val sendTxButton = Try {
     new Button ("Send") {listenTo(keys)}
-  }.toOption
-
-  val confirmSendToNetworkWindow = Try {
-    new Frame {
-      title = "Confirm"
-      iconImage = icon.get.getImage
-      contents = new BorderPanel {
-        border = Swing.EmptyBorder(10, 10, 10, 10)
-        add(sendTxButton.get,BorderPanel.Position.East)
-        add(new Button ("Cancel") {
-          listenTo(keys)
-          reactions += {
-            case scala.swing.event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _) if hasFocus && enabled => {
-              close()
-            }
-          }
-        },BorderPanel.Position.West)
-      }
-      maximumSize = new Dimension(240,50)
-      minimumSize = new Dimension(240,50)
-      pack()
-      centerOnScreen()
-    }
   }.toOption
 
   class IssueTxWindow(sender:String,inbox:Seq[String]) extends ActionListener {
@@ -553,6 +522,16 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }.toOption
 
     recipDropList.get.peer.addActionListener(this)
+
+    val sendToNetworkButton = Try{
+      new Button ("Send To Network") {
+        listenTo(keys)
+        reactions += {
+          case scala.swing.event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _) if hasFocus && enabled =>
+            confirmSendToNetworkWindow.get.open()
+        }
+      }
+    }.toOption
 
     val issueTxWindow:Option[Frame] = Try{
       new Frame {
@@ -626,6 +605,34 @@ class ProsomoWindow(config:Config) extends ActionListener {
       case Success(v) => Some(v)
       case Failure(e) =>
         e.printStackTrace()
+        None
+    }
+
+    val confirmSendToNetworkWindow = Try {
+      new Dialog(issueTxWindow.get) {
+        title = "Confirm Transaction"
+        modal = true
+        contents = new BorderPanel {
+          border = Swing.EmptyBorder(10, 10, 10, 10)
+          add(sendTxButton.get,BorderPanel.Position.East)
+          add(new Button ("Cancel") {
+            listenTo(keys)
+            reactions += {
+              case scala.swing.event.ButtonClicked(_) | event.KeyPressed(_, event.Key.Enter, _, _) if hasFocus && enabled => {
+                close()
+              }
+            }
+          },BorderPanel.Position.West)
+        }
+        maximumSize = new Dimension(240,50)
+        minimumSize = new Dimension(240,50)
+        pack()
+        centerOnScreen()
+      }
+    } match {
+      case Success(value) => Some(value)
+      case Failure(exception) =>
+        exception.printStackTrace()
         None
     }
 
@@ -1099,14 +1106,6 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }.toOption
 
-  val netStats = Try{
-    new TextArea {
-      text = ""
-      editable = false
-      border=BorderFactory.createEmptyBorder()
-      focusable = false
-    }
-  }.toOption
 
   val nameElem = Try{
     new BoxPanel(Orientation.Horizontal) {
@@ -1132,9 +1131,8 @@ class ProsomoWindow(config:Config) extends ActionListener {
     new BoxPanel(Orientation.Vertical) {
       contents += nameElem.get
       contents += agentNameElem.get
-      contents += netStats.get
       maximumSize = new Dimension(2000,2000)
-      preferredSize = new Dimension(800,400)
+      preferredSize = new Dimension(800,500)
       minimumSize = new Dimension(100,100)
       focusable = false
     }
@@ -1195,8 +1193,30 @@ class ProsomoWindow(config:Config) extends ActionListener {
   }
 
   def refreshPeerList = {
-    SwingUtilities.invokeAndWait(()=>peerList.get.peer.setListData(peerSeq.toArray))
+    SwingUtilities.invokeAndWait(()=>{
+      val newPeers:Array[String] = peerSeq.toArray
+      val oldPeers:Array[String] = peerListModel.toArray.map{ case str: String => str }
+      newPeers.foreach(str=>
+        if (!oldPeers.contains(str)) peerListModel.addElement(str)
+      )
+      oldPeers.foreach(str=>
+        if (!newPeers.contains(str)) peerListModel.removeElement(str)
+      )
+    })
   }
+
+  val netStats = Array.fill(11){netStatTextArea}
+
+  def netStatTextArea:TextField = {
+    new TextField {
+      text = ""
+      editable = false
+      border=BorderFactory.createEmptyBorder()
+      focusable = false
+      //preferredSize = new Dimension(500,10)
+    }
+  }
+
 
   def refreshWallet() = {
     if (pendingTxField.get.enabled) {
@@ -1206,17 +1226,17 @@ class ProsomoWindow(config:Config) extends ActionListener {
       }
     }
     Swing.onEDT{
-      netStats.get.text = {
-        var text = "\n\n"
-        text += s"        Number of active peers discovered on the network: ${SharedData.activePeers}\n\n"
-        text += f"        Proportion of active stake online in the current staking distribution: ${SharedData.activeStake}%1.5f\n\n"
-        text += f"        Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f\n\n"
-        text += f"        Proportion of active slots as block number divided by global slot: ${SharedData.activeSlots}%5.5f\n\n"
-        text += f"        Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f\n\n"
-        text += s"        Transactions in mempool: ${SharedData.numTxsMempool}\n\n"
-        text += f"        Average block delay: ${SharedData.averageNetworkDelay}%5.5f\n\n"
-        text
-      }
+      netStats(0).text = s"Number of active peers discovered on the network: ${SharedData.activePeers}"
+      netStats(1).text = f"Proportion of active stake online in the current staking distribution: ${SharedData.activeStake}%1.5f"
+      netStats(2).text = f"Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f"
+      netStats(3).text = f"Proportion of active slots as block number divided by global slot: ${SharedData.activeSlots}%5.5f"
+      netStats(4).text = f"Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f"
+      netStats(5).text = s"Transactions in mempool: ${SharedData.numTxsMempool}"
+      netStats(6).text = f"Average block delay: ${SharedData.averageNetworkDelay}%5.5f"
+      netStats(7).text = s"Maximum block delay: ${SharedData.maxNetworkDelay}"
+      netStats(8).text = s"Minimum block delay: ${SharedData.minNetworkDelay}"
+      netStats(9).text = f"Average tine length: ${SharedData.averageTineLength}%5.5f"
+      netStats(10).text = s"Maximum tine length: ${SharedData.maxTineLength}"
     }
   }
 
@@ -1276,6 +1296,17 @@ class ProsomoWindow(config:Config) extends ActionListener {
         nameField.get.enabled = false
         nameNetBoxElem.get.contents -= nameElem.get
         nameNetBoxElem.get.contents -= agentNameElem.get
+        netStats.foreach(f => {
+          nameNetBoxElem.get.contents += new Separator()
+          nameNetBoxElem.get.contents += {
+            new BoxPanel(Orientation.Vertical) {
+              contents += f
+              focusable = false
+              border = Swing.EmptyBorder(0, 20, 0, 0)
+            }
+          }
+        })
+        nameNetBoxElem.get.contents += new Separator()
         connectButton.get.enabled = false
         connectButton.get.text = "Connecting..."
         knownAddressField.get.editable = false

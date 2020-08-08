@@ -74,11 +74,14 @@ trait Receive extends Members {
           val bSlot = b._3
           val bRho = b._5
           if (holderIndex == SharedData.printingHolder && !helloLock) {
-            networkDelayList ::= (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
+            val newDelay = (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
+            networkDelayList ::= newDelay
             if (networkDelayList.size > 100) networkDelayList.take(100)
-            def average(points:List[Double]):Double={
-              val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
-              net/num
+            SharedData.maxNetworkDelay = Array(newDelay,SharedData.maxNetworkDelay).max
+            if (SharedData.minNetworkDelay == 0.0) {
+              SharedData.minNetworkDelay = newDelay
+            } else {
+              SharedData.minNetworkDelay = Array(newDelay,SharedData.minNetworkDelay).min
             }
             SharedData.averageNetworkDelay = average(networkDelayList)
           }

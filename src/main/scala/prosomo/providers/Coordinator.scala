@@ -130,6 +130,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var transactionCounter:Int = 0
   var localClockOffset:Long = 0
   var networkDelayList: List[Double] = List(0.0)
+  var tineLengthList: List[Double] = List(0.0)
   var holdersToIssueRandomly:List[ActorRefWrapper] = List()
   var genesisBlock:Option[Block] = None
 

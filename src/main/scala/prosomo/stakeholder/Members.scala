@@ -137,8 +137,13 @@ trait Members extends SimpleTypes with Actor with Timers {
   var alphaCache:Option[LoadingCache[ByteArrayWrapper,Ratio]]
   var thresholdCache:Option[LoadingCache[(Ratio,Slot),Ratio]]
   var networkDelayList:List[Double]
+  var tineLengthList:List[Double]
   var genesisBlock:Option[Block]
 
+  def average(points:List[Double]):Double={
+    val (net,num) = points.foldLeft((0.0,0))({ case ((s,l),x)=> (x+s,1+l) })
+    net/num
+  }
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet():Unit

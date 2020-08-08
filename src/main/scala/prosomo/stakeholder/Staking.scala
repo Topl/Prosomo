@@ -15,7 +15,7 @@ import scala.math.BigInt
 trait Staking extends Members {
 
   /**
-    * Aggregate staking function used for calculating threshold per epoch, fixed difficulty
+    * Staking function used for calculating threshold per epoch, fixed difficulty
     * @param a relative stake
     * @return probability of being elected slot leader
     */
@@ -30,7 +30,7 @@ trait Staking extends Members {
   }
 
   /**
-    * Aggregate staking function used for calculating threshold per epoch, dynamic difficulty
+    * Staking function used for calculating threshold per epoch, dynamic difficulty
     * @param a relative stake
     * @param m_f coefficient log(1-f(slot-parentSlot))
     * @return probability of being elected slot leader
@@ -46,7 +46,7 @@ trait Staking extends Members {
   }
 
   /**
-    * Aggregate staking function parameterized in terms of slot and parent slot, dynamic difficulty
+    * Staking function parameterized in terms of slot and parent slot, dynamic difficulty
     * @param a relative stake
     * @param s_interval delta between slot of header and slot of parent
     * @return probability of being elected slot leader

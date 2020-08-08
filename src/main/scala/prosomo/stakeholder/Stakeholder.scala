@@ -144,6 +144,7 @@ class Stakeholder(
   var alphaCache: Option[LoadingCache[ByteArrayWrapper, Ratio]] = None
   var thresholdCache: Option[LoadingCache[(Ratio,Slot), Ratio]] = None
   var networkDelayList: List[Double] = List(0.0)
+  var tineLengthList: List[Double] = List(0.0)
 }
 
 object Stakeholder {

@@ -82,6 +82,10 @@ object SharedData extends Types {
   var numTxsMempool:Int = 0
   var activeSlots:Double = 0.0
   var averageNetworkDelay:Double = 0.0
+  var minNetworkDelay:Double = 0.0
+  var maxNetworkDelay:Double = 0.0
+  var averageTineLength:Double = 0.0
+  var maxTineLength:Int = 0
 
   var guiPeerInfo:Map[String,List[ActorRefWrapper]] = Map()
   var confirmedBalance:Map[String,BigInt] = Map()

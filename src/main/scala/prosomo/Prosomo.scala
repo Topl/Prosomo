@@ -242,7 +242,7 @@ class Prosomo(config:Config,window:Option[ProsomoWindow]) extends Runnable with 
               }
             case None =>
           }
-          window.get.confirmSendToNetworkWindow.get.close()
+          window.get.txWin.get.confirmSendToNetworkWindow.get.close()
           window.get.txWin.get.issueTxWindow.get.close()
           window.get.txWin = None
           window.get.issueTxButton.get.enabled = true

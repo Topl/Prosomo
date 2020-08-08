@@ -21,6 +21,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.{existentials, postfixOps}
 import scala.util.{Failure, Success, Try}
+import scala.util.Random
 
 /**
   * Control all network interaction
@@ -86,6 +87,7 @@ class NetworkController(settings: NetworkSettings,
     case Bound(_) =>
       log.info("Successfully bound to the port " + settings.bindAddress.getPort)
       scheduleConnectionToPeer()
+      scheduleRandomDisconnect()
 
     case CommandFailed(_: Bind) =>
       log.error("Network port " + settings.bindAddress.getPort + " already in use!")
@@ -215,6 +217,13 @@ class NetworkController(settings: NetworkSettings,
           peerInfoOpt.foreach(peerInfo => self ! ConnectTo(peerInfo))
         }
       }
+    }
+  }
+
+  private def scheduleRandomDisconnect(): Unit = {
+    context.system.scheduler.schedule(300.seconds,300.seconds) {
+      if (connections.size >= settings.maxConnections)
+        self ! DisconnectFrom(connections.toSeq(Random.nextInt(connections.size-1))._2)
     }
   }
 
