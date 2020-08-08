@@ -189,7 +189,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val peerList = Try{
     new ListView[String] {
       peer.setModel(peerListModel)
-      font = swing.Font("Monospaced",Style.Plain,16)
+      font = swing.Font("Monospaced",Style.Plain,14)
       focusable = false
       renderer = ListView.Renderer(entry=>{
         val padlen = 30
