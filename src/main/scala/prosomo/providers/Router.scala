@@ -395,8 +395,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
     case Update => update
 
-    case ActorPathSendTimerKey =>
-      if (!holders.forall(_.remote)) holdersToNetwork()
+    case ActorPathSendTimerKey => holdersToNetwork()
 
     case value:SetClock =>
       t0 = value.t0
@@ -775,10 +774,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
           }
         }
       }
-      if (!holders.forall(_.remote)) {
-        timers.startPeriodicTimer(ActorPathSendTimerKey, ActorPathSendTimerKey, 10.seconds)
-        holdersToNetwork()
-      }
+      timers.startPeriodicTimer(ActorPathSendTimerKey, ActorPathSendTimerKey, 10.seconds)
       updatePeerInfo()
       localRoutees.foreach(ref=>ref ! HoldersWithPosition(holders.filterNot(_.remote),holdersPosition))
       sender() ! "done"
