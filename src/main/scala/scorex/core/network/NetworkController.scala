@@ -221,9 +221,12 @@ class NetworkController(settings: NetworkSettings,
   }
 
   private def scheduleRandomDisconnect(): Unit = {
-    context.system.scheduler.schedule(300.seconds,300.seconds) {
-      if (connections.size >= settings.maxConnections && connections.nonEmpty)
-        self ! DisconnectFrom(connections.toSeq(Random.nextInt(connections.size))._2)
+    context.system.scheduler.schedule(600.seconds,600.seconds) {
+      if (connections.size >= settings.maxConnections && connections.nonEmpty) {
+        val randomPeer = connections.toSeq(Random.nextInt(connections.size))
+        messageHandlers(prosomo.remote.SpecTypes.holdersFromRemote) ! InvalidateHolders(randomPeer._2.peerInfo.get.peerSpec.agentName)
+        self ! DisconnectFrom(randomPeer._2)
+      }
     }
   }
 
