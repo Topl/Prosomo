@@ -136,7 +136,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
       connection ! Write(messageSerializer.serialize(msg), ReceivableMessages.Ack(outMessagesCounter))
 
     case CommandFailed(Write(msg, ReceivableMessages.Ack(id))) =>
-      log.warn(s"Failed to write ${msg.length} bytes to $connectionId, switching to buffering mode")
+      log.info(s"Failed to write ${msg.length} bytes to $connectionId, switching to buffering mode")
       connection ! ResumeWriting
       buffer(id, msg)
       context become workingCycleBuffering
@@ -169,12 +169,12 @@ class PeerConnectionHandler(val settings: NetworkSettings,
       outMessagesBuffer -= id
       if (outMessagesBuffer.nonEmpty) writeFirst()
       else {
-        log.warn("Buffered messages processed, exiting buffering mode")
+        log.info("Buffered messages processed, exiting buffering mode")
         context become workingCycleWriting
       }
 
     case CloseConnection =>
-      log.warn(s"Enforced to abort communication with: " + connectionId + s", switching to closing mode")
+      log.info(s"Enforced to abort communication with: " + connectionId + s", switching to closing mode")
       writeAll()
       context become closingWithNonEmptyBuffer
   }
@@ -197,7 +197,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
             e match {
               //peer is doing bad things, ban it
               case MaliciousBehaviorException(msg) =>
-                log.warn(s"Banning peer for malicious behaviour($msg): ${connectionId.toString}")
+                log.info(s"Banning peer for malicious behaviour($msg): ${connectionId.toString}")
                 //peer will be added to the blacklist and the network controller will send CloseConnection
                 networkControllerRef ! PenalizePeer(connectionId.remoteAddress, PenaltyType.PermanentPenalty)
               //non-malicious corruptions

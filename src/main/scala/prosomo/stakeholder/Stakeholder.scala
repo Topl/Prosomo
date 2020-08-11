@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Ratio, Sig, Vrf}
+import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer, Tine, Wallet}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
@@ -160,7 +160,7 @@ object Stakeholder {
         None,
         None
       )
-    ).withDispatcher("params.stakeholder")
+    ).withDispatcher(Parameters.stakeholderEC)
 
   def props(
              seed:Array[Byte],
@@ -180,6 +180,6 @@ object Stakeholder {
         Some(password),
         Some(kdir)
       )
-    ).withDispatcher("params.stakeholder")
+    ).withDispatcher(Parameters.stakeholderEC)
 }
 

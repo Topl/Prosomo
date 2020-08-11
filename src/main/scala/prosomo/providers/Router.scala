@@ -956,7 +956,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       if (useGui) Try{SharedData.guiPeerInfo -= peerName}
       egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
       ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
-      println("Peer removed: "+peerName)
+      println("Peer removed: "+peerName+", Number of peers: "+holders.count(_.remote).toString)
       holders = holdersOut
       coordinatorRef ! HoldersFromRemote(holders)
     case Populate =>
@@ -972,25 +972,27 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       sender() ! "done"
     case Register =>
       networkController ! RegisterMessageSpecs(prosomoMessageSpecs, self)
-      var i = 0
-      egressRoutees = Seq.fill(7) {
-        val ref = context.actorOf(Router.props(
+      if (Parameters.useRouterSystem) {
+        var i = 0
+        egressRoutees = Seq.fill(7) {
+          val ref = context.actorOf(Router.props(
             fch.hash(seed+s"egr$i"),
             inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
           ), s"egressRoutee_$i")
-        i += 1
-        ref
+          i += 1
+          ref
+        }
+        i = 0
+        ingressRoutees = Seq.fill(7) {
+          val ref = context.actorOf(Router.props(
+            fch.hash(seed+s"ing$i"),
+            inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
+          ),s"ingressRoutee_$i")
+          i += 1
+          ref
+        }
+        println("Router System Started...")
       }
-      i = 0
-      ingressRoutees = Seq.fill(7) {
-        val ref = context.actorOf(Router.props(
-          fch.hash(seed+s"ing$i"),
-          inputRef.map(_.actorRef)++Seq(self,coordinatorRef.actorRef)
-        ),s"ingressRoutee_$i")
-        i += 1
-        ref
-      }
-      println("Router System Started...")
       sender() ! "done"
     case BootstrapJob(bootStrapper) =>
       if (bootStrapJobs.contains(bootStrapper)) {
@@ -1031,5 +1033,5 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
 object Router {
   def props(seed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
-    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef))).withDispatcher("params.router")
+    Props(new Router(seed,ref.map(ActorRefWrapper.routerRef))).withDispatcher(Parameters.routerEC)
 }

@@ -267,6 +267,14 @@ object Parameters {
   //public key for HMAC used in each router actor
   val pk_ecx:Array[Byte] = ecx.scalarMultBasePoint(sk_ecx)
 
+  val stakeholderEC:String = config.getString("params.stakeholderEC")
+  val routerEC:String = config.getString("params.routerEC")
+  val coordinatorEC:String = config.getString("params.coordinatorEC")
+  val tineProviderEC:String = config.getString("params.tineProviderEC")
+  val networkControllerEC:String = config.getString("params.networkControllerEC")
+  val useRouterSystem:Boolean = config.getBoolean("params.useRouterSystem")
+
+
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString
   val storageFlag:Boolean = config.getBoolean("params.storageFlag")

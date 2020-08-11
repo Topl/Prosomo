@@ -853,5 +853,5 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 object Coordinator {
   def props(inputSeed:Array[Byte],ref:Seq[akka.actor.ActorRef]): Props =
     Props(new Coordinator(inputSeed,ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head)))))
-      .withDispatcher("params.coordinator")
+      .withDispatcher(Parameters.coordinatorEC)
 }

@@ -135,5 +135,5 @@ object TineProvider extends SimpleTypes {
   case object Done
 
   def props(blockStorage: BlockStorage,localRef:ActorRefWrapper)(implicit routerRef:ActorRefWrapper):Props =
-    Props(new TineProvider(blockStorage,localRef)).withDispatcher("params.tineProvider")
+    Props(new TineProvider(blockStorage,localRef)).withDispatcher(Parameters.tineProviderEC)
 }
