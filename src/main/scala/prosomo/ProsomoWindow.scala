@@ -53,7 +53,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val baseColor1:Color =   new Color(68, 68, 68)
   val baseColor2:Color =   new Color(244, 248, 252)
 
-  val peerDiscoveryAddress = "34.72.8.173:9084"
+  val peerDiscoveryAddress = "35.222.130.13:9084"
   val logo = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))}.toOption
   val icon = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Icon.png"))}.toOption
 
