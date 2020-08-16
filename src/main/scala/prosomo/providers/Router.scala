@@ -440,6 +440,57 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
 
   private def messageFromPeer: Receive = {
     case DataFromPeer(spec, data, remote) =>
+      def processRemoteHolders:Unit = {
+        data match {
+          case msg:HoldersType@unchecked => Try{
+            for (string<-msg._1) {
+              Try{ActorPath.fromString(string)}.toOption match {
+                case Some(newPath:ActorPath) =>
+                  holders.find(_.path == newPath) match {
+                    case None =>
+                      holders ::= ActorRefWrapper(newPath)
+                      pathToPeer += (newPath -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
+                      SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                        case Some(list:List[ActorRefWrapper]) =>
+                          val newList = ActorRefWrapper(newPath)::list
+                          SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                          SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                        case None =>
+                          SharedData.guiPeerInfo +=
+                            (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
+                      }
+                      println("New holder "+newPath.toString)
+                      coordinatorRef ! HoldersFromRemote(holders)
+                      updatePeerInfo()
+                      if (!holders.forall(_.remote)) holdersToNetwork()
+                    case Some(actorRef:ActorRefWrapper) =>
+                      if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
+                        if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path)._1))
+                          SharedData.guiPeerInfo -= pathToPeer(actorRef.path)._1
+                        val key = actorRef.path
+                        pathToPeer -= key
+                        pathToPeer += (key -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
+                        SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
+                          case Some(list:List[ActorRefWrapper]) =>
+                            val newList = actorRef::list
+                            SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
+                            SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
+                          case None =>
+                            SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
+                        }
+                        if (!holders.forall(_.remote)) holdersToNetwork()
+                        println("Updated Peer "+newPath.toString)
+                        egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
+                        ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
+                      }
+                  }
+                case None => println("Error: could not parse actor path "+string)
+              }
+            }
+          }.orElse(Try{println("Error: remote holders data not parsed")})
+          case _ => println("Error: remote holders data not parsed")
+        }
+      }
       ingressRoutees.size match {
         case 0 =>
           spec.messageCode match {
@@ -667,60 +718,14 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
                 }.orElse(Try{println("Error: SendTx message not valid")})
                 case _ => println("Error: SendTx message not parsed")
               }
+            case HoldersFromRemoteSpec.messageCode =>
+              processRemoteHolders
             case _ => println("Error: message code did not match any specs")
           }
         case _ =>
           spec.messageCode match {
             case HoldersFromRemoteSpec.messageCode =>
-              data match {
-                case msg:HoldersType@unchecked => Try{
-                  for (string<-msg._1) {
-                    Try{ActorPath.fromString(string)}.toOption match {
-                      case Some(newPath:ActorPath) =>
-                        holders.find(_.path == newPath) match {
-                          case None =>
-                            holders ::= ActorRefWrapper(newPath)
-                            pathToPeer += (newPath -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
-                            SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
-                              case Some(list:List[ActorRefWrapper]) =>
-                                val newList = ActorRefWrapper(newPath)::list
-                                SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
-                                SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                              case None =>
-                                SharedData.guiPeerInfo +=
-                                  (remote.peerInfo.get.peerSpec.agentName -> List(ActorRefWrapper(newPath)))
-                            }
-                            println("New holder "+newPath.toString)
-                            coordinatorRef ! HoldersFromRemote(holders)
-                            updatePeerInfo()
-                            if (!holders.forall(_.remote)) holdersToNetwork()
-                          case Some(actorRef:ActorRefWrapper) =>
-                            if (pathToPeer(actorRef.path)._1 != remote.peerInfo.get.peerSpec.agentName) {
-                              if (SharedData.guiPeerInfo.keySet.contains(pathToPeer(actorRef.path)._1))
-                                SharedData.guiPeerInfo -= pathToPeer(actorRef.path)._1
-                              val key = actorRef.path
-                              pathToPeer -= key
-                              pathToPeer += (key -> (remote.peerInfo.get.peerSpec.agentName,msg._2,msg._3))
-                              SharedData.guiPeerInfo.get(remote.peerInfo.get.peerSpec.agentName) match {
-                                case Some(list:List[ActorRefWrapper]) =>
-                                  val newList = actorRef::list
-                                  SharedData.guiPeerInfo -= remote.peerInfo.get.peerSpec.agentName
-                                  SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> newList)
-                                case None =>
-                                  SharedData.guiPeerInfo += (remote.peerInfo.get.peerSpec.agentName -> List(actorRef))
-                              }
-                              if (!holders.forall(_.remote)) holdersToNetwork()
-                              println("Updated Peer "+newPath.toString)
-                              egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
-                              ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, Seq(key), bootStrapJobs, holders))
-                            }
-                        }
-                      case None => println("Error: could not parse actor path "+string)
-                    }
-                  }
-                }.orElse(Try{println("Error: remote holders data not parsed")})
-                case _ => println("Error: remote holders data not parsed")
-              }
+              processRemoteHolders
             case _ =>
               spec.messageCode match {
                 case DiffuseDataSpec.messageCode => ingressRoutees.head ! DataFromPeer(spec, data, remote)
