@@ -947,7 +947,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
   }
 
   private def registerNC: Receive = {
-    case InvalidateHolders(peerName) =>
+    case InvalidateHolders(peerName) if pathToPeer.map(p=>p._2._1).toArray.contains(peerName) =>
       var holdersOut:List[ActorRefWrapper] = holders.filterNot(_.remote)
       var holdersToRemove:Seq[ActorPath] = Seq()
       for (holder <- holders) if (pathToPeer.keySet.contains(holder.actorPath)) {

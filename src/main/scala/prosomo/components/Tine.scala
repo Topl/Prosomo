@@ -68,7 +68,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
     * Either a single Array database or a LoadingCache of Array databases,
     * loading cache can restore a segment of tine from the block database,
     * Initializing tineCache is resource intensive so the database is handled with Either Left Right logic,
-    * The database is started Left with a single SortedMap for all slots,
+    * The database is started Left with a single cache for all slots,
     * Once the Left database expands the update method will turn it Right and load the tineCache
     */
 

@@ -140,7 +140,7 @@ trait Receive extends Members {
                 } else {println("Error: invalid returned block")}
               }
               if (value.job == bootStrapJob) {
-                timers.startSingleTimer(BootstrapJob,BootstrapJob,1*slotT.millis)
+                timers.startSingleTimer(BootstrapJob,BootstrapJob,10*slotT.millis)
               }
             } else {
               if (!blocks.knownInCache(blockToId(block))) {
@@ -173,7 +173,7 @@ trait Receive extends Members {
             }
             if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
             bootstrapAdoptTine()
-            timers.startSingleTimer(BootstrapJob,BootstrapJob,1*slotT.millis)
+            timers.startSingleTimer(BootstrapJob,BootstrapJob,10*slotT.millis)
           }
         }
       }
