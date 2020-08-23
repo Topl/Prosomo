@@ -405,7 +405,6 @@ trait ChainSelection extends Members {
           case _ =>
         }
       }
-      assert(currentEpoch == epoch)
       tinePoolWithPrefix = tinePoolWithPrefix.dropRight(1)
       var newCandidateTines:Array[(Tine,Slot,Int)] = Array()
       for (entry <- tinePoolWithPrefix) {

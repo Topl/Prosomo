@@ -18,7 +18,7 @@ import scala.math.BigInt
 trait Messages extends Members {
 
   override def scheduleDiffuse(): Unit = {
-    timers.startSingleTimer(Diffuse,Diffuse,10*slotT.millis)
+    timers.startPeriodicTimer(Diffuse,Diffuse,10*slotT.millis)
   }
 
   /**

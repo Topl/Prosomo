@@ -74,14 +74,14 @@ trait Receive extends Members {
           val bSlot = b._3
           val bRho = b._5
           if (holderIndex == SharedData.printingHolder && !helloLock) {
-            val newDelay = (t1-t0-bSlot*slotT).toDouble/slotT.toDouble
-            networkDelayList ::= newDelay
+            val newDelay = (t1-t0-bSlot*slotT).toDouble/1000.0
+            if (newDelay>0.0) networkDelayList ::= newDelay
             if (networkDelayList.size > 100) networkDelayList.take(100)
             SharedData.maxNetworkDelay = Array(newDelay,SharedData.maxNetworkDelay).max
             if (SharedData.minNetworkDelay == 0.0) {
-              SharedData.minNetworkDelay = newDelay
+              if (newDelay>0.0) SharedData.minNetworkDelay = newDelay
             } else {
-              SharedData.minNetworkDelay = Array(newDelay,SharedData.minNetworkDelay).min
+              if (newDelay>0.0) SharedData.minNetworkDelay = Array(newDelay,SharedData.minNetworkDelay).min
             }
             SharedData.averageNetworkDelay = average(networkDelayList)
           }
@@ -89,7 +89,7 @@ trait Receive extends Members {
             blocks.add(value.block)
             if (bSlot <= globalSlot && bSlot > globalSlot-k_s) {
               val newId = (bSlot, bHash)
-              send(selfWrapper,gossipSet(selfWrapper,value.sender,holders), SendBlock(value.block,selfWrapper))
+              if (value.block.number > getBlockHeader(localChain.head).get._9) send(selfWrapper,gossipSet(selfWrapper,value.sender,holders), SendBlock(value.block,selfWrapper))
               if (!bootStrapLock) {
                 if (tinePool.keySet.size > tineMaxTries) {
                   if (holderIndex == SharedData.printingHolder && printFlag)
@@ -313,7 +313,8 @@ trait Receive extends Members {
       if (helloLock) {
         if (tinePool.keySet.isEmpty && tinePoolWithPrefix.isEmpty) {
           val lastSlot = localChain.head._1
-          if (globalSlot > 1 && lastSlot < globalSlot - tineMaxDepth) {
+          if (globalSlot > 1 && lastSlot < globalSlot - tineBootstrappingDepth*4) {
+            println(s"Current Head slot $lastSlot < ${globalSlot - tineBootstrappingDepth*4}")
             println(s"Holder $holderIndex Bootstrapping...")
             send(
               selfWrapper,
@@ -325,7 +326,6 @@ trait Receive extends Members {
           } else {
             bootStrapLock = false
             helloLock = false
-            scheduleDiffuse()
           }
         } else {
           if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
@@ -521,7 +521,8 @@ trait Receive extends Members {
       if (!useFencing) {
         timers.startSingleTimer(Update,Update,updateTime)
         timers.startPeriodicTimer(GetTime, GetTime, updateTime)
-        timers.startSingleTimer(Refresh,Refresh,slotT* (refreshInterval * rng.nextDouble).toInt.millis)
+        timers.startSingleTimer(Refresh,Refresh,slotT * (refreshInterval * rng.nextDouble).toInt.millis)
+        scheduleDiffuse()
       }
       self ! BootstrapJob
 
@@ -529,7 +530,6 @@ trait Receive extends Members {
       blocks.refresh()
       history.refresh()
       walletStorage.refresh()
-      scheduleDiffuse()
       timers.startPeriodicTimer(Refresh,Refresh,slotT*refreshInterval.millis)
 
     case GetTime =>

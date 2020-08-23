@@ -53,7 +53,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val baseColor1:Color =   new Color(68, 68, 68)
   val baseColor2:Color =   new Color(244, 248, 252)
 
-  val peerDiscoveryAddress = "35.222.130.13:9084"
+  val peerDiscoveryAddress = "34.121.33.132:9084"
   val logo = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Logo.png"))}.toOption
   val icon = Try{new javax.swing.ImageIcon(getClass.getClassLoader.getResource("Icon.png"))}.toOption
 
@@ -1215,6 +1215,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
     }
   }
 
+  val slotT = Parameters.slotT
 
   def refreshWallet() = {
     if (pendingTxField.get.enabled) {
@@ -1226,9 +1227,9 @@ class ProsomoWindow(config:Config) extends ActionListener {
     Swing.onEDT{
       netStats(0).text = s"Number of active peers discovered on the network: ${SharedData.activePeers}"
       netStats(1).text = f"Proportion of active stake online in the current staking distribution: ${SharedData.activeStake}%1.5f"
-      netStats(2).text = f"Average block time as global slot divided by block number: ${SharedData.blockTime}%5.5f"
+      netStats(2).text = f"Average block time as global slot divided by block number: ${SharedData.blockTime*slotT.toDouble/1000.0}%5.5f"
       netStats(3).text = f"Proportion of active slots as block number divided by global slot: ${SharedData.activeSlots}%5.5f"
-      netStats(4).text = f"Average transactions per second over entire chain: ${SharedData.txsPerSecond}%5.5f"
+      netStats(4).text = f"Average transactions per second over entire chain: ${SharedData.txsPerSecond*1000.0/slotT.toDouble}%5.5f"
       netStats(5).text = s"Transactions in mempool: ${SharedData.numTxsMempool}"
       netStats(6).text = f"Average block delay: ${SharedData.averageNetworkDelay}%5.5f"
       netStats(7).text = s"Maximum block delay: ${SharedData.maxNetworkDelay}"

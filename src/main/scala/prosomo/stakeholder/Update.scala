@@ -135,7 +135,6 @@ trait Update extends Members {
               println("Holder " + holderIndex.toString + " alpha = " + keys.alpha.toDouble+"\nEta:"+Base58.encode(eta))
             }
             inbox = Map()
-            scheduleDiffuse()
           case _ =>
         }
         if (globalSlot == localSlot && updating) {
@@ -169,6 +168,7 @@ trait Update extends Members {
           }
         case _ =>
       }
+      if (holderIndex == SharedData.printingHolder) SharedData.numTxsMempool = memPool.keySet.size
       if (holderIndex == SharedData.printingHolder && useGui && globalSlot > 0) {
         SharedData.walletInfo =
           (wallet.getNumPending,wallet.getConfirmedTxCounter,wallet.getConfirmedBalance,wallet.getPendingBalance)
@@ -179,7 +179,6 @@ trait Update extends Members {
           globalSlot.toDouble/getBlockHeader(head).get._9.toDouble
         }
         SharedData.activeSlots = 1.0/SharedData.blockTime
-        SharedData.numTxsMempool = memPool.keySet.size
         SharedData.txsPerSecond = {
           var net = 0
           for (entry<-localState.toSeq) {

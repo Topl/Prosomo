@@ -53,30 +53,27 @@ trait Staking extends Members {
     */
 
   def threshold(a:Ratio, s_interval:Slot):Ratio = {
-    val index:Int = s_interval-1 match {
-      case int: Int if int < m_f_range.length => int
-      case _ => m_f_range.length-1
+    s_interval-1 match {
+      case int: Int if int < m_f_range.length =>
+        phi(a,m_f_range(int))
+      case _ =>
+        phi(a)
     }
-    phi(a,m_f_range(index))
   }
 
   def threshold_cached(a:Ratio, s_interval:Slot):Ratio = {
-    val index:Int = s_interval-1 match {
-      case int: Int if int < m_f_range.length => int
-      case _ => m_f_range.length-1
-    }
     thresholdCache match {
       case None =>
         thresholdCache = Some(CacheBuilder.newBuilder()
           .maximumSize(1000)
           .build[(Ratio,Slot),Ratio](
-          new CacheLoader[(Ratio,Slot),Ratio] {
-            def load(id:(Ratio,Slot)):Ratio = {phi(id._1,m_f_range(id._2))}
-          }
-        ))
+            new CacheLoader[(Ratio,Slot),Ratio] {
+              def load(id:(Ratio,Slot)):Ratio = {threshold(id._1,id._2)}
+            }
+          ))
       case _ =>
     }
-    thresholdCache.get.get((a,index))
+    thresholdCache.get.get((a,s_interval))
   }
 
   val factorial_cache:Array[BigInt] = (0 to o_n).toArray.map(i=>factorial(i))
@@ -90,7 +87,7 @@ trait Staking extends Members {
     * Compares the vrf output to the threshold
     * @param y vrf output bytes
     * @param t threshold between 0.0 and 1.0
-    * @return true if y mapped to double between 0.0 and 1.0 is less than threshold
+    * @return true if y mapped to real number between 0.0 and 1.0 is less than threshold
     */
   def compare(y: Array[Byte],t: Ratio):Boolean = {
     var net:Ratio = Ratio(0)

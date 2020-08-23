@@ -23,6 +23,8 @@ trait Forging extends Members with Types {
     * Determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables
     * */
 
+  //lazy val randomFiller:String = rng.nextString(500000)
+
   def forgeBlock(forgerKeys:Keys):Unit = if (!SharedData.limiterFlag) Try{
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(

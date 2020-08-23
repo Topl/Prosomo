@@ -363,11 +363,13 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
         case Some(holder1:ActorRefWrapper) =>
           val r = rng.nextDouble
           if (r<txProbability%1.0) {
-            val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
-            assert(holder1 != holder2)
-            val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
-            holder1 ! IssueTx(holder2,delta)
-            transactionCounter += 1
+            if (SharedData.numTxsMempool<txPerBlock*3) {
+              val holder2 = holders.filter(_ != holder1)(rng.nextInt(holders.length-1))
+              assert(holder1 != holder2)
+              val delta:BigInt = BigDecimal(maxTransfer*rng.nextDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+              holder1 ! IssueTx(holder2,delta)
+              transactionCounter += 1
+            }
           }
         case None =>
       }

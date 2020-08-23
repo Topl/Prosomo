@@ -961,7 +961,7 @@ class Router(seed:Array[Byte], inputRef:Seq[ActorRefWrapper]) extends Actor
       if (useGui) Try{SharedData.guiPeerInfo -= peerName}
       egressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
       ingressRoutees.foreach(_ ! RouterPeerInfo(pathToPeer, holdersToRemove, bootStrapJobs, holders))
-      println("Peer removed: "+peerName+", Number of peers: "+holders.count(_.remote).toString)
+      //println("Peer removed: "+peerName+", Number of peers: "+holders.count(_.remote).toString)
       holders = holdersOut
       coordinatorRef ! HoldersFromRemote(holders)
     case Populate =>
