@@ -15,8 +15,3 @@ The simulation can be executed locally or across many nodes.  Local communicatio
 - Confirmed transactions are added to forged blocks giving the forger a reward
 - Command scheduling and flexible configuration options that can be modified at run-time
 - A user interface that helps users track local files, manage keys, and connect to a bootstrap server to discover peers
-
-
-## Persistent Testnet
-
-The testnet is live and can be accessed with the latest release.  The distribution contains a jar file that will require an installation of a JVM to run.  The user interface will be configured to connect to the Prosomo testnet.  Once connected, peers will discover your public name along with the public address generated for your account.  This testnet is purely experimental and stake has no value.  A faucet node that with genesis stakeholders will be active for the duration of the testnet.  The forgers will detect new public addresses and issue random transactions to new users that bootstrap to the network.  Once the faucet node has discovered a new peer, transactions will be issued to that peer while they are online.  The public address will accumulate stake and 2 days later that peer will be able to forge blocks.
