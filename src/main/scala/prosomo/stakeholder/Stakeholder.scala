@@ -4,8 +4,10 @@ import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
 import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Serializer, Tine, Wallet}
+import prosomo.components.{Block, Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+import prosomo.ledger
+import prosomo.ledger.{Ledger, Transactions, Wallet}
 
 import scala.math.BigInt
 import scala.util.Random
@@ -65,7 +67,7 @@ class Stakeholder(
   override val fch = new Fch
   val rng:Random = new Random(BigInt(seed).toLong)
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
-  var wallet:Wallet = Wallet(keys.pkw)
+  var wallet:Wallet = ledger.Wallet(keys.pkw)
   val history:StateStorage = new StateStorage(storageDir,serializer)
   val holderId:ActorPath = self.path
   val sessionId:Sid = ByteArrayWrapper(fch.hash(holderId.toString))

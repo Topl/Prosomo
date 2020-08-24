@@ -4,7 +4,8 @@ import java.security.MessageDigest
 
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Serializer, Transaction}
+import prosomo.components.Serializer
+import prosomo.ledger.Transaction
 
 /**
   * AMS 2020:

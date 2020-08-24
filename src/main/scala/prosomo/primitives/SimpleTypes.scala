@@ -1,7 +1,8 @@
 package prosomo.primitives
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Transaction
+import prosomo.ledger.Transaction
+
 import scala.collection.mutable
 import scala.math.BigInt
 

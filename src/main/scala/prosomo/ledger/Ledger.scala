@@ -1,28 +1,29 @@
-package prosomo.stakeholder
+package prosomo.ledger
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendTx
-import prosomo.components.{Tine, Transaction}
-import prosomo.primitives.SharedData
+import prosomo.components.Tine
+import prosomo.primitives.{Ratio, SharedData}
+import prosomo.stakeholder.Members
 import scorex.util.encode.Base58
 
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
-import scala.util.{Failure, Try}
 import scala.util.control.Breaks.{break, breakable}
+import scala.util.{Failure, Try}
 
 /**
-  * AMS 2020:
-  * Methods regarding leger updates and state transitions using the account based transaction model,
-  * Many more Tx models are to be incorporated, namely UTXOs,
-  * this outlines where state updates will be executed in the system
-  */
+ * AMS 2020:
+ * Methods regarding leger updates and state transitions using the account based transaction model,
+ * Many more Tx models are to be incorporated, namely UTXOs,
+ * this outlines where state updates will be executed in the system
+ */
 
 trait Ledger extends Members {
 
-  def updateWallet():Unit = Try{
+  def updateWallet(): Unit = Try {
     var id = localChain.getLastActiveSlot(globalSlot).get
-    val bn:Int = getBlockHeader(id).get._9
+    val bn: Int = getBlockHeader(id).get._9
     if (bn == 0) {
       wallet.update(history.get(id).get._1)
       if (holderIndex == SharedData.printingHolder) {
@@ -32,17 +33,17 @@ trait Ledger extends Members {
           wallet.getConfirmedBalance,
           wallet.getPendingBalance
         )
-        SharedData.issueTxInfo = Some((keys.pkw,inbox))
+        SharedData.issueTxInfo = Some((keys.pkw, inbox))
         SharedData.selfWrapper = Some(selfWrapper)
       }
     } else {
-      breakable{
+      breakable {
         while (true) {
           id = getParentId(id).get
           getBlockHeader(id) match {
-            case Some(b:BlockHeader) =>
+            case Some(b: BlockHeader) =>
               val bni = b._9
-              if (bni <= bn-confirmationDepth || bni == 0) {
+              if (bni <= bn - confirmationDepth || bni == 0) {
                 wallet.update(history.get(id).get._1)
                 if (holderIndex == SharedData.printingHolder) {
                   SharedData.walletInfo = (
@@ -51,7 +52,7 @@ trait Ledger extends Members {
                     wallet.getConfirmedBalance,
                     wallet.getPendingBalance
                   )
-                  SharedData.issueTxInfo = Some((keys.pkw,inbox))
+                  SharedData.issueTxInfo = Some((keys.pkw, inbox))
                   SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
@@ -63,29 +64,30 @@ trait Ledger extends Members {
         }
       }
     }
-    for (trans:Transaction <- wallet.getPending(localState)) {
-      if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
-      send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
+    for (trans: Transaction <- wallet.getPending(localState)) {
+      if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid -> (trans, 0))
+      send(selfWrapper, gossipSet(selfWrapper, holders), SendTx(trans, selfWrapper))
     }
 
-    def collectStake():Unit = Try{
-      for (entry<-wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
+    def collectStake(): Unit = Try {
+      for (entry <- wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
         if (wallet.isSameLedgerId(entry._1) && entry._2._1 > 0) {
-          wallet.issueTx(entry._1,wallet.pkw,entry._2._1,keys.sk_sig,sig,rng,serializer) match {
-            case Some(trans:Transaction) =>
+          wallet.issueTx(entry._1, wallet.pkw, entry._2._1, keys.sk_sig, sig, rng, serializer) match {
+            case Some(trans: Transaction) =>
               if (holderIndex == SharedData.printingHolder && printFlag)
                 println("Holder " + holderIndex.toString + " Reallocated Stake")
               txCounter += 1
-              memPool += (trans.sid->(trans,0))
-              send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
-              wallet.reallocated += (entry._1->trans.nonce)
+              memPool += (trans.sid -> (trans, 0))
+              send(selfWrapper, gossipSet(selfWrapper, holders), SendTx(trans, selfWrapper))
+              wallet.reallocated += (entry._1 -> trans.nonce)
             case _ =>
           }
         }
       }
     }
+
     collectStake()
-    walletStorage.store(wallet,serializer)
+    walletStorage.store(wallet, serializer)
   } match {
     case Failure(exception) =>
       exception.printStackTrace()
@@ -93,47 +95,48 @@ trait Ledger extends Members {
   }
 
   /**
-    * apply each block in chain to passed local state
-    * @param ls old local state to be updated
-    * @param c chain of block ids
-    * @return updated localstate
-    */
+   * apply each block in chain to passed local state
+   *
+   * @param ls old local state to be updated
+   * @param c  chain of block ids
+   * @return updated localstate
+   */
 
-  def updateLocalState(ls:State, c:Tine): Option[State] = {
-    var nls:State = ls
+  def updateLocalState(ls: State, c: Tine): Option[State] = {
+    var nls: State = ls
     var isValid = true
     for (id <- c.ordered) {
       if (isValid) getBlockHeader(id) match {
-        case Some(b:BlockHeader) =>
-          val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
-          val cert:Cert = b._4
-          val (pk_vrf,_,_,pk_sig,_,_) = cert
-          val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+        case Some(b: BlockHeader) =>
+          val (_, _, slot: Slot, _, _, _, _, pk_kes: PublicKey, _, _) = b
+          val cert: Cert = b._4
+          val (pk_vrf, _, _, pk_sig, _, _) = cert
+          val pk_f: PublicKeyW = ByteArrayWrapper(pk_sig ++ pk_vrf ++ pk_kes)
           var validForger = true
           if (slot == 0) {
-            val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
+            val genesisSet: GenesisSet = blocks.get(id).get.genesisSet.get
             if (genesisSet.isEmpty) isValid = false
             if (isValid) for (entry <- genesisSet) {
               if (ByteArrayWrapper(entry._1) == genesisBytes) {
                 val delta = entry._3
-                val netStake:BigInt = 0
-                val newStake:BigInt = netStake + delta
-                val pk_g:PublicKeyW = entry._2
-                if(nls.keySet.contains(pk_g)) {
+                val netStake: BigInt = 0
+                val newStake: BigInt = netStake + delta
+                val pk_g: PublicKeyW = entry._2
+                if (nls.keySet.contains(pk_g)) {
                   isValid = false
                   nls -= pk_g
                 }
-                nls += (pk_g -> (newStake,true,0))
+                nls += (pk_g -> (newStake, true, 0))
               }
             }
           } else {
             //apply forger reward
             if (nls.keySet.contains(pk_f)) {
               val netStake: BigInt = nls(pk_f)._1
-              val txC:Int = nls(pk_f)._3
+              val txC: Int = nls(pk_f)._3
               val newStake: BigInt = netStake + forgerReward
               nls -= pk_f
-              nls += (pk_f -> (newStake,true,txC))
+              nls += (pk_f -> (newStake, true, txC))
             } else {
               validForger = false
             }
@@ -157,7 +160,7 @@ trait Ledger extends Members {
         case _ =>
       }
       if (!isValid) {
-        println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
+        println(s"Holder $holderIndex ledger error on slot " + id._1 + " block id:" + Base58.encode(id._2.data))
         SharedData.throwError(holderIndex)
       }
     }
@@ -168,40 +171,40 @@ trait Ledger extends Members {
     }
   }
 
-  def updateLocalState(ls:State, id:SlotId):Option[State] = {
-    var nls:State = ls
+  def updateLocalState(ls: State, id: SlotId): Option[State] = {
+    var nls: State = ls
     var isValid = true
     if (isValid) getBlockHeader(id) match {
-      case Some(b:BlockHeader) =>
-        val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
-        val cert:Cert = b._4
-        val (pk_vrf,_,_,pk_sig,_,_) = cert
-        val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+      case Some(b: BlockHeader) =>
+        val (_, _, slot: Slot, _, _, _, _, pk_kes: PublicKey, _, _) = b
+        val cert: Cert = b._4
+        val (pk_vrf, _, _, pk_sig, _, _) = cert
+        val pk_f: PublicKeyW = ByteArrayWrapper(pk_sig ++ pk_vrf ++ pk_kes)
         var validForger = true
         if (slot == 0) {
-          val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
+          val genesisSet: GenesisSet = blocks.get(id).get.genesisSet.get
           if (genesisSet.isEmpty) isValid = false
           if (isValid) for (entry <- genesisSet) {
             if (ByteArrayWrapper(entry._1) == genesisBytes) {
               val delta = entry._3
-              val netStake:BigInt = 0
-              val newStake:BigInt = netStake + delta
-              val pk_g:PublicKeyW = entry._2
-              if(nls.keySet.contains(pk_g)) {
+              val netStake: BigInt = 0
+              val newStake: BigInt = netStake + delta
+              val pk_g: PublicKeyW = entry._2
+              if (nls.keySet.contains(pk_g)) {
                 isValid = false
                 nls -= pk_g
               }
-              nls += (pk_g -> (newStake,true,0))
+              nls += (pk_g -> (newStake, true, 0))
             }
           }
         } else {
           //apply forger reward
           if (nls.keySet.contains(pk_f)) {
             val netStake: BigInt = nls(pk_f)._1
-            val txC:Int = nls(pk_f)._3
+            val txC: Int = nls(pk_f)._3
             val newStake: BigInt = netStake + forgerReward
             nls -= pk_f
-            nls += (pk_f -> (newStake,true,txC))
+            nls += (pk_f -> (newStake, true, txC))
           } else {
             validForger = false
           }
@@ -210,7 +213,7 @@ trait Ledger extends Members {
             for (trans <- blocks.get(id).get.blockBody.get) {
               if (verifyTransaction(trans)) {
                 applyTransaction(trans, nls, pk_f, fee_r) match {
-                  case Some(value:State) =>
+                  case Some(value: State) =>
                     nls = value
                   case _ => isValid = false
                 }
@@ -225,7 +228,7 @@ trait Ledger extends Members {
       case _ =>
     }
     if (!isValid) {
-      println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
+      println(s"Holder $holderIndex ledger error on slot " + id._1 + " block id:" + Base58.encode(id._2.data))
       SharedData.throwError(holderIndex)
     }
     if (isValid) {
@@ -241,7 +244,7 @@ trait Ledger extends Members {
       if (entry._2._2 < confirmationDepth) {
         val cnt = entry._2._2 + 1
         memPool -= entry._1
-        memPool += (entry._1 -> (entry._2._1,cnt))
+        memPool += (entry._1 -> (entry._2._1, cnt))
       } else {
         memPool -= entry._1
       }
@@ -252,37 +255,39 @@ trait Ledger extends Members {
   }
 
   /**
-    * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
-    * @param c chain to collect transactions
-    */
+   * collects all transaction on the ledger of each block in the passed chain and adds them to the buffer
+   *
+   * @param c chain to collect transactions
+   */
 
-  def collectLedger(c:Tine): Unit = {
+  def collectLedger(c: Tine): Unit = {
     for (id <- c.ordered) {
       for (trans <- blocks.get(id).get.blockBody.get) {
         if (!memPool.keySet.contains(trans.sid)) {
-          if (verifyTransaction(trans)) memPool += (trans.sid->(trans,0))
+          if (verifyTransaction(trans)) memPool += (trans.sid -> (trans, 0))
         }
       }
     }
   }
 
   /**
-    * sorts buffer and adds transaction to ledger during block forging
-    * @param pkw public key triad of forger
-    * @return list of transactions
-    */
+   * sorts buffer and adds transaction to ledger during block forging
+   *
+   * @param pkw public key triad of forger
+   * @return list of transactions
+   */
 
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSet = {
+  def chooseLedger(pkw: PublicKeyW, mp: MemPool, s: State): TransactionSet = {
     var ledger: List[Transaction] = List()
     var ls: State = s
     val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1.nonce < _._2._1.nonce): _*)
     breakable {
       for (entry <- sortedBuffer) {
-        val transaction:Transaction = entry._2._1
-        val transactionCount:Int = transaction.nonce
+        val transaction: Transaction = entry._2._1
+        val transactionCount: Int = transaction.nonce
         if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
-          applyTransaction(transaction,ls, pkw,fee_r) match {
-            case Some(value:State) =>
+          applyTransaction(transaction, ls, pkw, fee_r) match {
+            case Some(value: State) =>
               ledger ::= entry._2._1
               ls = value
             case _ =>
@@ -293,5 +298,41 @@ trait Ledger extends Members {
     }
     ledger.reverse
   }
+
+  /**
+   * verify a signed issued transaction
+   *
+   * @param t transaction
+   * @return true if valid, false otherwise
+   */
+
+  def verifyTransaction(t: Transaction): Boolean = {
+    verifyTX(t, sig, serializer)
+  }
+
+  /**
+   * calculates alpha, the epoch relative stake, from the staking state
+   * @param holderKey the holder public address
+   * @param ls state from which the relative stake is calculated
+   * @return state allocated to holderKey divided by all stake in state
+   */
+  def relativeStake(holderKey:PublicKeyW,ls:State): Ratio = {
+    var netStake:BigInt = 0
+    var holderStake:BigInt = 0
+    for (member <- ls.keySet) {
+      val (balance,activityIndex, _) = ls(member)
+      if (activityIndex) netStake += balance
+    }
+    if (ls.keySet.contains(holderKey)){
+      val (balance,activityIndex, _) = ls(holderKey)
+      if (activityIndex) holderStake += balance
+    }
+    if (netStake > 0) {
+      new Ratio(holderStake,netStake)
+    } else {
+      new Ratio(BigInt(0),BigInt(1))
+    }
+  }
+
 
 }

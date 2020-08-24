@@ -4,8 +4,9 @@ import akka.actor.{Actor, ActorPath, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
+import prosomo.components.{Block, Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+import prosomo.ledger.{Transaction, Wallet}
 
 import scala.concurrent.duration._
 import scala.math.BigInt

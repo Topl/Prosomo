@@ -2,7 +2,7 @@ package prosomo.stakeholder
 
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Tine, Transaction}
+import prosomo.components.{Block, Tine}
 import prosomo.primitives.{Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 
@@ -303,16 +303,6 @@ trait Validation extends Members with Types {
       tine.print()
     }
     isValid
-  }
-
-  /**
-    * verify a signed issued transaction
-    * @param t transaction
-    * @return true if valid, false otherwise
-    */
-
-  def verifyTransaction(t:Transaction):Boolean = {
-    verifyTX(t,sig,serializer)
   }
 
 }

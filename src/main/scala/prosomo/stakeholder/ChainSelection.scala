@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
-import prosomo.components.{Tine, Transaction}
+import prosomo.components.Tine
 import prosomo.primitives.{ActorRefWrapper, Ratio, SharedData}
 import scorex.util.encode.Base58
 

@@ -120,30 +120,6 @@ trait Staking extends Members {
   }
 
   /**
-    * calculates alpha, the epoch relative stake, from the staking state
-    * @param holderKey the holder public address
-    * @param ls state from which the relative stake is calculated
-    * @return state allocated to holderKey divided by all stake in state
-    */
-  def relativeStake(holderKey:PublicKeyW,ls:State): Ratio = {
-    var netStake:BigInt = 0
-    var holderStake:BigInt = 0
-    for (member <- ls.keySet) {
-      val (balance,activityIndex, _) = ls(member)
-      if (activityIndex) netStake += balance
-    }
-    if (ls.keySet.contains(holderKey)){
-      val (balance,activityIndex, _) = ls(holderKey)
-      if (activityIndex) holderStake += balance
-    }
-    if (netStake > 0) {
-      new Ratio(holderStake,netStake)
-    } else {
-      new Ratio(BigInt(0),BigInt(1))
-    }
-  }
-
-  /**
     * calculates epoch nonce recursively
     * @param c local chain to be verified
     * @param ep epoch derived from time step

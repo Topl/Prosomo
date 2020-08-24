@@ -9,7 +9,8 @@ import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
 import prosomo.cases._
-import prosomo.components.{Block, Tine, Transaction}
+import prosomo.components.{Block, Tine}
+import prosomo.ledger.Transaction
 import scorex.util.encode.Base58
 
 import scala.math.BigInt

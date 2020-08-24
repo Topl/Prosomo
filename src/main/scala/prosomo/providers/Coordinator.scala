@@ -14,6 +14,7 @@ import prosomo.components
 import prosomo.components.Serializer.DeserializeGenesisBlock
 import prosomo.components._
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+import prosomo.ledger.{Ledger, Transactions, Wallet}
 import prosomo.primitives._
 import prosomo.stakeholder._
 import scorex.util.encode.Base58
@@ -73,7 +74,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var derivedKey:Array[Byte] = Array()
   var salt:Array[Byte] = Array()
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
-  var wallet:Wallet = components.Wallet(keys.pkw)
+  var wallet:Wallet = Wallet(keys.pkw)
   var chainUpdateLock = false
   var localState:State = Map()
   var eta:Eta = Array()

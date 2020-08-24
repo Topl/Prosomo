@@ -3,7 +3,8 @@ package prosomo.history
 import prosomo.primitives.{ByteStream, Fch, LDBStore, SimpleTypes}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
-import prosomo.components.{Serializer, Wallet}
+import prosomo.components.Serializer
+import prosomo.ledger.Wallet
 
 import scala.util.Try
 
@@ -24,7 +25,7 @@ class WalletStorage(dir:String) extends SimpleTypes {
   def restore(serializer: Serializer,pkw:ByteArrayWrapper):Wallet = {
     def newWallet:Wallet = {
       println("New wallet")
-      val out = components.Wallet(pkw)
+      val out = Wallet(pkw)
       store(out,serializer)
       out
     }

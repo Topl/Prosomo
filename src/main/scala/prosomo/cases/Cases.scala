@@ -1,7 +1,8 @@
 package prosomo.cases
 
 import akka.actor.ActorPath
-import prosomo.components.{Block, Transaction}
+import prosomo.components.Block
+import prosomo.ledger.Transaction
 import prosomo.primitives.Types._
 import prosomo.primitives.{ActorRefWrapper, KeyFile}
 

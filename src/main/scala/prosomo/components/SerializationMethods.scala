@@ -2,7 +2,8 @@ package prosomo.components
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components
+import prosomo.{components, ledger}
+import prosomo.ledger.{Transaction, Wallet}
 import prosomo.primitives._
 
 import scala.collection.mutable
@@ -469,7 +470,7 @@ trait SerializationMethods extends SimpleTypes {
     val out4 = ByteArrayWrapper(stream.get(sid_length))
     val out5 = stream.getInt
     val out6 = stream.get(sig_length)
-    val out = Transaction(
+    val out = ledger.Transaction(
       out1,
       out2,
       out3,
@@ -880,7 +881,7 @@ trait SerializationMethods extends SimpleTypes {
 
   private def dWallet(stream: ByteStream):Wallet = {
     val out1:ByteArrayWrapper = ByteArrayWrapper(stream.get(pkw_length))
-    val out = components.Wallet(out1)
+    val out = Wallet(out1)
     val out2len = stream.getInt
     val b1 = new ByteStream(stream.get(out2len),stream.caseObject)
     out.pendingTxsOut = dTxMap(b1)
