@@ -1,8 +1,7 @@
 package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.SimpleTypes
-import prosomo.primitives.Types.{BlockHeader,GenesisSet,TransactionSet}
+import prosomo.components.Types.{BlockHeader, GenesisSet, TransactionSet}
 
 /**
   * AMS 2020:

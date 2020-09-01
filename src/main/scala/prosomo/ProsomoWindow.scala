@@ -8,8 +8,8 @@ import akka.actor.ActorRef
 import com.typesafe.config.{Config, ConfigFactory}
 import javax.swing.{BorderFactory, Box, DefaultListModel, JOptionPane, SwingUtilities, UIManager}
 import prosomo.cases.NewHolderFromUI
-import prosomo.components.Serializer
-import prosomo.primitives.Parameters.{devMode, fch}
+import prosomo.components.{KeyFile, Parameters, Serializer, SharedData}
+import prosomo.components.Parameters.{devMode, fch}
 import prosomo.primitives._
 import scorex.util.encode.Base58
 
@@ -233,7 +233,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   val uiDeclaredAddress = Try{windowConfig.getString("scorex.network.declaredAddress")}.toOption match {
     case Some(adr) if adr != "" => adr
     case None => {
-      prosomo.primitives.Parameters.declaredAddressFromRemote match {
+      Parameters.declaredAddressFromRemote match {
         case Some(str) =>str+":9084"
         case None => ""
       }
@@ -1267,7 +1267,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
           waitToConnect = false
           runApp = false
           System.setOut(SharedData.oldOut)
-          prosomo.primitives.Parameters.useGui = false
+          components.Parameters.useGui = false
       }
       title = "Prosomo"
       iconImage = icon.get.getImage
@@ -1285,7 +1285,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
 
   window match {
     case None => Try{
-      prosomo.primitives.Parameters.useGui = false
+      components.Parameters.useGui = false
     }
     case Some(frame) => Try{
       while (waitToConnect) {
@@ -1331,7 +1331,7 @@ class ProsomoWindow(config:Config) extends ActionListener {
   override def actionPerformed(e: ActionEvent): Unit = {
     e.getActionCommand match {
       case "0" =>
-        agentNameField.get.text = nameField.get.text + "_" + prosomo.primitives.Parameters.prosomoNodeUID.take(8)
+        agentNameField.get.text = nameField.get.text + "_" + components.Parameters.prosomoNodeUID.take(8)
         if (nameField.get.text != ""
           && nameField.get.text.forall((('a'to'z')++('A'to'Z')++('0'to'9')).toSet.contains(_))
         ) {

@@ -3,8 +3,8 @@ package prosomo.stakeholder
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, WriteFile}
-import prosomo.components.Tine
-import prosomo.primitives.{KeyFile, Ratio, SharedData}
+import prosomo.components.{SharedData, Tine, KeyFile}
+import prosomo.primitives.Ratio
 import scorex.util.encode.Base58
 
 import scala.util.Try

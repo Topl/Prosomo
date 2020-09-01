@@ -2,9 +2,10 @@ package prosomo.history
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache, RemovalNotification}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Serializer
-import prosomo.primitives.{ByteStream, Fch, LDBStore, SharedData, Types, Parameters}
+import prosomo.components.{Parameters, Serializer, SharedData, Types}
+import prosomo.primitives.{ByteStream, Fch, LDBStore}
 import scorex.util.encode.Base58
+
 import scala.util.Try
 
 /**

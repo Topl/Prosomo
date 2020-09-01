@@ -10,8 +10,8 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{GuiCommand, IssueTxToAddress, NewDataFile, NewHolderFromUI, Populate, Register, Run}
-import prosomo.components.Serializer
-import prosomo.primitives.{Fch, Kes, KeyFile, Parameters, SharedData, Sig, SystemLoadMonitor, Vrf}
+import prosomo.components.{KeyFile, Parameters, Serializer, SharedData}
+import prosomo.primitives.{Fch, Kes, Sig, SystemLoadMonitor, Vrf}
 import prosomo.providers.{Coordinator, Router}
 import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import scorex.core.app.{Application, ScorexContext}

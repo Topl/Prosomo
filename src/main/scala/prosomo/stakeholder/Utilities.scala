@@ -1,6 +1,6 @@
 package prosomo.stakeholder
 
-import prosomo.primitives.Types
+import prosomo.components.Types
 
 /**
   * AMS 2020:

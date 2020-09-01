@@ -1,10 +1,10 @@
 package prosomo.cases
 
 import akka.actor.ActorPath
-import prosomo.components.Block
+import prosomo.components.{Block, KeyFile}
 import prosomo.ledger.Transaction
-import prosomo.primitives.Types._
-import prosomo.primitives.{ActorRefWrapper, KeyFile}
+import prosomo.components.Types._
+import prosomo.primitives.ActorRefWrapper
 
 import scala.concurrent.duration.FiniteDuration
 import scala.math.BigInt

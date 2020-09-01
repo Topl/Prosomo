@@ -1,7 +1,6 @@
 package prosomo.remote
 
-import prosomo.primitives.Types._
-import prosomo.primitives.Mac
+import prosomo.components.Types._
 import prosomo.components.Block
 import prosomo.ledger.Transaction
 

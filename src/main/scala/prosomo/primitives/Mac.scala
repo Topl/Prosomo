@@ -1,6 +1,6 @@
 package prosomo.primitives
 
-import prosomo.primitives.Types.Hash
+import prosomo.components.Types.Hash
 
 /**
   * AMS 2020:

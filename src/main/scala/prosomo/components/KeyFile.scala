@@ -1,9 +1,11 @@
-package prosomo.primitives
+package prosomo.components
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+
+import com.google.common.primitives.Ints
 import io.circe.parser.parse
 import io.circe.syntax._
 import io.circe.{Decoder, HCursor, Json}
@@ -14,13 +16,11 @@ import org.bouncycastle.crypto.generators.SCrypt
 import org.bouncycastle.crypto.modes.SICBlockCipher
 import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
 import prosomo.components.Serializer.DeserializeForgingKey
-import scorex.util.encode.Base58
+import prosomo.primitives._
 import scorex.crypto.hash.Keccak256
-import java.io.File
-import com.google.common.primitives.Ints
-import prosomo.components.Serializer
+import scorex.util.encode.Base58
+
 import scala.util.{Failure, Success, Try}
-import prosomo.primitives.Types.Slot
 
 /**
   * AMS 2020:
@@ -102,7 +102,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
       case Success(value:ForgingKey) => value
       case Failure(exception) =>
         exception.printStackTrace()
-        SharedData.throwError
+        SharedData.throwError()
         new ForgingKey
     }
     out.pk_kes = kes_info._1
@@ -183,7 +183,7 @@ case class KeyFile(sig_info:(Array[Byte],Array[Byte],Array[Byte],Array[Byte],Arr
   }
 }
 
-object KeyFile {
+object KeyFile extends SimpleTypes {
   val fch = new Fch
   def getDerivedKey(password: String, salt: Array[Byte]): Array[Byte] = {
     SCrypt.generate(password.getBytes(StandardCharsets.UTF_8), salt, scala.math.pow(2, 14).toInt, 8, 1, 32)

@@ -3,13 +3,13 @@ package prosomo.stakeholder
 import java.io.BufferedWriter
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import prosomo.primitives.{ActorRefWrapper, Kes, KeyFile, Ratio, SharedData, Sig, Vrf}
+import prosomo.primitives.{ActorRefWrapper, Kes, Ratio, Sig, Vrf}
 import prosomo.providers.TineProvider
 import io.iohk.iodb.ByteArrayWrapper
 
 import scala.concurrent.duration._
 import prosomo.cases._
-import prosomo.components.{Block, Tine}
+import prosomo.components.{Block, KeyFile, SharedData, Tine}
 import prosomo.ledger.Transaction
 import scorex.util.encode.Base58
 

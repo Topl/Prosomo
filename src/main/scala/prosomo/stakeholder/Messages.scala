@@ -3,7 +3,7 @@ package prosomo.stakeholder
 import akka.util.Timeout
 import prosomo.cases._
 import prosomo.history.BlockStorage
-import prosomo.primitives.{ActorRefWrapper, Parameters}
+import prosomo.primitives.ActorRefWrapper
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

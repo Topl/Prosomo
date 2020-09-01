@@ -2,11 +2,11 @@ package prosomo.history
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import prosomo.components.{Serializer, Tine}
-import prosomo.primitives.{ByteStream, SimpleTypes}
+import prosomo.components.{Serializer, SimpleTypes, Tine}
+import prosomo.primitives.ByteStream
 import scorex.util.encode.Base58
 
-import scala.util.{Try,Success,Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
   * AMS 2020:

@@ -3,10 +3,10 @@ package prosomo.stakeholder
 import akka.actor.{Actor, ActorPath, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Serializer, Tine}
+import prosomo.primitives.{ActorRefWrapper, Fch, Kes, Ratio, Sig, Vrf}
+import prosomo.components.{Block, KeyFile, Keys, Parameters, Serializer, SimpleTypes, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
-import prosomo.ledger.{Transaction, Wallet}
+import prosomo.ledger.{StateRoot, Transaction, Wallet}
 
 import scala.concurrent.duration._
 import scala.math.BigInt

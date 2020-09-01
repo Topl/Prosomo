@@ -1,6 +1,6 @@
 package prosomo.ledger
 
-import prosomo.primitives.Types.{PublicKeyW, Sid, Signature}
+import prosomo.components.Types.{PublicKeyW, Sid, Signature}
 
 import scala.math.BigInt
 

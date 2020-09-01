@@ -3,7 +3,7 @@ package prosomo.providers
 import akka.actor.{Actor, PoisonPill, Props, Timers}
 import akka.util.Timeout
 import prosomo.cases._
-import prosomo.components.{Block, Serializer}
+import prosomo.components.{Block, Parameters, Serializer, SharedData, SimpleTypes, Types}
 import prosomo.history.BlockStorage
 import prosomo.primitives._
 

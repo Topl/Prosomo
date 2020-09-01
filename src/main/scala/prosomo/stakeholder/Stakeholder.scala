@@ -2,9 +2,9 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
+import prosomo.primitives.{ActorRefWrapper, Fch, Kes, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Serializer, Tine}
+import prosomo.components.{Block, KeyFile, Keys, Parameters, Serializer, Tine}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 import prosomo.ledger
 import prosomo.ledger.{Ledger, Transactions, Wallet}

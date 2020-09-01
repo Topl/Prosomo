@@ -1,7 +1,7 @@
 package prosomo.ledger
 
 import prosomo.components.Serializer
-import prosomo.primitives.Types.{PublicKeyW, State}
+import prosomo.components.Types.{PublicKeyW, State}
 import prosomo.primitives.{Ratio, Sig}
 
 import scala.math.BigInt

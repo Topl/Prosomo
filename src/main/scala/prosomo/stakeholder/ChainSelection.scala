@@ -3,8 +3,8 @@ package prosomo.stakeholder
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{BootstrapJob, RequestBlock, RequestTine, SendTx}
-import prosomo.components.Tine
-import prosomo.primitives.{ActorRefWrapper, Ratio, SharedData}
+import prosomo.components.{SharedData, Tine}
+import prosomo.primitives.{ActorRefWrapper, Ratio}
 import scorex.util.encode.Base58
 
 import scala.util.{Failure, Success, Try}

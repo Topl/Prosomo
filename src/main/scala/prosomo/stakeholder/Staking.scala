@@ -1,7 +1,7 @@
 package prosomo.stakeholder
 
-import prosomo.components.Tine
-import prosomo.primitives.{Ratio, SharedData}
+import prosomo.components.{SharedData, Tine}
+import prosomo.primitives.Ratio
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import scorex.util.encode.Base58
 

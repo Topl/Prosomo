@@ -2,8 +2,8 @@ package prosomo.ledger
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendTx
-import prosomo.components.Tine
-import prosomo.primitives.{Ratio, SharedData}
+import prosomo.components.{SharedData, Tine}
+import prosomo.primitives.Ratio
 import prosomo.stakeholder.Members
 import scorex.util.encode.Base58
 

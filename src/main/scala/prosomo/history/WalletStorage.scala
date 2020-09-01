@@ -1,9 +1,9 @@
 package prosomo.history
 
-import prosomo.primitives.{ByteStream, Fch, LDBStore, SimpleTypes}
+import prosomo.primitives.{ByteStream, Fch, LDBStore}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components
-import prosomo.components.Serializer
+import prosomo.components.{Serializer, SimpleTypes}
 import prosomo.ledger.Wallet
 
 import scala.util.Try

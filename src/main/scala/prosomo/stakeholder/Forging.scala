@@ -2,9 +2,10 @@ package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendBlock
-import prosomo.components.{Block, Tine}
-import prosomo.primitives.{Keys, ForgingKey, Ratio, SharedData, Types}
+import prosomo.components.{Block, Keys, SharedData, Tine, Types}
+import prosomo.primitives.{ForgingKey, Ratio}
 import scorex.util.encode.Base58
+
 import scala.math.BigInt
 import scala.util.Try
 

@@ -1,6 +1,8 @@
-package prosomo.primitives
+package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
+import prosomo.primitives._
+
 import scala.util.Try
 
 /**

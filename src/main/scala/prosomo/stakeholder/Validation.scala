@@ -2,8 +2,8 @@ package prosomo.stakeholder
 
 import com.google.common.primitives.Ints
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.{Block, Tine}
-import prosomo.primitives.{Ratio, SharedData, Types}
+import prosomo.components.{Block, SharedData, Tine, Types}
+import prosomo.primitives.Ratio
 import scorex.util.encode.Base58
 
 import scala.math.BigInt

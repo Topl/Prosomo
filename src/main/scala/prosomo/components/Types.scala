@@ -1,11 +1,11 @@
-package prosomo.primitives
+package prosomo.components
 
 import java.security.MessageDigest
 
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Serializer
 import prosomo.ledger.Transaction
+import prosomo.primitives.{ActorRefWrapper, Fch}
 
 /**
   * AMS 2020:

@@ -3,13 +3,11 @@ package prosomo.components
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import com.google.common.primitives.Bytes
 import prosomo.history.BlockStorage
-import prosomo.primitives.SimpleTypes
 import scorex.util.encode.Base58
-import prosomo.primitives.Types._
-import prosomo.primitives.Parameters
+import prosomo.components.Types._
 
 import scala.collection.mutable
-import scala.util.{Try,Success,Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
   * AMS 2020:

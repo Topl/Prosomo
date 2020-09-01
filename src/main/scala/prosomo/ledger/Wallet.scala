@@ -1,9 +1,9 @@
 package prosomo.ledger
 
 import io.iohk.iodb.ByteArrayWrapper
-import prosomo.components.Serializer
+import prosomo.components.{Parameters, Serializer, Types}
 import prosomo.ledger
-import prosomo.primitives.{Fch, Parameters, Sig, Types}
+import prosomo.primitives.{Fch, Sig}
 
 import scala.collection.immutable.ListMap
 import scala.math.BigInt

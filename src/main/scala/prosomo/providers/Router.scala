@@ -5,7 +5,7 @@ import akka.util.Timeout
 import com.google.common.primitives.Bytes
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases._
-import prosomo.components.Serializer
+import prosomo.components.{Parameters, Serializer, SharedData, Types}
 import prosomo.primitives.{ActorRefWrapper, _}
 import prosomo.remote.SpecTypes._
 import prosomo.remote._
