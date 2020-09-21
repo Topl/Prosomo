@@ -41,7 +41,7 @@ trait Forging extends Members with Types {
           .toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
       }
       val bn:Int = pb._9 + 1
-      val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
+      val txs:TransactionSet = blockify(forgerKeys.pkw,memPool,localState)
       val pi: Pi = vrf.vrfProof(
         forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE")
       )
@@ -66,8 +66,8 @@ trait Forging extends Members with Types {
         println(s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs")
       val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
-      updateLocalState(localState, (slot,block.id)) match {
-        case Some(forgedState:State) =>
+      applyBlock(localState, (slot,block.id)) match {
+        case Some(forgedState:StateData) =>
           send(selfWrapper,rng.shuffle(holders.filter(_ != selfWrapper))
             .take(numGossipersForge),SendBlock(block,selfWrapper))
           history.add((slot,block.id),forgedState,eta)

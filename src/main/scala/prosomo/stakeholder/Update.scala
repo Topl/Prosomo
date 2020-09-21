@@ -7,7 +7,8 @@ import prosomo.components.Tine
 import prosomo.primitives.{KeyFile, Ratio, SharedData}
 import scorex.util.encode.Base58
 
-import scala.util.Try
+import scala.util.{Try,Success,Failure}
+import scala.collection.mutable
 
 /**
   * AMS 2020:
@@ -48,13 +49,13 @@ trait Update extends Members {
     * @return the staking distribution to be used in epoch number ep
     */
 
-  def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):State = if (ep > 1) {
+  def getStakingState(ep:Int, chain:Tine, tine:Option[Tine]):StateData = if (ep > 1) {
     val stakeDistMaxSlot:Slot = (ep-1)*epochLength-1
     val stakeDistId:SlotId = localChain.getLastActiveSlot(stakeDistMaxSlot).get
     tine match {
       case Some(t) if t.minSlot.get <= stakeDistMaxSlot =>
         history.get(t.getLastActiveSlot(stakeDistMaxSlot).get) match {
-          case Some(value:(State,Eta)) =>
+          case Some(value:(StateData,Eta)) =>
             value._1
           case _ =>
             val thisSlot:Slot = t.lastActiveSlot(stakeDistMaxSlot).get
@@ -62,7 +63,7 @@ trait Update extends Members {
               +Base58.encode(localChain.getLastActiveSlot(stakeDistMaxSlot).get._2.data)
               +" from tine")
             SharedData.throwError(holderIndex)
-            Map()
+            mutable.Map()
         }
       case _ =>
         history.getStakeDist(stakeDistId)

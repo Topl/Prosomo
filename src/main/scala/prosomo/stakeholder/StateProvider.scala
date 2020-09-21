@@ -2,14 +2,14 @@ package prosomo.stakeholder
 
 import akka.actor.{ActorPath, Props}
 import com.google.common.cache.LoadingCache
-import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, Vrf}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.components.{Block, Serializer, Tine, Wallet, State}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
+import prosomo.primitives._
 
+import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
-import scala.collection.mutable
 
 /**
   * AMS 2020:
@@ -27,7 +27,7 @@ import scala.collection.mutable
   * @param inputKeyDir UI key dir for updates
   */
 
-class Stakeholder(
+class StateProvider(
                    inputSeed:Array[Byte],
                    override val holderIndex:Int,
                    inputRef:Seq[ActorRefWrapper],
@@ -41,7 +41,7 @@ class Stakeholder(
   with Ledger
   with Messages
   with Operations
-  with Receive
+  with SPReceive
   with Staking
   with Transactions
   with Update
@@ -148,11 +148,12 @@ class Stakeholder(
   var tineLengthList: List[Double] = List(0.0)
 }
 
-object Stakeholder {
+
+object StateProvider {
 
   def props(seed:Array[Byte],index:Int,ref:Seq[akka.actor.ActorRef]): Props =
     Props(
-      new Stakeholder(
+      new StateProvider(
         seed,
         index,
         ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),
@@ -161,7 +162,7 @@ object Stakeholder {
         None,
         None
       )
-    ).withDispatcher(Parameters.stakeholderEC)
+    ).withDispatcher(Parameters.stateProviderEC)
 
   def props(
              seed:Array[Byte],
@@ -172,7 +173,7 @@ object Stakeholder {
              password:String,
              kdir:String): Props =
     Props(
-      new Stakeholder(
+      new StateProvider(
         seed,
         index,
         ref.map(ActorRefWrapper(_)(ActorRefWrapper.routerRef(ref.head))),
@@ -181,6 +182,6 @@ object Stakeholder {
         Some(password),
         Some(kdir)
       )
-    ).withDispatcher(Parameters.stakeholderEC)
+    ).withDispatcher(Parameters.stateProviderEC)
 }
 

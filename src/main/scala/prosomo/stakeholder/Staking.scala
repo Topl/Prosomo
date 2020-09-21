@@ -125,7 +125,7 @@ trait Staking extends Members {
     * @param ls state from which the relative stake is calculated
     * @return state allocated to holderKey divided by all stake in state
     */
-  def relativeStake(holderKey:PublicKeyW,ls:State): Ratio = {
+  def relativeStake(holderKey:PublicKeyW,ls:StateData): Ratio = {
     var netStake:BigInt = 0
     var holderStake:BigInt = 0
     for (member <- ls.keySet) {

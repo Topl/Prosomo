@@ -7,6 +7,7 @@ import prosomo.primitives.{Ratio, SharedData, Types}
 import scorex.util.encode.Base58
 
 import scala.math.BigInt
+import scala.collection.mutable
 import scala.util.control.Breaks.{break, breakable}
 
 /**
@@ -84,7 +85,7 @@ trait Validation extends Members with Types {
     var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
     var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
     var eta_Ep: Eta = eta_from_genesis(c, 0)
-    var staking_state_tine: State = Map()
+    var staking_state_tine: StateData = mutable.Map()
     var pid:SlotId = (0,gh)
     var i = 0
 
@@ -119,14 +120,14 @@ trait Validation extends Members with Types {
         if (i/epochLength > ep) {
           ep = i/epochLength
           eta_Ep = eta_from_tine(c, ep, eta_Ep,None)
-          val toUpdate:State = if(ep == 0 || ep == 1 || ep == 2) {Map()} else staking_state_tine
+          val toUpdate:StateData = if(ep == 0 || ep == 1 || ep == 2) {mutable.Map()} else staking_state_tine
           val epochChain = if(ep == 0 || ep == 1) {
             c.slice(0,0)
           } else {
             c.slice((ep-2)*epochLength,(ep-1)*epochLength-1)
           }
-          updateLocalState(toUpdate,epochChain) match {
-            case Some(value:State) =>  staking_state_tine = value
+          applyTine(toUpdate,epochChain) match {
+            case Some(value:StateData) =>  staking_state_tine = value
             case _ =>
               println("Error: encountered invalid ledger in local chain")
               bool &&= false
@@ -185,21 +186,21 @@ trait Validation extends Members with Types {
     var isValid = true
     var pid:SlotId = localChain.getLastActiveSlot(prefix).get
     history.get(pid) match {
-      case Some(value:(State,Eta)) =>
+      case Some(value:(StateData,Eta)) =>
         val ep_prefix = prefix/epochLength
         val eta_prefix = value._2
         val ls_prefix = value._1
         var ep = ep_prefix
         var eta_tine:Eta = eta_prefix
-        var ls:State = ls_prefix
-        var staking_state_tine: State = getStakingState(ep_prefix,localChain,None)
+        var ls:StateData = ls_prefix
+        var staking_state_tine: StateData = getStakingState(ep_prefix,localChain,None)
         var alpha_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var tr_Ep:Ratio = new Ratio(BigInt(0),BigInt(1))
         var currentSlot = prefix+1
         breakable{
           for (id <- tine.ordered) {
-            updateLocalState(ls,id) match {
-              case Some(newState:State) =>
+            applyBlock(ls,id) match {
+              case Some(newState:StateData) =>
                 getBlockHeader(id) match {
                   case Some(block:BlockHeader) =>
                     getParentBlockHeader(block) match {

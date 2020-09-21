@@ -197,7 +197,7 @@ trait ChainSelection extends Members {
         routerRef ! BootstrapJob(selfWrapper)
       }
 
-      val bestChain = if(tineHeadId._1 - prefix < k_s && bnl < bnt) {
+      val bestChain = if (tineHeadId._1 - prefix < k_s && bnl < bnt) {
         true
       } else {
         val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive
@@ -238,7 +238,7 @@ trait ChainSelection extends Members {
         localChain.reorg(prefix,tine)
         val newHeadSlot = localChain.head._1
         history.get(localChain.get(newHeadSlot).get) match {
-          case Some(reorgState:(State,Eta)) =>
+          case Some(reorgState:(StateData,Eta)) =>
             localState = reorgState._1
             eta = reorgState._2
           case _ =>
@@ -373,7 +373,7 @@ trait ChainSelection extends Members {
       localChain.reorg(prefix,tine)
       val newHeadSlot = localChain.head._1
       history.get(localChain.head) match {
-        case Some(reorgState:(State,Eta)) =>
+        case Some(reorgState:(StateData,Eta)) =>
           localState = reorgState._1
           eta = reorgState._2
         case _ =>

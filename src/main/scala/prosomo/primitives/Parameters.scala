@@ -268,6 +268,7 @@ object Parameters {
   val pk_ecx:Array[Byte] = ecx.scalarMultBasePoint(sk_ecx)
 
   val stakeholderEC:String = config.getString("params.stakeholderEC")
+  val stateProviderEC:String = config.getString("params.stateProviderEC")
   val routerEC:String = config.getString("params.routerEC")
   val coordinatorEC:String = config.getString("params.coordinatorEC")
   val tineProviderEC:String = config.getString("params.tineProviderEC")

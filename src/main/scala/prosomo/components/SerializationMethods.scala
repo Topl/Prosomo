@@ -102,7 +102,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(slotId: SlotId):Array[Byte] = Bytes.concat(getBytes(slotId._1),getBytes(slotId._2))
   def getBytes(cert:Cert):Array[Byte] = sCert(cert)
   def getBytes(kesSignature: ForgingSignature):Array[Byte] = sKesSignature(kesSignature)
-  def getBytes(state: State):Array[Byte] = sState(state)
+  def getBytes(state: StateData):Array[Byte] = sState(state)
   def getBytes(transaction: Transaction):Array[Byte] = sTransaction(transaction)
   def getBytes(mac:Mac):Array[Byte] = sMac(mac)
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
@@ -622,16 +622,16 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sState(state: State):Array[Byte] = {
+  private def sState(state: StateData):Array[Byte] = {
     def mapToBytes(in:(PublicKeyW,(BigInt,Boolean,Int))):Array[Byte] = {
       in._1.data ++ getBytes(in._2._1) ++ getBytes(in._2._2) ++ getBytes(in._2._3)
     }
     Ints.toByteArray(state.keySet.size) ++ Bytes.concat(state.toSeq.map(mapToBytes):_*)
   }
 
-  private def dState(stream:ByteStream):State = {
+  private def dState(stream:ByteStream):StateData = {
     val numEntry = stream.getInt
-    var out:State = Map()
+    var out:StateData = mutable.Map()
     var i = 0
     while (i < numEntry) {
       val pkw = ByteArrayWrapper(stream.get(pkw_length))

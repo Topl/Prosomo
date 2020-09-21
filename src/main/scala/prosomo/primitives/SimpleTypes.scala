@@ -49,7 +49,10 @@ trait SimpleTypes {
   type ForgingSignature = (Array[Byte],Array[Byte],Array[Byte],Int,Array[Byte])
   type BlockHeader = (Hash,Hash,Slot,Cert,Rho,Pi,ForgingSignature,PublicKey,BlockNumber,Slot)
   type Request = (List[SlotId],Int,Int)
-  type State = Map[PublicKeyW,(BigInt,Boolean,Int)]
+  type StateKey = PublicKeyW
+  type StateValue = (BigInt,Boolean,Int)
+  type StateData = mutable.Map[StateKey,StateValue]
+  type StakeDistribution = Map[PublicKeyW,BigInt]
   type MemPool = Map[Sid,(Transaction,Int)]
   type TineData = (mutable.SortedMap[BigInt,SlotId],Slot,Slot)
 

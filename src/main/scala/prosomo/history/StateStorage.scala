@@ -47,31 +47,31 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     stateStoreCache.asMap().keySet().forEach(stateStoreCache.get(_).refresh())
   }
 
-  private val epochStakeDistCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
+  private val epochStakeDistCache:LoadingCache[SlotId,(StateData,Eta)] = CacheBuilder.newBuilder()
     .maximumSize(4)
-    .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
-      def load(id:SlotId):(State,Eta) = {
+    .build[SlotId,(StateData,Eta)](new CacheLoader[SlotId,(StateData,Eta)] {
+      def load(id:SlotId):(StateData,Eta) = {
         stateCache.get(id)
       }
     })
 
-  def getStakeDist(id:SlotId):State = {
+  def getStakeDist(id:SlotId):StateData = {
     epochStakeDistCache.get(id)._1
   }
 
   def cacheStakeDist(id:SlotId):Unit = epochStakeDistCache.refresh(id)
 
-  private val stateCache:LoadingCache[SlotId,(State,Eta)] = CacheBuilder.newBuilder()
+  private val stateCache:LoadingCache[SlotId,(StateData,Eta)] = CacheBuilder.newBuilder()
     .maximumSize(cacheSize)
-    .build[SlotId,(State,Eta)](new CacheLoader[SlotId,(State,Eta)] {
-      def load(id:SlotId):(State,Eta) = {
+    .build[SlotId,(StateData,Eta)](new CacheLoader[SlotId,(StateData,Eta)] {
+      def load(id:SlotId):(StateData,Eta) = {
         SharedData.throwDiskWarning(s"state database ${Base58.encode(id._2.data)}")
         (
           stateStoreCache.get(id._1/one_ninth_epoch).get(id._2).get match {
             case bytes:ByteArrayWrapper => {
               val byteStream = new ByteStream(bytes.data,DeserializeState)
               serializer.fromBytes(byteStream) match {
-                case s:State@unchecked => s
+                case s:StateData@unchecked => s
               }
             }
           },
@@ -84,19 +84,19 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
 
   def known(id:SlotId):Boolean = {
     Try{stateCache.getIfPresent(id)}.toOption match {
-      case Some(s:(State,Eta)) => true
+      case Some(s:(StateData,Eta)) => true
       case _ => stateStoreCache.get(id._1/one_ninth_epoch).known(id._2)
     }
   }
 
   def known_then_load(id:SlotId):Boolean = {
     Try{stateCache.get(id)}.toOption match {
-      case Some(s:(State,Eta)) => true
+      case Some(s:(StateData,Eta)) => true
       case None => false
     }
   }
 
-  def add(id:SlotId,ls:State,eta:Eta):Unit = {
+  def add(id:SlotId, ls:StateData, eta:Eta):Unit = {
     if (!known(id)) {
       stateStoreCache.get(id._1/one_ninth_epoch).update(Seq(),Seq(id._2 -> ByteArrayWrapper(serializer.getBytes(ls))))
       etaStoreCache.get(id._1/one_ninth_epoch).update(Seq(),Seq(id._2 -> ByteArrayWrapper(eta)))
@@ -104,5 +104,5 @@ class StateStorage(dir:String,serializer:Serializer) extends Types {
     stateCache.put(id,(ls,eta))
   }
 
-  def get(id:SlotId):Option[(State,Eta)] = Try{stateCache.get(id)}.toOption
+  def get(id:SlotId):Option[(StateData,Eta)] = Try{stateCache.get(id)}.toOption
 }

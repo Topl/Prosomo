@@ -5,6 +5,7 @@ import prosomo.primitives.{Fch, Sig, Types}
 import prosomo.stakeholder.Transactions
 import prosomo.primitives.Parameters
 import scala.collection.immutable.ListMap
+import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
 
@@ -23,8 +24,8 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
   var confirmedTxCounter:Int = 0
   var netStake:BigInt = 1
   var netStake0:BigInt = 1
-  var issueState:State = Map()
-  var confirmedState:State = Map()
+  var issueState:State = State(mutable.Map())
+  var confirmedState:State = State(mutable.Map())
   var reallocated:Map[PublicKeyW,Int] = Map()
   val fch:Fch = new Fch
 
@@ -85,17 +86,22 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
   }
 
   def update(state:State): Unit = {
-    issueState = state
-    confirmedState = state
+    issueState = state.copy
+    confirmedState = state.copy
     for (entry <- pendingTxsOut) {
-      if (entry._2.nonce < issueState(pkw)._3) {
-        removeTx(entry._2)
+      issueState.get(pkw) match {
+        case Some(value) =>
+          if (entry._2.nonce < value._3) {
+            removeTx(entry._2)
+          }
+        case None =>
       }
+
     }
     for (entry <- sortPendingTx) {
       val trans = entry._2
-      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) =>
+      applyTransaction(trans,issueState,None,fee_r) match {
+        case Some(value:StateData) =>
           issueState = value
         case _ =>
           pendingTxsOut = Map()
@@ -117,9 +123,14 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
   def getPending(state:State):List[Transaction] = {
     var out:List[Transaction] = List()
     for (entry <- pendingTxsOut) {
-      if (entry._2.nonce >= state(pkw)._3) {
-        out ::= entry._2
+      state.get(pkw) match {
+        case Some(value) =>
+          if (entry._2.nonce >= value._3) {
+            out ::= entry._2
+          }
+        case None =>
       }
+
     }
     out
   }
@@ -166,45 +177,63 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
 
 
   def issueTx(data:(ByteArrayWrapper,BigInt),sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Option[Transaction] = {
-    if (issueState.keySet.contains(pkw)) {
-      val (pk_r,delta) = data
-      val scaledDelta = BigDecimal(delta.toDouble*netStake.toDouble/netStake0.toDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
-      val txC = issueState(pkw)._3
-      val trans:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
-      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) =>
-          issueState = value
-          pendingTxsOut += (trans.sid->trans)
-          Some(trans)
-        case _ =>
-          None
-      }
-    } else {
-      None
+    issueState.get(pkw) match {
+      case Some(value) =>
+        val (pk_r,delta) = data
+        val scaledDelta = BigDecimal(delta.toDouble*netStake.toDouble/netStake0.toDouble).setScale(0, BigDecimal.RoundingMode.HALF_UP).toBigInt
+        val txC:Int = value._3
+        val tx:Transaction = signTransaction(sk_sig,pkw,pk_r,scaledDelta,txC,sig,rng,serializer)
+        applyTransaction(tx,issueState.copy,None,fee_r) match {
+          case Some(value:StateData) =>
+            issueState = value
+            pendingTxsOut += (tx.sid->tx)
+            Some(tx)
+          case _ =>
+            None
+        }
+      case None =>
+        None
     }
   }
 
-  def issueTx(sender:PublicKeyW,recip:PublicKeyW,delta:BigInt,sk_sig:Array[Byte],sig:Sig,rng:Random,serializer: Serializer): Option[Transaction] = {
-    if (issueState.keySet.contains(sender)) {
-      val txC = issueState(sender)._3
-      val trans:Transaction = signTransaction(sk_sig,sender,recip,delta,txC,sig,rng,serializer)
-      applyTransaction(trans,issueState,ByteArrayWrapper(Array()),fee_r) match {
-        case Some(value:State) =>
-          if (sender == pkw) {
-            issueState = value
-            pendingTxsOut += (trans.sid->trans)
-          }
-          Some(trans)
-        case _ =>
-          None
-      }
-    } else {
-      None
+  def issueTx(sender:PublicKeyW, recipient:PublicKeyW, delta:BigInt, sk_sig:Array[Byte], sig:Sig, rng:Random, serializer: Serializer): Option[Transaction] = {
+    issueState.get(sender) match {
+      case Some(value) =>
+        val txC = value._3
+        val tx:Transaction = signTransaction(sk_sig,sender,recipient,delta,txC,sig,rng,serializer)
+        applyTransaction(tx,issueState,None,fee_r) match {
+          case Some(value:StateData) =>
+            if (sender == pkw) {
+              issueState = value
+              pendingTxsOut += (tx.sid->tx)
+            }
+            Some(tx)
+          case _ =>
+            None
+        }
+      case None => None
     }
   }
 
   def isSameLedgerId(publicAddress:PublicKeyW):Boolean = {
     publicAddress.data.take(pk_length).deep == pkw.data.take(pk_length).deep && publicAddress != pkw
+  }
+
+  def collectStake(sk_sig:Array[Byte], sig:Sig, rng:Random, serializer: Serializer):Seq[Transaction] = {
+    var out:Seq[Transaction] = Seq()
+    confirmedState.data.foreach({entry=>
+      if (!reallocated.keySet.contains(entry._1)) {
+        if (isSameLedgerId(entry._1) && entry._2._1 > 0) {
+          issueTx(entry._1,pkw,entry._2._1,sk_sig,sig,rng,serializer) match {
+            case Some(tx) =>
+              reallocated += (entry._1 -> tx.nonce)
+              out ++= Seq(tx)
+            case None =>
+          }
+        }
+      }
+    })
+    out
   }
 
 }

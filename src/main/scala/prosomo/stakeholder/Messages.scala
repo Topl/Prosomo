@@ -115,7 +115,7 @@ trait Messages extends Members {
     * @return
     */
 
-  def getStakingState(holder:ActorRefWrapper):State = {
+  def getStakingState(holder:ActorRefWrapper):StateData = {
     implicit val timeout:Timeout = Timeout(waitTime)
     val future = holder ? RequestState
     val result = Await.result(future, timeout.duration)

@@ -2,29 +2,29 @@ package prosomo.stakeholder
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.SendTx
-import prosomo.components.{Tine, Transaction}
+import prosomo.components.{Tine, Transaction, State}
 import prosomo.primitives.SharedData
 import scorex.util.encode.Base58
 
 import scala.collection.immutable.ListMap
 import scala.math.BigInt
-import scala.util.{Failure, Try}
+import scala.util.{Success,Failure, Try}
 import scala.util.control.Breaks.{break, breakable}
 
 /**
   * AMS 2020:
-  * Methods regarding leger updates and state transitions using the account based transaction model,
+  * Methods regarding ledger updates and state transitions using the account based transaction model,
   * Many more Tx models are to be incorporated, namely UTXOs,
   * this outlines where state updates will be executed in the system
   */
 
 trait Ledger extends Members {
 
-  def updateWallet():Unit = Try{
+  def updateWallet():Unit = Try {
     var id = localChain.getLastActiveSlot(globalSlot).get
     val bn:Int = getBlockHeader(id).get._9
     if (bn == 0) {
-      wallet.update(history.get(id).get._1)
+      wallet.update(localState)
       if (holderIndex == SharedData.printingHolder) {
         SharedData.walletInfo = (
           wallet.getNumPending,
@@ -37,13 +37,18 @@ trait Ledger extends Members {
       }
     } else {
       breakable{
+        val newState = localState.copy
+        unapplyBlock(newState,id) match {
+          case Some(_) =>
+          case None => assert(false)
+        }
         while (true) {
           id = getParentId(id).get
           getBlockHeader(id) match {
             case Some(b:BlockHeader) =>
               val bni = b._9
               if (bni <= bn-confirmationDepth || bni == 0) {
-                wallet.update(history.get(id).get._1)
+                wallet.update(newState)
                 if (holderIndex == SharedData.printingHolder) {
                   SharedData.walletInfo = (
                     wallet.getNumPending,
@@ -55,6 +60,11 @@ trait Ledger extends Members {
                   SharedData.selfWrapper = Some(selfWrapper)
                 }
                 break
+              } else {
+                unapplyBlock(newState,id) match {
+                  case Some(_) =>
+                  case None => assert(false)
+                }
               }
             case None =>
               println("Error: invalid id in wallet")
@@ -67,24 +77,6 @@ trait Ledger extends Members {
       if (!memPool.keySet.contains(trans.sid)) memPool += (trans.sid->(trans,0))
       send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
     }
-
-    def collectStake():Unit = Try{
-      for (entry<-wallet.confirmedState) if (!wallet.reallocated.keySet.contains(entry._1)) {
-        if (wallet.isSameLedgerId(entry._1) && entry._2._1 > 0) {
-          wallet.issueTx(entry._1,wallet.pkw,entry._2._1,keys.sk_sig,sig,rng,serializer) match {
-            case Some(trans:Transaction) =>
-              if (holderIndex == SharedData.printingHolder && printFlag)
-                println("Holder " + holderIndex.toString + " Reallocated Stake")
-              txCounter += 1
-              memPool += (trans.sid->(trans,0))
-              send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(trans,selfWrapper))
-              wallet.reallocated += (entry._1->trans.nonce)
-            case _ =>
-          }
-        }
-      }
-    }
-    collectStake()
     walletStorage.store(wallet,serializer)
   } match {
     case Failure(exception) =>
@@ -92,146 +84,166 @@ trait Ledger extends Members {
     case _ =>
   }
 
+  def collectStake():Unit = {
+    wallet.collectStake(keys.sk_sig, sig, rng, serializer).foreach({tx =>
+      if (holderIndex == SharedData.printingHolder && printFlag)
+        println("Holder " + holderIndex.toString + " Reallocated Stake")
+      txCounter += 1
+      memPool += (tx.sid->(tx,0))
+      send(selfWrapper,gossipSet(selfWrapper,holders), SendTx(tx,selfWrapper))
+    })
+  }
+
+  def applyBlockReward(ls:State, pk_f:PublicKeyW): Option[State] = Try{
+    val f_net: BigInt = ls.get(pk_f).get._1
+    val txC:Int = ls.get(pk_f).get._3
+    val f_new: BigInt = f_net + forgerReward
+    ls -= pk_f
+    ls += (pk_f -> (f_new,true,txC))
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      exception.printStackTrace()
+      None
+  }
+
+  def unapplyBlockReward(ls:State, pk_f:PublicKeyW): Option[State] = Try{
+    val f_net: BigInt = ls.get(pk_f).get._1
+    val txC:Int = ls.get(pk_f).get._3
+    val f_new: BigInt = f_net - forgerReward
+    ls -= pk_f
+    ls += (pk_f -> (f_new,true,txC))
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      exception.printStackTrace()
+      None
+  }
+
+  def applyGenesisSet(ls:State, genesisSet: GenesisSet): Option[State] = Try{
+    assert(genesisSet.nonEmpty)
+    for (entry <- genesisSet) {
+      if (ByteArrayWrapper(entry._1) == genesisBytes) {
+        val delta = entry._3
+        val netStake:BigInt = 0
+        val newStake:BigInt = netStake + delta
+        val pk_g:PublicKeyW = entry._2
+        ls.get(pk_g) match {
+          case None =>
+            ls += (pk_g -> (newStake,true,0))
+          case _ => assert(false)
+        }
+      }
+    }
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      exception.printStackTrace()
+      None
+  }
+
   /**
-    * apply each block in chain to passed local state
+    * apply each block in tine to local state in order
     * @param ls old local state to be updated
     * @param c chain of block ids
     * @return updated localstate
     */
 
-  def updateLocalState(ls:State, c:Tine): Option[State] = {
-    var nls:State = ls
-    var isValid = true
+  def applyTine(ls:State, c:Tine): Option[State] = Try{
     for (id <- c.ordered) {
-      if (isValid) getBlockHeader(id) match {
-        case Some(b:BlockHeader) =>
-          val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
-          val cert:Cert = b._4
-          val (pk_vrf,_,_,pk_sig,_,_) = cert
-          val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
-          var validForger = true
-          if (slot == 0) {
-            val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
-            if (genesisSet.isEmpty) isValid = false
-            if (isValid) for (entry <- genesisSet) {
-              if (ByteArrayWrapper(entry._1) == genesisBytes) {
-                val delta = entry._3
-                val netStake:BigInt = 0
-                val newStake:BigInt = netStake + delta
-                val pk_g:PublicKeyW = entry._2
-                if(nls.keySet.contains(pk_g)) {
-                  isValid = false
-                  nls -= pk_g
-                }
-                nls += (pk_g -> (newStake,true,0))
-              }
-            }
-          } else {
-            //apply forger reward
-            if (nls.keySet.contains(pk_f)) {
-              val netStake: BigInt = nls(pk_f)._1
-              val txC:Int = nls(pk_f)._3
-              val newStake: BigInt = netStake + forgerReward
-              nls -= pk_f
-              nls += (pk_f -> (newStake,true,txC))
-            } else {
-              validForger = false
-            }
-            //apply transactions
-            if (validForger) {
-              for (trans <- blocks.get(id).get.blockBody.get) {
-                if (verifyTransaction(trans)) {
-                  applyTransaction(trans, nls, pk_f, fee_r) match {
-                    case Some(value: State) =>
-                      nls = value
-                    case _ => isValid = false
-                  }
-                } else {
-                  isValid = false
-                }
-              }
-            } else {
-              isValid = false
-            }
-          }
+      applyBlock(ls,id) match {
+        case None => assert(false)
         case _ =>
       }
-      if (!isValid) {
-        println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
-        SharedData.throwError(holderIndex)
-      }
     }
-    if (isValid) {
-      Some(nls)
-    } else {
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      exception.printStackTrace()
       None
-    }
   }
 
-  def updateLocalState(ls:State, id:SlotId):Option[State] = {
-    var nls:State = ls
-    var isValid = true
-    if (isValid) getBlockHeader(id) match {
-      case Some(b:BlockHeader) =>
+  def unapplyTine(ls:State, c:Tine): Option[State] = Try{
+    for (id <- c.ordered.reverse) {
+      unapplyBlock(ls,id) match {
+        case None => assert(false)
+        case _ =>
+      }
+    }
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      exception.printStackTrace()
+      None
+  }
+
+  def applyBlock(ls:State, id:SlotId):Option[State] = Try{
+    getBlockHeader(id) match {
+      case Some(b) =>
+        val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
+        val cert:Cert = b._4
+        val (pk_vrf,_,_,pk_sig,_,_) = cert
+        val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
+        if (slot == 0) {
+          val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
+          applyGenesisSet(ls,genesisSet) match {
+            case Some(_) =>
+            case None => assert(false)
+          }
+        } else {
+          //apply forger reward
+          applyBlockReward(ls,pk_f)
+          //apply transactions
+          for (tx <- blocks.get(id).get.blockBody.get) {
+            assert(verifyTransaction(tx))
+            applyTransaction(tx, ls, pk_f, fee_r) match {
+              case Some(_) =>
+              case None => assert(false)
+            }
+          }
+        }
+      case None =>
+        assert(false)
+    }
+    ls
+  } match {
+    case Success(value) => Some(value)
+    case Failure(exception) =>
+      println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
+      SharedData.throwError(holderIndex)
+      exception.printStackTrace()
+      None
+  }
+
+  def unapplyBlock(ls:State, id:SlotId):Option[State] = {
+    getBlockHeader(id) match {
+      case Some(b) => Try{
         val (_,_,slot:Slot,_,_,_,_,pk_kes:PublicKey,_,_) = b
         val cert:Cert = b._4
         val (pk_vrf,_,_,pk_sig,_,_) = cert
         val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
         var validForger = true
-        if (slot == 0) {
-          val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
-          if (genesisSet.isEmpty) isValid = false
-          if (isValid) for (entry <- genesisSet) {
-            if (ByteArrayWrapper(entry._1) == genesisBytes) {
-              val delta = entry._3
-              val netStake:BigInt = 0
-              val newStake:BigInt = netStake + delta
-              val pk_g:PublicKeyW = entry._2
-              if(nls.keySet.contains(pk_g)) {
-                isValid = false
-                nls -= pk_g
-              }
-              nls += (pk_g -> (newStake,true,0))
-            }
-          }
-        } else {
-          //apply forger reward
-          if (nls.keySet.contains(pk_f)) {
-            val netStake: BigInt = nls(pk_f)._1
-            val txC:Int = nls(pk_f)._3
-            val newStake: BigInt = netStake + forgerReward
-            nls -= pk_f
-            nls += (pk_f -> (newStake,true,txC))
-          } else {
-            validForger = false
-          }
-          //apply transactions
-          if (validForger) {
-            for (trans <- blocks.get(id).get.blockBody.get) {
-              if (verifyTransaction(trans)) {
-                applyTransaction(trans, nls, pk_f, fee_r) match {
-                  case Some(value:State) =>
-                    nls = value
-                  case _ => isValid = false
-                }
-              } else {
-                isValid = false
-              }
-            }
-          } else {
-            isValid = false
+
+        //unapply transactions
+        for (trans <- blocks.get(id).get.blockBody.get.reverse) {
+          unapplyTransaction(trans, ls, pk_f, fee_r) match {
+            case Some(_) =>
+            case None => assert(false)
           }
         }
-      case _ =>
-    }
-    if (!isValid) {
-      println(s"Holder $holderIndex ledger error on slot "+id._1+" block id:"+Base58.encode(id._2.data))
-      SharedData.throwError(holderIndex)
-    }
-    if (isValid) {
-      Some(nls)
-    } else {
-      None
+        //unapply forger reward
+        unapplyBlockReward(ls,pk_f) match {
+          case Some(_) =>
+          case None => assert(false)
+        }
+        ls
+      }.toOption
+      case None => None
     }
   }
 
@@ -245,7 +257,7 @@ trait Ledger extends Members {
       } else {
         memPool -= entry._1
       }
-      if (entry._2._1.nonce < localState(entry._2._1.sender)._3) {
+      if (entry._2._1.nonce < localState.get(entry._2._1.sender).get._3) {
         memPool -= entry._1
       }
     }
@@ -272,26 +284,24 @@ trait Ledger extends Members {
     * @return list of transactions
     */
 
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSet = {
-    var ledger: List[Transaction] = List()
-    var ls: State = s
+  def blockify(pkw:PublicKeyW, mp:MemPool, ls:State): TransactionSet = {
+    var newBlockBody: Seq[Transaction] = Seq()
     val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1.nonce < _._2._1.nonce): _*)
     breakable {
       for (entry <- sortedBuffer) {
-        val transaction:Transaction = entry._2._1
-        val transactionCount:Int = transaction.nonce
-        if (transactionCount == ls(transaction.sender)._3 && verifyTransaction(transaction)) {
-          applyTransaction(transaction,ls, pkw,fee_r) match {
-            case Some(value:State) =>
-              ledger ::= entry._2._1
-              ls = value
+        val tx:Transaction = entry._2._1
+        val txCount:Int = tx.nonce
+        if (txCount == ls.get(tx.sender).get._3 && verifyTransaction(tx)) {
+          applyTransaction(tx,ls, pkw,fee_r) match {
+            case Some(_) =>
+              newBlockBody ++= Seq(entry._2._1)
             case _ =>
           }
-          if (ledger.length >= txPerBlock) break
+          if (newBlockBody.length >= txPerBlock) break
         }
       }
     }
-    ledger.reverse
+    newBlockBody
   }
 
 }

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorPath, Timers}
 import com.google.common.cache.LoadingCache
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.{ActorRefWrapper, Fch, Kes, KeyFile, Keys, Parameters, Ratio, Sig, SimpleTypes, Vrf}
-import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet}
+import prosomo.components.{Block, Serializer, Tine, Transaction, Wallet, State}
 import prosomo.history.{BlockStorage, ChainStorage, StateStorage, WalletStorage}
 
 import scala.concurrent.duration._
@@ -103,7 +103,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   var keyFile:Option[KeyFile]
   var localState:State
   var eta:Eta
-  var stakingState:State
+  var stakingState:StakeDistribution
   var memPool:MemPool
   var chainUpdateLock:Boolean
   var holders: List[ActorRefWrapper]
@@ -147,11 +147,12 @@ trait Members extends SimpleTypes with Actor with Timers {
   def forgeBlock(forgerKeys:Keys):Unit
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet():Unit
+  def collectStake():Unit
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
   def maxValidBG():Unit
   def bootstrapAdoptTine():Unit
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta)
-  def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):State
+  def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):StateData
   def stakingTestStrategy(y:Rho,ps:Slot,bn:Int):Rho
   def update():Unit
   def scheduleDiffuse():Unit
@@ -167,7 +168,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def hash(input:TransactionSet,serializer: Serializer):Hash
   def hash(input:String,serializer: Serializer):Hash
   def verifyTX(transaction: Transaction,sig:Sig,serializer: Serializer):Boolean
-  def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
+  def applyTransaction(t: Transaction, ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
+  def unapplyTransaction(t: Transaction, ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
   def getParentId(b:BlockHeader):SlotId
   def phi(a:Ratio):Ratio
   def phi(a:Ratio,m_f:Ratio):Ratio
@@ -175,7 +177,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def threshold(a:Ratio, s_interval:Slot):Ratio
   def factorial(n: Int):BigInt
   def compare(y: Array[Byte],t: Ratio):Boolean
-  def relativeStake(holderKey:PublicKeyW,ls:State):Ratio
+  def relativeStake(holderKey:PublicKeyW,ls:StateData):Ratio
   def uuid:String
   def bytes2hex(b: Array[Byte]):String
   def hex2bytes(hex: String): Array[Byte]
@@ -191,7 +193,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def send(sender:ActorRefWrapper, holders:List[ActorRefWrapper], command: Any):Unit
   def sendAssertDone(holders:List[ActorRefWrapper], command: Any):Unit
   def sendAssertDone(holder:ActorRefWrapper, command: Any):Unit
-  def getStakingState(holder:ActorRefWrapper):State
+  def getStakingState(holder:ActorRefWrapper):StateData
   def blockTree(holder:ActorRefWrapper):Unit
   def getPositionData(router:ActorRefWrapper):(Map[ActorRefWrapper,(Double,Double)],Map[(ActorRefWrapper,ActorRefWrapper),Long])
   def verifyBlockHeader(b:BlockHeader):Boolean
@@ -199,11 +201,16 @@ trait Members extends SimpleTypes with Actor with Timers {
   def verifyChain(c:Tine, gh:Hash):Boolean
   def verifyTine(tine:Tine, prefix:Slot):Boolean
   def verifyTransaction(t:Transaction):Boolean
-  def updateLocalState(ls:State, c:Tine):Option[State]
-  def updateLocalState(ls:State, id:SlotId):Option[State]
+  def applyBlock(ls:State, id:SlotId):Option[State]
+  def unapplyBlock(ls:State, id:SlotId):Option[State]
+  def applyTine(ls:State, c:Tine):Option[State]
+  def unapplyTine(ls:State, c:Tine):Option[State]
+  def applyBlockReward(ls:State,pk_f:PublicKeyW):Option[State]
+  def unapplyBlockReward(ls:State,pk_f:PublicKeyW):Option[State]
+  def applyGenesisSet(ls:State, genesisSet: GenesisSet):Option[State]
   def trimMemPool():Unit
   def collectLedger(c:Tine):Unit
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet
+  def blockify(pkw:PublicKeyW, mp:MemPool, s:State):TransactionSet
   def timeFlag[R](block: => R):R
   def time[R](block: => R):R
 

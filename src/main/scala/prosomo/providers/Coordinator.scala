@@ -18,6 +18,7 @@ import prosomo.primitives._
 import prosomo.stakeholder._
 import scorex.util.encode.Base58
 
+import scala.collection.mutable
 import scala.math.BigInt
 import scala.reflect.io.Path
 import scala.sys.process._
@@ -75,9 +76,9 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   var keys:Keys = Keys(seed,sig,vrf,kes,0)
   var wallet:Wallet = components.Wallet(keys.pkw)
   var chainUpdateLock = false
-  var localState:State = Map()
+  var localState:State = State(mutable.Map())
   var eta:Eta = Array()
-  var stakingState:State = Map()
+  var stakingState:StakeDistribution = Map()
   var memPool:MemPool = Map()
   var holders: List[ActorRefWrapper] = List()
   var gOff = 0
@@ -495,7 +496,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           if(value.slice(0,arg2.length) == arg2) {
             val ratio:Double =  value.drop(arg2.length).toDouble
             assert(ratio>0.0 && ratio<1.0)
-            val stakingState:State = getStakingState(holders.head)
+            val stakingState:StateData = getStakingState(holders.head)
             val netStake:BigInt = {
               var out:BigInt = 0
               for (holder<-holders){
@@ -536,7 +537,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
           if (value.slice(0,arg3.length) == arg3) {
             val ratio:Double =  value.drop(arg3.length).toDouble
             assert(ratio>0.0 && ratio<1.0)
-            val stakingState:State = getStakingState(holders.head)
+            val stakingState:StateData = getStakingState(holders.head)
             val netStake:BigInt = {
               var out:BigInt = 0
               for (holder<-holders){

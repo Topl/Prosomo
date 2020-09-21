@@ -451,8 +451,8 @@ trait Receive extends Members {
           case None =>
             localChain.loadCache()
             localChain.update((0,genBlockHash),genesisBlock.get.blockHeader.get._5)
-            updateLocalState(localState, (0,genBlockHash)) match {
-              case Some(value:State) => localState = value
+            applyBlock(localState, (0,genBlockHash)) match {
+              case Some(value:StateData) => localState = value
               case _ =>
                 SharedData.throwError(holderIndex)
                 println("error: invalid genesis block")
