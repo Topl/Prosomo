@@ -63,7 +63,19 @@ trait Forging extends Members with Types {
       val b:BlockHeader = (h, ledger, slot, cert, rho, pi, kes_sig, forgerKeys.pk_kes,bn,ps)
       val hb = hash(b,serializer)
       if (printFlag)
-        println(s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs")
+        if (slot-ps > gamma) {
+          println(
+            Console.GREEN
+              + s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs"
+              + Console.RESET
+          )
+        } else {
+          println(
+            Console.MAGENTA
+              + s"Holder $holderIndex forged block $bn id:${Base58.encode(hb.data)} with ${txs.length} txs"
+              + Console.RESET
+          )
+        }
       val block = Block(hb,Some(b),Some(txs),None)
       blocks.add(block)
       updateLocalState(localState, (slot,block.id)) match {
@@ -82,7 +94,7 @@ trait Forging extends Members with Types {
     }
 
     if (!bootStrapLock && slot - ps < slotWindow) {
-      val test = stakingTestStrategy(y,ps,pb._9+1)
+      val test = stakingTestStrategy(y,ps,pb._9+1,pb._5,slot-ps)
       if (f_dynamic) {
         testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
       } else {

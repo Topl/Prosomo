@@ -33,15 +33,13 @@ trait Members extends SimpleTypes with Actor with Timers {
   val slotT:Long = Parameters.slotT
   val useRouting:Boolean = Parameters.useRouting
   val delta_s:Int = Parameters.delta_s
-  val f_s:Double = Parameters.f_s
   val o_n:Int = Parameters.o_n
-  val m_f_root:Ratio = Parameters.m_f_root
+  val m_f:Ratio = Parameters.m_f
   val f_dynamic:Boolean = Parameters.f_dynamic
   val testStrategy:String = Parameters.testStrategy
-  val f_min:Ratio = Parameters.f_min
-  val f_max:Ratio = Parameters.f_max
-  val num_f:Int = Parameters.num_f
   val m_f_range:Array[Ratio] = Parameters.m_f_range
+  val m_f_B:Ratio = Parameters.m_f_B
+  val gamma:Slot = Parameters.gamma
   val k_s:Int = Parameters.k_s
   val epochLength:Int = Parameters.epochLength
   val one_third_epoch:Int = Parameters.one_third_epoch
@@ -152,7 +150,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def bootstrapAdoptTine():Unit
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):State
-  def stakingTestStrategy(y:Rho,ps:Slot,bn:Int):Rho
+  def stakingTestStrategy(y:Rho,ps:Slot,bn:Int,rho:Rho,s_interval:Slot):Rho
   def update():Unit
   def scheduleDiffuse():Unit
   def Sha512(bytes: Array[Byte]):Array[Byte]

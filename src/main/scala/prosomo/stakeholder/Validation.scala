@@ -135,7 +135,7 @@ trait Validation extends Members with Types {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
-      val test:Rho = stakingTestStrategy(y,ps,bn)
+      val test:Rho = stakingTestStrategy(y,ps,bn,parent._5,slot-ps)
       if (f_dynamic) {
         tr_Ep = threshold(alpha_Ep,slot-ps)
       } else {
@@ -223,7 +223,7 @@ trait Validation extends Members with Types {
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }
-                          val test = stakingTestStrategy(y,ps,bn)
+                          val test = stakingTestStrategy(y,ps,bn,parent._5,slot-ps)
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)

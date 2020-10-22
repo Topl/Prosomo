@@ -22,7 +22,7 @@ trait Staking extends Members {
 
   def phi(a:Ratio): Ratio = {
     var out = Ratio(0)
-    val base = m_f_root * a
+    val base = m_f * a
     for (n <- 1 to o_n) {
       out = out - ( base.pow(n) * Ratio(BigInt(1),factorial_cache(n)) )
     }
@@ -53,11 +53,12 @@ trait Staking extends Members {
     */
 
   def threshold(a:Ratio, s_interval:Slot):Ratio = {
+    assert(s_interval>0)
     s_interval-1 match {
-      case int: Int if int < m_f_range.length =>
+      case int:Int if int < m_f_range.length =>
         phi(a,m_f_range(int))
       case _ =>
-        phi(a)
+        phi(a,m_f_B)
     }
   }
 
@@ -113,10 +114,16 @@ trait Staking extends Members {
     * inherently making that tine less viable
     */
 
-  def stakingTestStrategy(y:Rho,ps:Slot,bn:Int):Rho = testStrategy match {
+  def stakingTestStrategy(y:Rho,ps:Slot,bn:Int,rho:Rho,s_interval:Slot):Rho = testStrategy match {
     case "vrf" => y
     case "parent-slot-hash" => Sha512(y++serializer.getBytes(ps))
     case "parent-slot-number-hash" => Sha512(y++serializer.getBytes(ps)++serializer.getBytes(bn))
+    case "taktikos-bounded-header-nonce" =>
+      if (s_interval <= gamma) {
+        Sha512(y++rho)
+      } else {
+        y
+      }
   }
 
   /**

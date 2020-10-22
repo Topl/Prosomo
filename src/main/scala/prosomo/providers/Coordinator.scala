@@ -206,7 +206,6 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       println(s"Delta = $delta_s")
       println(s"K = $k_s")
       println(s"S = $slotWindow")
-      println(s"f = $f_s")
       if (holderIndexMin > -1 && holderIndexMax > -1) {
         println("Populating...")
         holders = List.range(holderIndexMin,holderIndexMax+1).map(startHolder)

@@ -168,16 +168,27 @@ object Parameters {
     }
     out
   }
-  val m_f_root:Ratio = log_one_minus(Ratio(f_s,4))
+  val m_f:Ratio = log_one_minus(Ratio(f_s,4))
   val f_dynamic:Boolean = config.getBoolean("params.f_dynamic")
   val testStrategy:String = config.getString("params.testStrategy")
-  val f_min:Ratio = Ratio(config.getDouble("params.f_min"),4)
-  val f_max:Ratio = Ratio(config.getDouble("params.f_max"),4)
-  val num_f:Int = config.getInt("params.num_f")
-  val m_f_range:Array[Ratio] = (0 to num_f).toArray
-    .map(i => log_one_minus( Ratio(num_f-i,num_f)*f_min + Ratio(i,num_f)*f_max) )
-  //(0 to num_f).toArray
-  //  .map(i => println( (Ratio(num_f-i,num_f)*f_min + Ratio(i,num_f)*f_max).toBigDecimal.toString()) )
+  val f_A:Ratio = Ratio(config.getDouble("params.f_A"),4)
+  val f_B:Ratio = Ratio(config.getDouble("params.f_B"),4)
+  val gamma:Int = config.getInt("params.gamma")
+  val slot_gap:Int = config.getInt("params.slot_gap")
+  //Local Dynamic Difficulty curve
+  def ldd_gap_sawtooth(i:Int):Ratio = {
+    if (i <= slot_gap) {
+      Ratio(0)
+    } else {
+      Ratio(i-slot_gap,gamma-slot_gap)*f_A
+    }
+  }
+  val m_f_B:Ratio = log_one_minus(f_B)
+  val m_f_range:Array[Ratio] = (0 to gamma).toArray
+    .map(i => ldd_gap_sawtooth(i))
+    .map(f => log_one_minus(f))
+  (0 to gamma).toArray
+    .map(i => println(i, ldd_gap_sawtooth(i).toBigDecimal.toString()) )
 
   // checkpoint depth in slots, k parameter in maxValid-bg, k > 192*delta/epsilon*beta
   val k_s:Int = if(useDelayParam) {
