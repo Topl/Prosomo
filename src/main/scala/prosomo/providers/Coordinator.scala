@@ -277,10 +277,12 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       case newBlock:Block => genesisBlock = Some(newBlock)
     }
     blocks.store(genBlockKey,genesisBlock.get)
-    val file = new File("src/main/resources/genesis/blockData")
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(Base58.encode(serializer.getBytes(genesisBlock.get)))
-    bw.close()
+    if (Parameters.writeGenBlock) {
+      val file = new File("src/main/resources/genesis/blockData")
+      val bw = new BufferedWriter(new FileWriter(file))
+      bw.write(Base58.encode(serializer.getBytes(genesisBlock.get)))
+      bw.close()
+    }
   }
 
   def setupLocal():Unit = {
@@ -715,11 +717,8 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
 
     if (SharedData.killFlag) {
       timers.cancelAll
-      fileWriter match {
-        case fw:BufferedWriter => fw.close()
-        case _ => println("error: file writer close on non writer object")
-      }
       context.system.terminate
+      System.exit(0)
     }
   }
 

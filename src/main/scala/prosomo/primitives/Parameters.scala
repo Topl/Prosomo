@@ -3,6 +3,7 @@ package prosomo.primitives
 import java.io.{BufferedReader, File, InputStreamReader}
 import java.net.URL
 
+import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.Prosomo
@@ -12,8 +13,10 @@ import scala.concurrent.duration._
 import prosomo.remote._
 import scorex.util.encode.Base58
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
 import scala.math.BigInt
-import scala.util.{Try,Success,Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
   * AMS 2020:
@@ -31,11 +34,17 @@ object Parameters {
   val prosomoNodeUID:String = Base58.encode(fch.hash(java.util.UUID.randomUUID.toString))
   //tag for identifying ledger entries
   val genesisBytes: ByteArrayWrapper = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
+  println("Checking external IP at http://checkip.amazonaws.com")
   val declaredAddressFromRemote: Option[String] = Try{
-    val whatismyip = new URL("http://checkip.amazonaws.com")
-    val in:BufferedReader = new BufferedReader(new InputStreamReader(
-      whatismyip.openStream()))
-    in.readLine()
+    implicit val timeout:Timeout = Timeout(10.seconds)
+    val future = Future({
+      val whatismyip = new URL("http://checkip.amazonaws.com")
+      val in:BufferedReader = new BufferedReader(new InputStreamReader(
+        whatismyip.openStream()))
+      in.readLine()
+    })
+    val result = Await.result(future,timeout.duration)
+    result
   }.toOption
 
   def getConfig:Config = {
@@ -284,7 +293,8 @@ object Parameters {
   val tineProviderEC:String = config.getString("params.tineProviderEC")
   val networkControllerEC:String = config.getString("params.networkControllerEC")
   val useRouterSystem:Boolean = config.getBoolean("params.useRouterSystem")
-
+  val maxBlockNumber:Int = config.getInt("params.maxBlockNumber")
+  val writeGenBlock:Boolean = config.getBoolean("params.writeGenBlock")
 
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString

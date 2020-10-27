@@ -13,7 +13,8 @@ import scala.util.{Try,Success,Failure}
 
 /**
   * AMS 2020:
-  * Tine keeps track of a set of slotIds and VRF outputs for fast epoch nonce calculation
+  * Tine contains arrays of slotIds and their corresponding VRF NONCE header values for fast epoch nonce calculation,
+  * The TinePool methods use this for accumulating block ids and finding the common prefix with respect to localChain
   * @param best an array that keeps track of the id with the highest block number in each third of an epoch
   * @param maxSlot option for tracking max slot of this tine
   * @param minSlot option for tracking min slot of this tine
@@ -382,7 +383,8 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
   }
 
   /**
-    * Return up to n blocks including and after the starting slot
+    * Return up to n blocks past the starting slot,
+    * Starting slot is included in returned array
     * @param start starting slot to begin search
     * @param n number of ids to return
     * @return set of ids in ascending block number order
@@ -662,8 +664,7 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
   def copy(tine:Tine):Unit = {
     tineDB match {
       case Left(_) =>
-        this.minSlot = tine.minSlot
-        this.maxSlot = tine.maxSlot
+        assert(false)
       case Right(_) =>
         this.minSlot = tine.minSlot
         this.maxSlot = tine.maxSlot
@@ -743,6 +744,22 @@ case class Tine(var best:mutable.SortedMap[BigInt,SlotId] = mutable.SortedMap(),
       exception.printStackTrace()
       false
   }
+
+  def slotIntervalDist:mutable.SortedMap[Int,Int] = {
+    val out:mutable.SortedMap[Int,Int] = mutable.SortedMap()
+    this.ordered.foreach(id => {
+      val header = blocks.get(id).get.blockHeader.get
+      val interval = header._3 - header._10
+      if (header._3>0) {
+        out.get(interval) match {
+          case Some(i) => out.update(interval,i+1)
+          case None => out.update(interval,1)
+        }
+      }
+    })
+    out
+  }
+
 }
 
 object Tine extends SimpleTypes {

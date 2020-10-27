@@ -1,5 +1,7 @@
 package prosomo.stakeholder
 
+import java.io.{BufferedWriter, File, FileWriter}
+
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.cases.{Flag, WriteFile}
@@ -138,6 +140,24 @@ trait Update extends Members {
           case _ =>
         }
         if (globalSlot == localSlot && updating) {
+          if (maxBlockNumber > 0) {
+            if (holderIndex == SharedData.printingHolder) {
+              if (blocks.get(localChain.head).get.number >= maxBlockNumber) {
+                val f_eff = blocks.get(localChain.head).get.number.toDouble/localChain.lastActiveSlot(globalSlot).get
+                val delta_dist = localChain.slotIntervalDist
+                println(s"<f> = $f_eff")
+                println("Histogram:")
+                delta_dist.foreach(e=> println(e._1.toString+" "+e._2.toString))
+                val file = new File(inputSeedString+"_hist.dat")
+                val bw = new BufferedWriter(new FileWriter(file))
+                bw.write(s"<f> = $f_eff\n")
+                delta_dist.foreach(e=> bw.write(e._1.toString+" "+e._2.toString)+"\n")
+                bw.close()
+                actorStalled = true
+                SharedData.killFlag = true
+              }
+            }
+          }
           val keyTime = keys.sk_kes.time(kes)
           if (keyTime < globalSlot) {
             keys.sk_kes.update_fast(kes, globalSlot)

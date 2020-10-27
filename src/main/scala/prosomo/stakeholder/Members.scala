@@ -72,6 +72,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val stakeScale:Double = Parameters.stakeScale
   val initStakeMin:Double = Parameters.initStakeMin
   val timeServer:String = Parameters.timeServer
+  val maxBlockNumber:Int = Parameters.maxBlockNumber
 
   val localRef:ActorRefWrapper
   val holderIndex:Int
