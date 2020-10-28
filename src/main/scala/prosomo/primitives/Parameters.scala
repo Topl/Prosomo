@@ -36,7 +36,7 @@ object Parameters {
   val genesisBytes: ByteArrayWrapper = ByteArrayWrapper(fch.hash("GENESIS".getBytes))
   println("Checking external IP at http://checkip.amazonaws.com")
   val declaredAddressFromRemote: Option[String] = Try{
-    implicit val timeout:Timeout = Timeout(10.seconds)
+    implicit val timeout:Timeout = Timeout(1.seconds)
     val future = Future({
       val whatismyip = new URL("http://checkip.amazonaws.com")
       val in:BufferedReader = new BufferedReader(new InputStreamReader(
