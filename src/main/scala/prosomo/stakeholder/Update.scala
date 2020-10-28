@@ -150,8 +150,12 @@ trait Update extends Members {
                 delta_dist.foreach(e=> println(e._1.toString+" "+e._2.toString))
                 val file = new File(inputSeedString+"_hist.dat")
                 val bw = new BufferedWriter(new FileWriter(file))
-                bw.write(s"<f> = $f_eff\n")
-                delta_dist.foreach(e=> bw.write(e._1.toString+" "+e._2.toString)+"\n")
+                bw.write(s"<f> = $f_eff")
+                bw.newLine()
+                delta_dist.foreach(e => {
+                  bw.write(e._1.toString+" "+e._2.toString)
+                  bw.newLine()
+                })
                 bw.close()
                 actorStalled = true
                 SharedData.killFlag = true
