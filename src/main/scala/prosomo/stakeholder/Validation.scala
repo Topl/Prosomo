@@ -39,7 +39,7 @@ trait Validation extends Members with Types {
     val headerVer = verifyBlockHeader(header)
     val ledgerVer = if (header._3 == 0) {
       b.genesisSet match {
-        case Some(txs:GenesisSet) =>
+        case Some(txs:GenesisSeq) =>
           if (txs.nonEmpty) {
             hashGen(txs,serializer) == header._2
           } else {
@@ -49,7 +49,7 @@ trait Validation extends Members with Types {
       }
     } else {
       b.blockBody match {
-        case Some(txs:TransactionSet) =>
+        case Some(txs:TransactionSeq) =>
           if (txs.length <= txPerBlock){
             if (txs.nonEmpty) {
               val (out1,out2) = (hash(txs,serializer) == header._2 , txs.map(verifyTransaction).reduceLeft(_ && _))

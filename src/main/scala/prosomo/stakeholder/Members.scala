@@ -70,6 +70,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val refreshInterval:Int = Parameters.refreshInterval
   val stakeDistribution:String = Parameters.stakeDistribution
   val stakeScale:Double = Parameters.stakeScale
+  val resourceScale:Double = Parameters.resourceScale
   val initStakeMin:Double = Parameters.initStakeMin
   val timeServer:String = Parameters.timeServer
   val maxBlockNumber:Int = Parameters.maxBlockNumber
@@ -162,8 +163,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def hash(input:BlockHeader,serializer: Serializer):Hash
   def hash(input:Transaction,serializer: Serializer):Hash
   def hash(input:(List[SlotId],Int,Int),serializer: Serializer):Hash
-  def hashGen(input:GenesisSet,serializer: Serializer):Hash
-  def hash(input:TransactionSet,serializer: Serializer):Hash
+  def hashGen(input:GenesisSeq, serializer: Serializer):Hash
+  def hash(input:TransactionSeq, serializer: Serializer):Hash
   def hash(input:String,serializer: Serializer):Hash
   def verifyTX(transaction: Transaction,sig:Sig,serializer: Serializer):Boolean
   def applyTransaction(t: Transaction,ls:State, forger:PublicKeyW, fee_r:Ratio):Option[State]
@@ -202,7 +203,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def updateLocalState(ls:State, id:SlotId):Option[State]
   def trimMemPool():Unit
   def collectLedger(c:Tine):Unit
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSet
+  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State):TransactionSeq
   def timeFlag[R](block: => R):R
   def time[R](block: => R):R
 

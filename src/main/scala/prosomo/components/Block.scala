@@ -2,7 +2,7 @@ package prosomo.components
 
 import io.iohk.iodb.ByteArrayWrapper
 import prosomo.primitives.SimpleTypes
-import prosomo.primitives.Types.{BlockHeader,GenesisSet,TransactionSet}
+import prosomo.primitives.Types.{BlockHeader,GenesisSeq,TransactionSeq}
 
 /**
   * AMS 2020:
@@ -11,8 +11,8 @@ import prosomo.primitives.Types.{BlockHeader,GenesisSet,TransactionSet}
 
 case class Block(identifier:ByteArrayWrapper,
                  blockHeader:Option[BlockHeader],
-                 blockBody:Option[TransactionSet],
-                 genesisSet: Option[GenesisSet]
+                 blockBody:Option[TransactionSeq],
+                 genesisSet: Option[GenesisSeq]
                 ) extends SimpleTypes {
   def id:BlockId = identifier
   def slotId:SlotId = (slot,id)

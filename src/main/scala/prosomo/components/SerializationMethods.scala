@@ -107,7 +107,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(mac:Mac):Array[Byte] = sMac(mac)
   def getBytes(blockHeader: BlockHeader):Array[Byte] = sBlockHeader(blockHeader)
   def getBytes(gen:(Array[Byte], ByteArrayWrapper, BigInt)):Array[Byte] = sGen(gen)
-  def getBytes(txs:TransactionSet):Array[Byte] = sTransactionSet(txs)
+  def getBytes(txs:TransactionSeq):Array[Byte] = sTransactionSet(txs)
   def getBytes(idList:List[BlockId]):Array[Byte] = sIdList(idList)
   def getBytes(bool:Boolean):Array[Byte] = sBoolean(bool)
   def getBytes(chain:Tine):Array[Byte] = sChain(chain)
@@ -116,7 +116,7 @@ trait SerializationMethods extends SimpleTypes {
   def getBytes(block:Block):Array[Byte] = sBlock(block)
 
   def getHoldersBytes(msg:HoldersType):Array[Byte] = sHolders(msg)
-  def getGenesisBytes(txs:GenesisSet):Array[Byte] = sGenesisSet(txs)
+  def getGenesisBytes(txs:GenesisSeq):Array[Byte] = sGenesisSet(txs)
 
   def fromBytes(input:ByteStream): Any = {
     input.caseObject match {
@@ -649,14 +649,14 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sTransactionSet(sequence:TransactionSet):Array[Byte] = {
+  private def sTransactionSet(sequence:TransactionSeq):Array[Byte] = {
     val bodyBytes = Bytes.concat(sequence.map(getBytes):_*)
     Ints.toByteArray(sequence.length) ++ bodyBytes
   }
 
-  private def dTransactionSet(stream: ByteStream):TransactionSet = {
+  private def dTransactionSet(stream: ByteStream):TransactionSeq = {
     val numTx = stream.getInt
-    var out:TransactionSet = Seq()
+    var out:TransactionSeq = Seq()
     var i = 0
     while (i < numTx) {
       val outLen = stream.getInt
@@ -669,14 +669,14 @@ trait SerializationMethods extends SimpleTypes {
     out
   }
 
-  private def sGenesisSet(sequence: GenesisSet): Array[Byte] = {
+  private def sGenesisSet(sequence: GenesisSeq): Array[Byte] = {
     val output = Bytes.concat(sequence.map(getBytes):_*)
     Ints.toByteArray(sequence.length) ++ output
   }
 
-  private def dGenesisSet(stream:ByteStream): GenesisSet = {
+  private def dGenesisSet(stream:ByteStream): GenesisSeq = {
     val numTx = stream.getInt
-    var out:GenesisSet = Seq()
+    var out:GenesisSeq = Seq()
     var i = 0
     while (i < numTx) {
       val outLen = stream.getInt

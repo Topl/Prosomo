@@ -96,7 +96,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
                 if (h._3 == 0) {
                   val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeGenesisSet)
                   serializer.fromBytes(byteStream) match {
-                    case txs:GenesisSet@unchecked =>
+                    case txs:GenesisSeq@unchecked =>
                       val block = Block(key,Some(h),None,Some(txs))
                       Some(block)
                     case _ => None
@@ -104,7 +104,7 @@ class BlockStorage(dir:String,serializer: Serializer) extends SimpleTypes {
                 } else {
                   val byteStream:ByteStream = new ByteStream(bytes.data,DeserializeTransactionSet)
                   serializer.fromBytes(byteStream) match {
-                    case txs:TransactionSet@unchecked =>
+                    case txs:TransactionSeq@unchecked =>
                       val block = Block(key,Some(h),Some(txs),None)
                       Some(block)
                     case _ => None

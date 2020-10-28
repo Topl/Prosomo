@@ -23,8 +23,6 @@ trait Forging extends Members with Types {
     * Determines eligibility for a stakeholder to be a slot leader then calculates a block with epoch variables
     * */
 
-  //lazy val randomFiller:String = rng.nextString(500000)
-
   def forgeBlock(forgerKeys:Keys):Unit = if (!SharedData.limiterFlag) Try{
     val slot = globalSlot
     val pi_y: Pi = vrf.vrfProof(
@@ -41,7 +39,7 @@ trait Forging extends Members with Types {
           .toString+",eta:"+Base58.encode(eta)+",epoch:"+currentEpoch.toString
       }
       val bn:Int = pb._9 + 1
-      val txs:TransactionSet = chooseLedger(forgerKeys.pkw,memPool,localState)
+      val txs:TransactionSeq = chooseLedger(forgerKeys.pkw,memPool,localState)
       val pi: Pi = vrf.vrfProof(
         forgerKeys.sk_vrf, eta ++ serializer.getBytes(slot) ++ serializer.getBytes("NONCE")
       )
@@ -145,7 +143,23 @@ trait Forging extends Members with Types {
     val pi_y:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("TEST"))
     val y:Rho = vrf.vrfProofToHash(pi_y)
     val h:Hash = ByteArrayWrapper(eta0)
-    val genesisEntries: GenesisSet = List.range(0,numGenesisHolders).map(genEntry)
+    val activeStakers = List.range(0,numGenesisHolders).map(genEntry)
+    val netActiveStake:BigInt = activeStakers.map(f=>f._3).sum
+    val inactiveStaker:GenesisSeq = if (resourceScale < 1.0 && resourceScale > 0.0) {
+      val newByteString = new Array[Byte](pkw_length)
+      //make a random public key that will never be available to stake
+      rng.nextBytes(newByteString)
+      Seq((
+        genesisBytes.data,
+        ByteArrayWrapper(newByteString),
+        BigDecimal(netActiveStake.toDouble*(1.0/resourceScale-1.0))
+          .setScale(0, BigDecimal.RoundingMode.HALF_UP)
+          .toBigInt
+      ))
+    } else {
+      Seq()
+    }
+    val genesisEntries: GenesisSeq = activeStakers ++ inactiveStaker
     val ledger:Hash = hashGen(genesisEntries,serializer)
     val cert:Cert = (pk_vrf,y,pi_y,pk_sig,new Ratio(BigInt(1),BigInt(1)),"genesis")
     val sig:ForgingSignature = sk_kes.sign(

@@ -295,6 +295,7 @@ object Parameters {
   val useRouterSystem:Boolean = config.getBoolean("params.useRouterSystem")
   val maxBlockNumber:Int = config.getInt("params.maxBlockNumber")
   val writeGenBlock:Boolean = config.getBoolean("params.writeGenBlock")
+  val resourceScale:Double = config.getDouble("params.resourceScale")
 
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString

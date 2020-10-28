@@ -72,13 +72,13 @@ trait Types extends SimpleTypes {
     )
   }
 
-  def hashGen(input:GenesisSet,serializer: Serializer): Hash = {
+  def hashGen(input:GenesisSeq, serializer: Serializer): Hash = {
     ByteArrayWrapper(fch.hash(
       Bytes.concat(input.map(serializer.getBytes):_*)
     ))
   }
 
-  def hash(input:TransactionSet,serializer: Serializer): Hash = {
+  def hash(input:TransactionSeq, serializer: Serializer): Hash = {
     ByteArrayWrapper(fch.hash(
       Bytes.concat(input.map(serializer.getBytes):_*)
     ))

@@ -224,11 +224,11 @@ trait ChainSelection extends Members {
         if (!reorgTine.isEmpty) collectLedger(reorgTine)
         collectLedger(tine)
         if (!reorgTine.isEmpty) for (id <- reorgTine.ordered) {
-          val ledger:TransactionSet = blocks.get(id).get.blockBody.get
+          val ledger:TransactionSeq = blocks.get(id).get.blockBody.get
           wallet.add(ledger)
         }
         for (id <- tine.ordered) {
-          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+          val blockLedger:TransactionSeq = blocks.get(id).get.blockBody.get
           for (trans<-blockLedger) {
             if (memPool.keySet.contains(trans.sid)) {
               memPool -= trans.sid
@@ -292,7 +292,7 @@ trait ChainSelection extends Members {
           println(s"Tine Rejected $bnt  <= $bnl")
         collectLedger(tine)
         for (id <- localChain.slice(prefix+1,globalSlot).ordered) {
-          val blockLedger:TransactionSet = blocks.get(id).get.blockBody.get
+          val blockLedger:TransactionSeq = blocks.get(id).get.blockBody.get
           for (trans <- blockLedger) {
             if (memPool.keySet.contains(trans.sid)){
               memPool -= trans.sid

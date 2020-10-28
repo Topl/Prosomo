@@ -124,7 +124,7 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     out
   }
 
-  def add(ledger:TransactionSet): Unit = {
+  def add(ledger:TransactionSeq): Unit = {
     for (entry <- ledger) {
       entry match {
         case transaction: Transaction =>
@@ -134,7 +134,7 @@ case class Wallet(pkw:ByteArrayWrapper) extends Types with Transactions {
     }
   }
 
-  def remove(ledger:TransactionSet): Unit = {
+  def remove(ledger:TransactionSeq): Unit = {
     for (entry <- ledger) {
       entry match {
         case transaction: Transaction =>

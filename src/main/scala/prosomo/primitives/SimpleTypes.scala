@@ -44,8 +44,8 @@ trait SimpleTypes {
   type BlockId = Hash
   type SlotId = (Slot,BlockId)
   type Cert = (PublicKey,Rho,Pi,PublicKey,Ratio,String)
-  type TransactionSet = Seq[Transaction]
-  type GenesisSet = Seq[(Array[Byte], ByteArrayWrapper, BigInt)]
+  type TransactionSeq = Seq[Transaction]
+  type GenesisSeq = Seq[(Array[Byte], ByteArrayWrapper, BigInt)]
   type ForgingSignature = (Array[Byte],Array[Byte],Array[Byte],Int,Array[Byte])
   type BlockHeader = (Hash,Hash,Slot,Cert,Rho,Pi,ForgingSignature,PublicKey,BlockNumber,Slot)
   type Request = (List[SlotId],Int,Int)

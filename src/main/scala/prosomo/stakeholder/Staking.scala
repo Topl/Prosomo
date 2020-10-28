@@ -48,13 +48,13 @@ trait Staking extends Members {
   /**
     * Staking function parameterized in terms of slot and parent slot, dynamic difficulty
     * @param a relative stake
-    * @param s_interval delta between slot of header and slot of parent
+    * @param slot_interval delta between slot of header and slot of parent
     * @return probability of being elected slot leader
     */
 
-  def threshold(a:Ratio, s_interval:Slot):Ratio = {
-    assert(s_interval>0)
-    s_interval-1 match {
+  def threshold(a:Ratio, slot_interval:Slot):Ratio = {
+    assert(slot_interval>0)
+    slot_interval match {
       case int:Int if int < m_f_range.length =>
         phi(a,m_f_range(int))
       case _ =>

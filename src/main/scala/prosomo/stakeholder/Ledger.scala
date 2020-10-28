@@ -111,7 +111,7 @@ trait Ledger extends Members {
           val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
           var validForger = true
           if (slot == 0) {
-            val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
+            val genesisSet:GenesisSeq = blocks.get(id).get.genesisSet.get
             if (genesisSet.isEmpty) isValid = false
             if (isValid) for (entry <- genesisSet) {
               if (ByteArrayWrapper(entry._1) == genesisBytes) {
@@ -179,7 +179,7 @@ trait Ledger extends Members {
         val pk_f:PublicKeyW = ByteArrayWrapper(pk_sig++pk_vrf++pk_kes)
         var validForger = true
         if (slot == 0) {
-          val genesisSet:GenesisSet = blocks.get(id).get.genesisSet.get
+          val genesisSet:GenesisSeq = blocks.get(id).get.genesisSet.get
           if (genesisSet.isEmpty) isValid = false
           if (isValid) for (entry <- genesisSet) {
             if (ByteArrayWrapper(entry._1) == genesisBytes) {
@@ -272,7 +272,7 @@ trait Ledger extends Members {
     * @return list of transactions
     */
 
-  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSet = {
+  def chooseLedger(pkw:PublicKeyW,mp:MemPool,s:State): TransactionSeq = {
     var ledger: List[Transaction] = List()
     var ls: State = s
     val sortedBuffer = ListMap(mp.toSeq.sortWith(_._2._1.nonce < _._2._1.nonce): _*)
