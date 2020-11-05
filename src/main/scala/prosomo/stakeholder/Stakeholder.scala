@@ -52,7 +52,7 @@ class Stakeholder(
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
   val storageDir:String = inputDataDir match {
-    case None => "coordinator/"+dataFileDir+self.path.toStringWithoutAddress.drop(5)
+    case None => "coordinator/"+dataFileDir+"_"+simLabel+self.path.toStringWithoutAddress.drop(5)
     case Some(dir) => dir
   }
   implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)

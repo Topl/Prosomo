@@ -148,7 +148,7 @@ trait Update extends Members {
                 println(s"<f> = $f_eff")
                 println("Histogram:")
                 delta_dist.foreach(e=> println(e._1.toString+" "+e._2.toString))
-                val file = new File(inputSeedString+"_hist.dat")
+                val file = new File(inputSeedString+"_"+simLabel+"_hist.dat")
                 val bw = new BufferedWriter(new FileWriter(file))
                 bw.write(s"<f> = $f_eff")
                 bw.newLine()

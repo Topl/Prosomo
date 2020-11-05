@@ -53,11 +53,13 @@ object Parameters {
     Prosomo.input match {
       case input:Array[String] if input.nonEmpty => input.foreach(str =>
         Try{
-          val inputConfigFile = new File(str.stripSuffix(".conf")+".conf")
+          val inputConfigFile = new File(str)
+          assert(inputConfigFile.exists())
           localConfig = ConfigFactory.parseFile(inputConfigFile).withFallback(localConfig)
         }.toOption match {
           case None =>
             Try{
+              println("Reading input string: "+str)
               localConfig = ConfigFactory.parseString(str).withFallback(localConfig)
             }.toOption match {
               case None => println("Error: input not parsed")
@@ -296,6 +298,7 @@ object Parameters {
   val maxBlockNumber:Int = config.getInt("params.maxBlockNumber")
   val writeGenBlock:Boolean = config.getBoolean("params.writeGenBlock")
   val resourceScale:Double = config.getDouble("params.resourceScale")
+  val simLabel:String = config.getString("params.simLabel")
 
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString

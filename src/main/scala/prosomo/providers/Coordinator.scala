@@ -52,7 +52,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
   override val holderIndex: Slot = -1
   val seed:Array[Byte] = inputSeed
   val serializer:Serializer = new Serializer
-  val storageDir:String = "coordinator/"+dataFileDir+self.path.toStringWithoutAddress.drop(5)
+  val storageDir:String = "coordinator/"+dataFileDir+"_"+simLabel+self.path.toStringWithoutAddress.drop(5)
   implicit val blocks:BlockStorage = new BlockStorage(storageDir,serializer)
   val localChain:Tine = new Tine
   val chainStorage = new ChainStorage(storageDir)

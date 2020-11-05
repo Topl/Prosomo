@@ -74,6 +74,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val initStakeMin:Double = Parameters.initStakeMin
   val timeServer:String = Parameters.timeServer
   val maxBlockNumber:Int = Parameters.maxBlockNumber
+  val simLabel:String = Parameters.simLabel
 
   val localRef:ActorRefWrapper
   val holderIndex:Int
