@@ -197,7 +197,7 @@ trait ChainSelection extends Members {
         routerRef ! BootstrapJob(selfWrapper)
       }
 
-      val bestChain = if(tine.numActive < k_s && bnl < bnt) {
+      val bestChain = if(tine.numActive < k_n && bnl < bnt) {
         true
       } else {
         val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive
@@ -347,7 +347,7 @@ trait ChainSelection extends Members {
         + Base58.encode(headId._2.data))
     }
 
-    val bestChain = if(tineHeadId._1 - prefix < k_s && bnl < bnt) {
+    val bestChain = if(tine.numActive < k_n && bnl < bnt) {
       true
     } else {
       val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive

@@ -87,7 +87,7 @@ trait Receive extends Members {
           }
           if (verifyBlock(value.block)) {
             blocks.add(value.block)
-            if (bSlot <= globalSlot && bSlot > globalSlot-k_s) {
+            if (bSlot <= globalSlot && bSlot > globalSlot-slotWindow) {
               val newId = (bSlot, bHash)
               if (value.block.number > getBlockHeader(localChain.head).get._9) send(selfWrapper,gossipSet(selfWrapper,value.sender,holders), SendBlock(value.block,selfWrapper))
               if (!bootStrapLock) {
@@ -97,7 +97,7 @@ trait Receive extends Members {
                   tinePool -= tinePool.keySet.min
                 } else {
                   for (entry <- tinePool) {
-                    if (entry._2._1.head._1 <= globalSlot-k_s || !holders.contains(entry._2._5)) {
+                    if (entry._2._1.head._1 <= globalSlot-slotWindow || !holders.contains(entry._2._5)) {
                       if (holderIndex == SharedData.printingHolder && printFlag)
                         println("Holder " + holderIndex.toString + " Dropping Tine")
                       tinePool -= entry._1

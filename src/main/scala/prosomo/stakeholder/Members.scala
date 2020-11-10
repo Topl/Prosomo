@@ -40,7 +40,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val m_f_range:Array[Ratio] = Parameters.m_f_range
   val m_f_B:Ratio = Parameters.m_f_B
   val gamma:Slot = Parameters.gamma
-  val k_s:Int = Parameters.k_s
+  val k_n:Int = Parameters.k_n
   val epochLength:Int = Parameters.epochLength
   val one_third_epoch:Int = Parameters.one_third_epoch
   val slotWindow:Int = Parameters.slotWindow

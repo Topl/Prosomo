@@ -202,14 +202,14 @@ object Parameters {
     .map(i => println(i, ldd_gap_sawtooth(i).toBigDecimal.toString()) )
 
   // checkpoint depth in slots, k parameter in maxValid-bg, k > 192*delta/epsilon*beta
-  val k_s:Int = if(useDelayParam) {
+  val k_n:Int = if(useDelayParam) {
     (192.0*delta_s/(epsilon_s*beta_s)).floor.toInt + 1
   } else {
-    config.getInt("params.k_s")
+    config.getInt("params.k_n")
   }
   // epoch length R >= 3k/2f
   val epochLength:Int = if (useDelayParam) {
-    3*(k_s*(0.5/f_s)).toInt
+    3*(k_n*(0.5/f_s)).toInt
   } else {
     config.getInt("params.epochLength")
   }
@@ -217,7 +217,7 @@ object Parameters {
   val one_ninth_epoch:Int = epochLength/9
   // slot window for chain selection, s = k/4f
   val slotWindow:Int = if (useDelayParam) {
-    (k_s*0.25/f_s).toInt
+    (k_n*0.25/f_s).toInt
   } else {
     config.getInt("params.slotWindow")
   }

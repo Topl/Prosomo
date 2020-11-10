@@ -204,7 +204,7 @@ class Coordinator(inputSeed:Array[Byte],inputRef:Seq[ActorRefWrapper])
       sendAssertDone(localRef,Populate)
       println(s"Epoch Length = $epochLength")
       println(s"Delta = $delta_s")
-      println(s"K = $k_s")
+      println(s"K = $k_n")
       println(s"S = $slotWindow")
       if (holderIndexMin > -1 && holderIndexMax > -1) {
         println("Populating...")
