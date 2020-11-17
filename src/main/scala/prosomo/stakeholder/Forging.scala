@@ -32,7 +32,7 @@ trait Forging extends Members with Types {
     val pb:BlockHeader = getBlockHeader(localChain.head).get
     assert(pb._3 != slot)
     val ps:Slot = pb._3
-
+    val psk:Slot = getNthParentId(localChain.head,kappa-1)._1
     def testThenForge(test:Rho,thr:Ratio): Unit = if (compare(test, thr)) {
       def metaInfo:String = {
         "forger_index:"+holderIndex.toString+",adversarial:"+adversary
@@ -92,9 +92,9 @@ trait Forging extends Members with Types {
     }
 
     if (!bootStrapLock && slot - ps < slotWindow) {
-      val test = stakingTestStrategy(y,ps,pb._9+1,pb._5,slot-ps)
+      val test = stakingTestStrategy(y,ps,pb._9+1,pb._5,slot-psk)
       if (f_dynamic) {
-        testThenForge(test,threshold_cached(forgerKeys.alpha,slot-ps))
+        testThenForge(test,threshold_cached(forgerKeys.alpha,slot-psk))
       } else {
         testThenForge(test,phi(forgerKeys.alpha))
       }

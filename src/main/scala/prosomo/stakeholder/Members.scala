@@ -40,6 +40,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val m_f_range:Array[Ratio] = Parameters.m_f_range
   val m_f_B:Ratio = Parameters.m_f_B
   val gamma:Slot = Parameters.gamma
+  val kappa:Int = Parameters.kappa
   val k_n:Int = Parameters.k_n
   val epochLength:Int = Parameters.epochLength
   val one_third_epoch:Int = Parameters.one_third_epoch
@@ -183,6 +184,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getBlockHeader(bid:SlotId):Option[BlockHeader]
   def getParentBlockHeader(b:BlockHeader):Option[BlockHeader]
   def getParentId(bid:SlotId):Option[SlotId]
+  def getNthParentId(bid:SlotId,n:Int):SlotId
   def getNonce(id:SlotId):Option[Rho]
   def eta_from_genesis(c:Tine, ep:Int):Eta
   def eta_from_tine(c:Tine,ep:Int,eta_prev:Eta,tine:Option[Tine]):Eta

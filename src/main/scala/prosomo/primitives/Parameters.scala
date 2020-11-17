@@ -185,6 +185,7 @@ object Parameters {
   val f_A:Ratio = Ratio(config.getDouble("params.f_A"),4)
   val f_B:Ratio = Ratio(config.getDouble("params.f_B"),4)
   val gamma:Int = config.getInt("params.gamma")
+  val kappa:Int = config.getInt("params.kappa")
   val slot_gap:Int = config.getInt("params.slot_gap")
   //Local Dynamic Difficulty curve
   def ldd_gap_sawtooth(i:Int):Ratio = {

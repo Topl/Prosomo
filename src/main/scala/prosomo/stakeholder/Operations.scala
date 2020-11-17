@@ -48,6 +48,24 @@ trait Operations extends Members {
     }
   }
 
+  /**
+   * retrieve Nth parent block id
+   * @param bid header that points to parent id
+   * @return parent id if found, 0 otherwise
+   */
+  def getNthParentId(bid:SlotId,n:Int): SlotId = {
+    assert(n>=0)
+    if (n == 0) {
+      bid
+    } else {
+      getBlockHeader(bid) match {
+        case Some(b:BlockHeader) if b._3 > 0 => getNthParentId(getParentId(b),n-1)
+        case _ => bid
+      }
+    }
+
+  }
+
   def getNonce(id:SlotId):Option[Rho] = {
     getBlockHeader(id) match {
       case Some(header:BlockHeader) => Some(header._5)

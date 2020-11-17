@@ -217,13 +217,14 @@ trait Validation extends Members with Types {
                             }
                             currentSlot+=1
                           }
+                          val psk:Slot = getNthParentId(id,kappa)._1
                           alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),staking_state_tine)
                           if (f_dynamic) {
-                            tr_Ep = threshold(alpha_Ep,slot-ps)
+                            tr_Ep = threshold(alpha_Ep,slot-psk)
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }
-                          val test = stakingTestStrategy(y,ps,bn,parent._5,slot-ps)
+                          val test = stakingTestStrategy(y,ps,bn,parent._5,slot-psk)
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)
