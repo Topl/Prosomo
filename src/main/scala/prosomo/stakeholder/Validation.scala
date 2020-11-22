@@ -104,7 +104,7 @@ trait Validation extends Members with Types {
                 println("Holder "+holderIndex.toString+" pid mismatch")
                 println(s"bs:${b._3} pbs:${pid._1}")
               }
-              compareBlocks(pb,b)
+              compareBlocks(pb,b,id)
               pid = id
             case _ => bool &&= false
           }
@@ -112,7 +112,7 @@ trait Validation extends Members with Types {
       }
     }
 
-    def compareBlocks(parent: BlockHeader, block: BlockHeader): Unit = {
+    def compareBlocks(parent: BlockHeader, block: BlockHeader, bid:SlotId): Unit = {
       val (h0, _, slot, cert, rho, pi, _, pk_kes, bn, ps) = block
       val (pk_vrf, y, pi_y, pk_sig, tr_c,_) = cert
       while(i<=slot) {
@@ -135,9 +135,10 @@ trait Validation extends Members with Types {
         i+=1
       }
       alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes), staking_state_tine)
-      val test:Rho = stakingTestStrategy(y,ps,bn,parent._5,slot-ps)
+      val psk:Slot = getNthParentId(bid,kappa)._1
+      val test:Rho = stakingTestStrategy(y,ps,bn,parent._5,slot-baseSlot(psk))
       if (f_dynamic) {
-        tr_Ep = threshold(alpha_Ep,slot-ps)
+        tr_Ep = threshold(alpha_Ep,slot-baseSlot(psk))
       } else {
         tr_Ep = phi(alpha_Ep)
       }
@@ -220,11 +221,11 @@ trait Validation extends Members with Types {
                           val psk:Slot = getNthParentId(id,kappa)._1
                           alpha_Ep = relativeStake(ByteArrayWrapper(pk_sig++pk_vrf++pk_kes),staking_state_tine)
                           if (f_dynamic) {
-                            tr_Ep = threshold(alpha_Ep,slot-psk)
+                            tr_Ep = threshold(alpha_Ep,slot-baseSlot(psk))
                           } else {
                             tr_Ep = phi(alpha_Ep)
                           }
-                          val test = stakingTestStrategy(y,ps,bn,parent._5,slot-psk)
+                          val test = stakingTestStrategy(y,ps,bn,parent._5,slot-baseSlot(psk))
                           isValid &&= (
                             hash(parent,serializer) == h0
                               && verifyBlockHeader(block)

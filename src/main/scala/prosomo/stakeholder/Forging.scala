@@ -33,6 +33,7 @@ trait Forging extends Members with Types {
     assert(pb._3 != slot)
     val ps:Slot = pb._3
     val psk:Slot = getNthParentId(localChain.head,kappa-1)._1
+
     def testThenForge(test:Rho,thr:Ratio): Unit = if (compare(test, thr)) {
       def metaInfo:String = {
         "forger_index:"+holderIndex.toString+",adversarial:"+adversary
@@ -47,6 +48,10 @@ trait Forging extends Members with Types {
       val h: Hash = hash(pb,serializer)
       val ledger:Hash = hash(txs,serializer)
       val cert: Cert = (forgerKeys.pk_vrf, y, pi_y, forgerKeys.pk_sig, thr,metaInfo)
+      val keyTime = forgerKeys.sk_kes.time(kes)
+      if (keyTime < slot) {
+        forgerKeys.sk_kes.update_fast(kes, slot)
+      }
       val kes_sig: ForgingSignature = forgerKeys.sk_kes.sign(
         kes,
         h.data
@@ -92,9 +97,9 @@ trait Forging extends Members with Types {
     }
 
     if (!bootStrapLock && slot - ps < slotWindow) {
-      val test = stakingTestStrategy(y,ps,pb._9+1,pb._5,slot-psk)
+      val test = stakingTestStrategy(y,ps,pb._9+1,pb._5,slot-baseSlot(psk))
       if (f_dynamic) {
-        testThenForge(test,threshold_cached(forgerKeys.alpha,slot-psk))
+        testThenForge(test,threshold_cached(forgerKeys.alpha,slot-baseSlot(psk)))
       } else {
         testThenForge(test,phi(forgerKeys.alpha))
       }
@@ -136,7 +141,7 @@ trait Forging extends Members with Types {
       )
     }
     val bn:Int = 0
-    val ps:Slot = -1
+    val ps:Slot = -forging_window
     val slot:Slot = 0
     val pi:Pi = vrf.vrfProof(sk_vrf,eta0++serializer.getBytes(slot)++serializer.getBytes("NONCE"))
     val rho:Rho = vrf.vrfProofToHash(pi)

@@ -162,15 +162,19 @@ trait Update extends Members {
               }
             }
           }
-          val keyTime = keys.sk_kes.time(kes)
-          if (keyTime < globalSlot) {
-            keys.sk_kes.update_fast(kes, globalSlot)
-          }
           if (!useFencing) {
             forgeBlock(keys)
           }
-          keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
-          if (globalSlot%chainStoreInterval == 0) chainStorage.store(localChain,dataBaseCID,serializer)
+          if (globalSlot%kesStoreInterval == (phase*kesStoreInterval).toInt) {
+            val keyTime = keys.sk_kes.time(kes)
+            if (keyTime < globalSlot) {
+              keys.sk_kes.update_fast(kes, globalSlot)
+            }
+            keyFile = Some(KeyFile.update(keyFile.get,keys.sk_kes,password,keyDir,serializer,salt,derivedKey))
+          }
+          if (globalSlot%chainStoreInterval == (phase*chainStoreInterval).toInt) {
+            chainStorage.store(localChain,dataBaseCID,serializer)
+          }
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {

@@ -59,11 +59,10 @@ trait Operations extends Members {
       bid
     } else {
       getBlockHeader(bid) match {
-        case Some(b:BlockHeader) if b._3 > 0 => getNthParentId(getParentId(b),n-1)
+        case Some(b:BlockHeader) if b._3 >= 0 => getNthParentId(getParentId(b),n-1)
         case _ => bid
       }
     }
-
   }
 
   def getNonce(id:SlotId):Option[Rho] = {

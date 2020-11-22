@@ -40,6 +40,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   val m_f_range:Array[Ratio] = Parameters.m_f_range
   val m_f_B:Ratio = Parameters.m_f_B
   val gamma:Slot = Parameters.gamma
+  val slot_gap:Slot = Parameters.slot_gap
   val kappa:Int = Parameters.kappa
   val k_n:Int = Parameters.k_n
   val epochLength:Int = Parameters.epochLength
@@ -76,6 +77,9 @@ trait Members extends SimpleTypes with Actor with Timers {
   val timeServer:String = Parameters.timeServer
   val maxBlockNumber:Int = Parameters.maxBlockNumber
   val simLabel:String = Parameters.simLabel
+  val kesStoreInterval:Int = Parameters.kesStoreInterval
+  val useStableIntervalTerm:Boolean = Parameters.useStableIntervalTerm
+  val forging_window:Int = Parameters.forging_window
 
   val localRef:ActorRefWrapper
   val holderIndex:Int
@@ -173,6 +177,7 @@ trait Members extends SimpleTypes with Actor with Timers {
   def getParentId(b:BlockHeader):SlotId
   def phi(a:Ratio):Ratio
   def phi(a:Ratio,m_f:Ratio):Ratio
+  def baseSlot(s:Slot):Slot
   def threshold_cached(a:Ratio, s_interval:Slot):Ratio
   def threshold(a:Ratio, s_interval:Slot):Ratio
   def factorial(n: Int):BigInt

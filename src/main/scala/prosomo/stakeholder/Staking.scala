@@ -48,13 +48,13 @@ trait Staking extends Members {
   /**
     * Staking function parameterized in terms of slot and parent slot, dynamic difficulty
     * @param a relative stake
-    * @param slot_interval delta between slot of header and slot of parent
+    * @param s_interval delta between slot of header and slot of parent
     * @return probability of being elected slot leader
     */
 
-  def threshold(a:Ratio, slot_interval:Slot):Ratio = {
-    assert(slot_interval>0)
-    slot_interval match {
+  def threshold(a:Ratio, s_interval:Slot):Ratio = {
+    assert(s_interval>0)
+    s_interval match {
       case int:Int if int < m_f_range.length =>
         phi(a,m_f_range(int))
       case _ =>
@@ -69,12 +69,28 @@ trait Staking extends Members {
           .maximumSize(1000)
           .build[(Ratio,Slot),Ratio](
             new CacheLoader[(Ratio,Slot),Ratio] {
-              def load(id:(Ratio,Slot)):Ratio = {threshold(id._1,id._2)}
+              def load(id:(Ratio,Slot)):Ratio = {
+                threshold(id._1,id._2)
+              }
             }
           ))
       case _ =>
     }
-    thresholdCache.get.get((a,s_interval))
+    s_interval match {
+      case int:Int if int < m_f_range.length =>
+        thresholdCache.get.get((a,s_interval))
+      case _ =>
+        thresholdCache.get.get((a,m_f_range.length))
+    }
+  }
+
+  def baseSlot(s:Slot):Slot = if(useStableIntervalTerm) {
+    s match {
+      case _ if s <= 0 => s
+      case _ => forging_window*(s/forging_window+1)
+    }
+  } else {
+    s
   }
 
   val factorial_cache:Array[BigInt] = (0 to o_n).toArray.map(i=>factorial(i))

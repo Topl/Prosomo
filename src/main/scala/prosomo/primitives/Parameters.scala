@@ -187,6 +187,7 @@ object Parameters {
   val gamma:Int = config.getInt("params.gamma")
   val kappa:Int = config.getInt("params.kappa")
   val slot_gap:Int = config.getInt("params.slot_gap")
+  val forging_window:Int = config.getInt("params.forging_window")
   //Local Dynamic Difficulty curve
   def ldd_gap_sawtooth(i:Int):Ratio = {
     if (i <= slot_gap) {
@@ -300,6 +301,8 @@ object Parameters {
   val writeGenBlock:Boolean = config.getBoolean("params.writeGenBlock")
   val resourceScale:Double = config.getDouble("params.resourceScale")
   val simLabel:String = config.getString("params.simLabel")
+  val kesStoreInterval:Int = config.getInt("params.kesStoreInterval")
+  val useStableIntervalTerm:Boolean = config.getBoolean("params.useStableIntervalTerm")
 
   //path for data output files
   val dataFileDir:String = config.getString("params.dataFileDir")+"/seed_"+inputSeedString
