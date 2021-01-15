@@ -15,3 +15,4 @@ The simulation can be executed locally or across many nodes.  Local communicatio
 - Confirmed transactions are added to forged blocks giving the forger a reward
 - Command scheduling and flexible configuration options that can be modified at run-time
 - A user interface that helps users track local files, manage keys, and connect to a bootstrap server to discover peers
+- An experimental protocol, *Ouroboros Taktikos*, that potentially enhances security and stabilizes chain growth with a time varying forging difficulty
