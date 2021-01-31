@@ -172,7 +172,7 @@ trait Receive extends Members {
               tinePool += (-1 -> (Tine((bSlot,bHash),bRho),0,0,0,value.sender))
             }
             if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
-            bootstrapAdoptTine()
+            bootstrapSelectTine()
             timers.startSingleTimer(BootstrapJob,BootstrapJob,10*slotT.millis)
           }
         }
@@ -329,7 +329,7 @@ trait Receive extends Members {
           }
         } else {
           if (tinePool.keySet.contains(-1)) buildTine((-1,tinePool(-1)))
-          bootstrapAdoptTine()
+          bootstrapSelectTine()
           self ! BootstrapJob
         }
       } else if (bootStrapLock && tinePool.keySet.contains(bootStrapJob)) {

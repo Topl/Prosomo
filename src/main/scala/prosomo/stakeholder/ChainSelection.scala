@@ -175,7 +175,7 @@ trait ChainSelection extends Members {
     * Ledger collection is performed on all blocks
     */
 
-  def maxValidBG(): Unit = if (!tinePoolWithPrefix.isEmpty) {
+  def selectTine(): Unit = if (!tinePoolWithPrefix.isEmpty) {
     val job:Int = tinePoolWithPrefix.last._3
     Try{
       val prefix:Slot = tinePoolWithPrefix.last._2
@@ -197,9 +197,22 @@ trait ChainSelection extends Members {
         routerRef ! BootstrapJob(selfWrapper)
       }
 
-      val bestChain = if(tine.numActive < k_n && bnl < bnt) {
-        true
+      def displacement(t:Tine):Int = {
+        t.ordered.map(id=> id._1 - baseSlot(getNthParentId(id,kappa)._1)).sum
+      }
+
+      val bestChain = if (useMaxValidTK) {
+        //maxvalid-tk: Lowest forging window displacement if block numbers are equal
+        if (bnl == bnt) {
+          localChain.maxSlot.get > tine.maxSlot.get
+        } else {
+          bnl < bnt
+        }
+      } else if (tine.numActive <= k_n) {
+        //maxvalid-mc: The original 'moving checkpoint' rule, simple longest chain
+        bnl < bnt
       } else {
+        //maxvalid-bg: Densest tine in the slot window interval just past the common prefix block
         val slotsTine = tine.slice(prefix+1,prefix+1+slotWindow).numActive
         val slotsLocal = localChain.slice(prefix+1,prefix+1+slotWindow).numActive
         slotsLocal < slotsTine
@@ -219,7 +232,8 @@ trait ChainSelection extends Members {
 
       def adoptTine():Unit = {
         if (holderIndex == SharedData.printingHolder && printFlag)
-          println(s"Tine Adopted  $bnt  >  $bnl")
+          if (bnt>bnl) println(s"Tine Adopted  $bnt  >  $bnl")
+          else println(s"Tine Adopted  $bnt  T  $bnl")
         val reorgTine = localChain.slice(prefix+1,globalSlot)
         if (!reorgTine.isEmpty) collectLedger(reorgTine)
         collectLedger(tine)
@@ -329,7 +343,7 @@ trait ChainSelection extends Members {
     * Only for nodes that are processing fetch info responses
     * No ledger collection is performed
     */
-  def bootstrapAdoptTine(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
+  def bootstrapSelectTine(): Unit = if (!tinePoolWithPrefix.isEmpty) Try{
     val prefix:Slot = tinePoolWithPrefix.last._2
     val tine:Tine = tinePoolWithPrefix.last._1
     assert(!tine.isEmpty)

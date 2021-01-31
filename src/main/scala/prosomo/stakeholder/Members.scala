@@ -42,6 +42,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   val gamma:Slot = Parameters.gamma
   val slot_gap:Slot = Parameters.slot_gap
   val kappa:Int = Parameters.kappa
+  val k_bar:Int = Parameters.k_bar
+  val useMaxValidTK:Boolean = Parameters.useMaxValidTK
   val k_n:Int = Parameters.k_n
   val epochLength:Int = Parameters.epochLength
   val one_third_epoch:Int = Parameters.one_third_epoch
@@ -154,8 +156,8 @@ trait Members extends SimpleTypes with Actor with Timers {
   def updateTine(inputTine:Tine):Option[(Tine,Slot)]
   def updateWallet():Unit
   def buildTine(job:(Int,(Tine,Int,Int,Int,ActorRefWrapper))):Unit
-  def maxValidBG():Unit
-  def bootstrapAdoptTine():Unit
+  def selectTine():Unit
+  def bootstrapSelectTine():Unit
   def updateEpoch(slot:Slot,epochIn:Int,lastEta:Eta,chain:Tine,tine:Option[Tine]):(Int,Eta)
   def getStakingState(ep:Int,chain:Tine,tine:Option[Tine]):State
   def stakingTestStrategy(y:Rho,ps:Slot,bn:Int,rho:Rho,s_interval:Slot):Rho

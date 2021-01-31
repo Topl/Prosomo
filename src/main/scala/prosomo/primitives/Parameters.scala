@@ -187,6 +187,8 @@ object Parameters {
   val gamma:Int = config.getInt("params.gamma")
   val kappa:Int = config.getInt("params.kappa")
   val slot_gap:Int = config.getInt("params.slot_gap")
+  val useMaxValidTK:Boolean = config.getBoolean("params.useMaxValidTK")
+  val k_bar:Int = config.getInt("params.k_bar")
   val forging_window:Int = config.getInt("params.forging_window")
   //Local Dynamic Difficulty curve
   def ldd_gap_sawtooth(i:Int):Ratio = {

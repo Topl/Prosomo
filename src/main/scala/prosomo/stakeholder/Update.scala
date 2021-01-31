@@ -178,7 +178,7 @@ trait Update extends Members {
         }
       }
       if (!useFencing) while (tinePoolWithPrefix.nonEmpty && updating) {
-        maxValidBG()
+        selectTine()
       }
       if (useFencing) roundBlock match {
         case 0 =>
@@ -192,7 +192,7 @@ trait Update extends Members {
             if (holderIndex == SharedData.printingHolder && printFlag) {
               println("Holder " + holderIndex.toString + " Checking Tine")
             }
-            maxValidBG()
+            selectTine()
           }
         case _ =>
       }
