@@ -202,6 +202,7 @@ object Parameters {
   val m_f_range:Array[Ratio] = (0 to gamma).toArray
     .map(i => ldd_gap_sawtooth(i))
     .map(f => log_one_minus(f))
+  println("Difficulty curve:")
   (0 to gamma).toArray
     .map(i => println(i, ldd_gap_sawtooth(i).toBigDecimal.toString()) )
 

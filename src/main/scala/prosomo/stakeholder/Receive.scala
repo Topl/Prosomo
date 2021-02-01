@@ -89,7 +89,13 @@ trait Receive extends Members {
             blocks.add(value.block)
             if (bSlot <= globalSlot && bSlot > globalSlot-slotWindow) {
               val newId = (bSlot, bHash)
-              if (value.block.number > getBlockHeader(localChain.head).get._9) send(selfWrapper,gossipSet(selfWrapper,value.sender,holders), SendBlock(value.block,selfWrapper))
+              val currentHead = getBlockHeader(localChain.head).get
+              if (value.block.number > currentHead._9
+                || value.block.slot < currentHead._3
+                && value.block.number == currentHead._9
+                && useMaxValidTK) {
+                send(selfWrapper,gossipSet(selfWrapper,value.sender,holders), SendBlock(value.block,selfWrapper))
+              }
               if (!bootStrapLock) {
                 if (tinePool.keySet.size > tineMaxTries) {
                   if (holderIndex == SharedData.printingHolder && printFlag)
