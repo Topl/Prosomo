@@ -16,7 +16,7 @@ class CsgSimulation {
    * Blocks contain only information needed to construct tines
    * @param sl slot (label)
    * @param psl parent slot (label)
-   * @param n block number (height)
+   * @param n block number (height/length)
    * @param id unique block identifier (uniform random number)
    * @param pid parent block identifier (uniform random number)
    * @param adv adversarial block (boolean default to false)
@@ -92,7 +92,7 @@ class CsgSimulation {
   println("***************************************************************************************************"+
   "\n Conditional Settlement Game Simulation:"+
   "\n Challegers are honestly behaving automata"+
-  "\n Adversaries are automata attempting to execute a balanced fork attack by forging nothing-at-stake"+
+  "\n Players are adversaries are automata attempting to execute a balanced fork attack"+
   "\n***************************************************************************************************")
 
   //print the 1's and 0's
@@ -136,7 +136,7 @@ class CsgSimulation {
   val adversaryWindow = 100
 
   val challengers: Array[Honest] = Array.range(0,numHonest).map(p => Honest(0,p,stakeDist(p)))
-  val adversaries: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(-p-1,stakeDist(p)))
+  val players: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(-p-1,stakeDist(p)))
 
   uniqueSlots.update(0,Seq(blockDb(0)))
 
@@ -162,7 +162,7 @@ class CsgSimulation {
     //get the most common block id corresponding to the head of the chain among all challengers
     val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
     //static adversary creates two blocks with each leadership eligibility
-    val staticAdversaryBlocks = adversaries.map(a => a.test(i,commonId)).filter(_.isDefined) match {
+    val staticAdversaryBlocks = players.map(a => a.test(i,commonId)).filter(_.isDefined) match {
       case blocks if blocks.length >= 2 => blocks.take(2).map(update).toList
       case blocks if blocks.length == 1 =>
         val b = blocks.head.get
@@ -219,7 +219,7 @@ class CsgSimulation {
   }
   println(s"************** Static Adversary ******************")
   println(s"Proportion of adversarial blocks on dominant tine: ${numAdvBlocks.toDouble/maxBlockNumber}")
-  println(s"Proportion of adversarial stake: ${adversaries.map(_.alpha).sum}")
+  println(s"Proportion of adversarial stake: ${players.map(_.alpha).sum}")
   println(s"Proportion of unique slots p_0/(p_0+p_1) = ${uniqueSlots.keySet.size.toDouble/(uniqueSlots.keySet.size+forkedSlots.keySet.size)}")
   println(s"Expectation of settlement depth in blocks: ${settlements.sum.toDouble/settlements.size}")
 }
