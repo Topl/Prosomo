@@ -14,14 +14,23 @@ class CsgSimulation {
 
   /**
    * Blocks contain only information needed to construct tines
-   * @param sl slot (label)
-   * @param psl parent slot (label)
-   * @param n block number (height/length)
    * @param id unique block identifier (uniform random number)
-   * @param pid parent block identifier (uniform random number)
-   * @param adv adversarial block (boolean default to false)
+   * @param pid parent block identifier (parent uniform random number)
+   * @param n block number (label)
+   * @param sl slot (label)
+   * @param psl parent slot (parent label)
+   * @param nonce eligibility (label)
+   * @param adv adversarial block (boolean, default to false)
    */
-  case class Block(sl:Int,psl:Int,n:Int,id:Int,pid:Int,adv:Boolean = false)
+  case class Block(
+                    id:Int,
+                    pid:Int,
+                    n:Int,
+                    sl:Int,
+                    psl:Int,
+                    nonce:Double,
+                    adv:Boolean = false
+                  )
 
   //abstract trait for automata
   trait Holder {
@@ -33,15 +42,22 @@ class CsgSimulation {
   case class Honest(var head:Int, override val id:Int, override val alpha: Double) extends Holder {
     def chainSelect(b:Block):Unit = {
         val cloc = blockDb(head)
-        if (b.n > cloc.n) head = b.id
-        if (b.n == cloc.n && b.sl < cloc.sl) head = b.id
+        if (b.n > cloc.n) head = b.id //longest chain
+        if (b.n == cloc.n && b.sl < cloc.sl) head = b.id //tk 'early bird' rule
     }
     def test(sl:Int):Option[Block] = {
       val pb = blockDb(head)
       val y = y_test(sl,id)
       val thr = phi(sl-pb.sl,alpha)
       if (y < thr) {
-        Some(Block(sl,pb.sl,pb.n+1,rnd.nextInt(),pb.id))
+        Some(Block(
+          rnd.nextInt(),
+          pb.id,
+          pb.n+1,
+          sl,
+          pb.sl,
+          y
+        ))
       } else {
         None
       }
@@ -55,7 +71,15 @@ class CsgSimulation {
       val y = y_test(sl,id)
       val thr = phi(sl-pb.sl,alpha)
       if (y < thr) {
-        Some(Block(sl,pb.sl,pb.n+1,rnd.nextInt(),pb.id,adv = true))
+        Some(Block(
+          rnd.nextInt(),
+          pb.id,
+          pb.n+1,
+          sl,
+          pb.sl,
+          y,
+          adv = true
+        ))
       } else {
         None
       }
@@ -89,11 +113,13 @@ class CsgSimulation {
     (BigInt(uniqueBytes)+32768).toDouble/65535
   }
 
-  println("***************************************************************************************************"+
+  println(
+    "*************************************************************************************"+
   "\n Conditional Settlement Game Simulation:"+
-  "\n Challegers are honestly behaving automata"+
+  "\n Challengers are honestly behaving automata"+
   "\n Players are adversaries are automata attempting to execute a balanced fork attack"+
-  "\n***************************************************************************************************")
+  "\n*************************************************************************************"
+  )
 
   //print the 1's and 0's
   val printGame = true
@@ -129,7 +155,7 @@ class CsgSimulation {
     out
   }
   //database of all blocks, begins with genesis block, key is block id
-  val blockDb:mutable.Map[Int,Block] = mutable.Map(0 -> Block(0,0,0,0,0))
+  val blockDb:mutable.Map[Int,Block] = mutable.Map(0 -> Block(0,0,0,0,0,0))
   //counter for number of viable tines in the forging window
   var numTines = 1
   //window of slots in which the player attempts to extend tines
@@ -157,22 +183,41 @@ class CsgSimulation {
 
   //start the simulation
   for (i <- 1 to T) {
+
     //challengers make blocks
     val honestBlocks = Random.shuffle(challengers.map(h => h.test(i)).filter(_.isDefined).map(update).toList).take(2)
+
     //get the most common block id corresponding to the head of the chain among all challengers
     val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
+
     //static adversary creates two blocks with each leadership eligibility
     val staticAdversaryBlocks = players.map(a => a.test(i,commonId)).filter(_.isDefined) match {
-      case blocks if blocks.length >= 2 => blocks.take(2).map(update).toList
+      case blocks if blocks.length >= 2 => blocks.take(2).map(update).toList //player is only interested in 2 blocks
       case blocks if blocks.length == 1 =>
         val b = blocks.head.get
-        List(Some(b),Some(Block(b.sl,b.psl,b.n,rnd.nextInt(),b.pid,adv = true))).map(update)
+        List(
+          Some(b),
+          Some(Block(
+            rnd.nextInt(), //make an arbitrary new fork, while copying the labels of the block, making 2 blocks
+            b.pid,
+            b.n,
+            b.sl,
+            b.psl,
+            b.nonce,
+            adv = true
+          ))).map(update)
       case _ =>
         List()
     }
-    //game logic
+    //main game logic
     (honestBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
+      /**
+       * Empty trials, player does nothing
+       */
       case (false,false) => // perpendicular symbol, do nothing
+      /**
+       * Unique honest trials, player resets game
+       */
       case (true,false) if honestBlocks.size == 1 => // H_0, unique block, player sets k = 1
         numTines match { case 2 => numTines -= 1 case _ => }
         if (printGame) println("|   0")
@@ -182,7 +227,12 @@ class CsgSimulation {
         Random.shuffle(challengers.toList).foreach(h => {
           h.chainSelect(honestBlocks.head)
         })
-      case _ =>
+
+      /**
+       * Adversarial and Honest ties, player constructs malicious tines to bias challengers and extend balanced fork
+       * AMS 2021:  Optimal player strategy is to be determined, for now static player strategy is deployed
+       */
+      case _ => //H_1 and A_1 symbols, player may construct arbitrary forks
         numTines match {
           case 2 => if (printGame) println("| | 1")
           case 1 =>
@@ -199,6 +249,7 @@ class CsgSimulation {
     }
   }
 
+  //retrieves the mode of the head among challengers local chain
   val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
   val maxBlockNumber:Int = blockDb(commonId).n
   println("Local chain head id and block number: "+commonId.toString+", "+maxBlockNumber.toString)
