@@ -117,7 +117,7 @@ class CsgSimulation {
     "*************************************************************************************"+
   "\n Conditional Settlement Game Simulation:"+
   "\n Challengers are honestly behaving automata"+
-  "\n Players are adversaries are automata attempting to execute a balanced fork attack"+
+  "\n Players are adversaries, i.e. automata attempting to execute a balanced fork attack"+
   "\n*************************************************************************************"
   )
 
@@ -174,12 +174,16 @@ class CsgSimulation {
   //distribution of settlements
   var settlements:List[Int] = List()
   //settlement counter
-  var k:Int = 0
+  var k:Int = 1
 
   var windowBlocks:List[Block] = List(blockDb(0))
 
   def filterWindow(sl:Int):Unit =
     windowBlocks = windowBlocks.filter(b => b.sl > sl - adversaryWindow)
+
+  //player will forge this number of blocks in each round where eligible
+  //set to 0 for default behavior
+  val spam_blocks = 0
 
   //start the simulation
   for (i <- 1 to T) {
@@ -190,8 +194,19 @@ class CsgSimulation {
     //get the most common block id corresponding to the head of the chain among all challengers
     val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
 
-    //static adversary creates two blocks with each leadership eligibility
-    val staticAdversaryBlocks = players.map(a => a.test(i,commonId)).filter(_.isDefined) match {
+    val staticAdversaryBlocks:List[Block] = players.map(a => a.test(i,commonId)).filter(_.isDefined) match {
+      case blocks if blocks.length > 0 && spam_blocks > 0 =>
+        val b = blocks.head.get
+        Array.range(0,spam_blocks).toList.map(_ => Some(Block(
+          rnd.nextInt(), //make an arbitrary new fork, while copying the labels of the block, making 2 blocks
+          b.pid,
+          b.n,
+          b.sl,
+          b.psl,
+          b.nonce,
+          adv = true
+        ))).map(update)
+      //static adversary creates two blocks with each leadership eligibility
       case blocks if blocks.length >= 2 => blocks.take(2).map(update).toList //player is only interested in 2 blocks
       case blocks if blocks.length == 1 =>
         val b = blocks.head.get
@@ -249,7 +264,7 @@ class CsgSimulation {
     }
   }
 
-  //retrieves the mode of the head among challengers local chain
+  //retrieves the mode of the head among challenger's local chain
   val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
   val maxBlockNumber:Int = blockDb(commonId).n
   println("Local chain head id and block number: "+commonId.toString+", "+maxBlockNumber.toString)
