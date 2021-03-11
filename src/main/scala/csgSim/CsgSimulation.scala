@@ -240,16 +240,14 @@ class CsgSimulation {
         numTines match { case 2 => numTines -= 1 case _ => }
         if (printGame) println("|   0")
 
-
-
-
-
-        if( (i <= 10 || (i - lastUniqueSlot) > 10 )){
+        // Adding Network Delay
+        if( (i <= Delay || (i - lastUniqueSlot) > Delay )){
 
           println("Unique honest slots: "+lastUniqueSlot)
 
 
           lastUniqueSlot = i
+
           uniqueSlots.update(i,honestBlocks)
           if(uniqueSlots.size > forkedSlots.size){
             numConvergence += 1
