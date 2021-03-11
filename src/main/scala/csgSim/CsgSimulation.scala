@@ -261,7 +261,7 @@ class CsgSimulation {
           }
         }
         else{
-
+          k +=1
         }
 
         Random.shuffle(challengers.toList).foreach(h => {
