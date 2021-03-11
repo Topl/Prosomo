@@ -164,6 +164,8 @@ class CsgSimulation {
   val challengers: Array[Honest] = Array.range(0,numHonest).map(p => Honest(0,p,stakeDist(p)))
   val players: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(-p-1,stakeDist(p)))
 
+  var numConvergence = 0
+
   uniqueSlots.update(0,Seq(blockDb(0)))
 
   def update(b:Option[Block]):Block = {
@@ -184,7 +186,8 @@ class CsgSimulation {
   //player will forge this number of blocks in each round where eligible
   //set to 0 for default behavior
   val spam_blocks = 0
-
+  val Delay = 10
+  var lastUniqueSlot = 0
   //start the simulation
   for (i <- 1 to T) {
 
@@ -236,12 +239,37 @@ class CsgSimulation {
       case (true,false) if honestBlocks.size == 1 => // H_0, unique block, player sets k = 1
         numTines match { case 2 => numTines -= 1 case _ => }
         if (printGame) println("|   0")
-        settlements ::= k
-        k = 1
-        uniqueSlots.update(i,honestBlocks)
+
+
+
+
+
+        if( (i <= 10 || (i - lastUniqueSlot) > 10 )){
+
+          println("Unique honest slots: "+lastUniqueSlot)
+
+
+          lastUniqueSlot = i
+          uniqueSlots.update(i,honestBlocks)
+          if(uniqueSlots.size > forkedSlots.size){
+            numConvergence += 1
+            settlements ::= k
+            k = 1
+          }
+          else{
+            k +=1
+          }
+        }
+        else{
+
+        }
+
         Random.shuffle(challengers.toList).foreach(h => {
           h.chainSelect(honestBlocks.head)
         })
+
+
+
 
       /**
        * Adversarial and Honest ties, player constructs malicious tines to bias challengers and extend balanced fork
@@ -284,6 +312,8 @@ class CsgSimulation {
     }
   }
   println(s"************** Static Adversary ******************")
+  println(s"Number of convergence opportunities: ${numConvergence}")
+  println(s"Number of adversarial blocks: ${forkedSlots.size}")
   println(s"Proportion of adversarial blocks on dominant tine: ${numAdvBlocks.toDouble/maxBlockNumber}")
   println(s"Proportion of adversarial stake: ${players.map(_.alpha).sum}")
   println(s"Proportion of unique slots p_0/(p_0+p_1) = ${uniqueSlots.keySet.size.toDouble/(uniqueSlots.keySet.size+forkedSlots.keySet.size)}")
