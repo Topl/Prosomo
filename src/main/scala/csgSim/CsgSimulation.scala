@@ -1,127 +1,28 @@
 package csgSim
 
 import com.google.common.primitives.Ints
+import prosomo.primitives.Ratio
+
 import scala.collection.mutable
 import scala.util.Random
 import java.security.MessageDigest
-import scala.util.control.Breaks.{breakable,break}
+import scala.util.control.Breaks.{break, breakable}
+import scala.math.BigInt
 
 /**
  * AMS 2021: Conditional Settlement Game Simulator
+ * This represents a simple toy model of adversarial behavior in the execution of Ouroboros.
+ * The adaptive adversary using local-dynamic-difficulty is modeled with a set of automata that behave according
+ * to a longest chain selection rule.  Idealized representations of the leadership election mechanism and selection rule
+ * are implemented with the intention of numerical efficiency.  This provides a performant test bed
+ * to explore the nature of the adaptive adversary with a conditional leader election process.
+ * Block ids are represented with randomly generated integers and the structure of tines can be constructed from the
+ * labels (slots, nonces, and block number)
  */
 
 class CsgSimulation {
 
-  /**
-   * Blocks contain only information needed to construct tines
-   * @param id unique block identifier (uniform random number)
-   * @param pid parent block identifier (parent uniform random number)
-   * @param n block number (label)
-   * @param sl slot (label)
-   * @param psl parent slot (parent label)
-   * @param nonce eligibility (label)
-   * @param adv adversarial block (boolean, default to false)
-   */
-  case class Block(
-                    id:Int,
-                    pid:Int,
-                    n:Int,
-                    sl:Int,
-                    psl:Int,
-                    nonce:Double,
-                    adv:Boolean = false
-                  )
-
-  //abstract trait for automata
-  trait Holder {
-    val id:Int
-    val alpha:Double
-  }
-
-  //challengers
-  case class Honest(var head:Int, override val id:Int, override val alpha: Double) extends Holder {
-    def chainSelect(b:Block):Unit = {
-        val cloc = blockDb(head)
-        if (b.n > cloc.n) head = b.id //longest chain
-        if (b.n == cloc.n && b.sl < cloc.sl) head = b.id //tk 'early bird' rule
-    }
-    def test(sl:Int):Option[Block] = {
-      val pb = blockDb(head)
-      val y = y_test(sl,id)
-      val thr = phi(sl-pb.sl,alpha)
-      if (y < thr) {
-        Some(Block(
-          rnd.nextInt(),
-          pb.id,
-          pb.n+1,
-          sl,
-          pb.sl,
-          y
-        ))
-      } else {
-        None
-      }
-    }
-  }
-
-  //players
-  case class Adversarial(override val id:Int, override val alpha: Double) extends Holder {
-    def test(sl:Int,head:Int):Option[Block] = {
-      val pb = blockDb(head)
-      val y = y_test(sl,id)
-      val thr = phi(sl-pb.sl,alpha)
-      if (y < thr) {
-        Some(Block(
-          rnd.nextInt(),
-          pb.id,
-          pb.n+1,
-          sl,
-          pb.sl,
-          y,
-          adv = true
-        ))
-      } else {
-        None
-      }
-    }
-  }
-
-  //threshold phi(delta,alpha)
-  def phi(d:Int,a:Double): Double = {
-    1.0 - math.pow(1-f(d),a)
-  }
-
-  //difficulty curve
-  def f(d:Int):Double = {
-    d match {
-      case _ if d > gamma => f_B
-      case _ if d < psi => 0.0
-      case _ => f_A*(d-psi)/(gamma-psi).toDouble
-    }
-  }
-
-  //some uniform randomness
-  def sha256(bytes: Array[Byte]):Array[Byte] = {
-    val digest = MessageDigest.getInstance("SHA-256")
-    digest.update(bytes)
-    digest.digest()
-  }
-
-  //testing is assumed to follow VRF ideal functionality
-  def y_test(sl:Int,id:Int):Double = {
-    val uniqueBytes = sha256(Ints.toByteArray(sl)++Ints.toByteArray(id)++seed).take(2)
-    (BigInt(uniqueBytes)+32768).toDouble/65535
-  }
-
-  println(
-    "*************************************************************************************"+
-  "\n Conditional Settlement Game Simulation:"+
-  "\n Challengers are honestly behaving automata"+
-  "\n Players are adversaries, i.e. automata attempting to execute a balanced fork attack"+
-  "\n*************************************************************************************"
-  )
-
-  //print the 1's and 0's
+  //print visuals as the simulation executes
   val printGame = true
   //total number of automata
   val numHolders = 100
@@ -147,7 +48,7 @@ class CsgSimulation {
   //max difficulty
   val f_A = 0.4
   //base difficulty
-  val f_B = 0.1
+  val f_B = 0.05
   //initial stake distribution split into uniform 'coins' across all automata
   val stakeDist:mutable.Map[Int,Double] = {
     val out:mutable.Map[Int,Double] = mutable.Map.empty
@@ -157,136 +58,245 @@ class CsgSimulation {
   //database of all blocks, begins with genesis block, key is block id
   val blockDb:mutable.Map[Int,Block] = mutable.Map(0 -> Block(0,0,0,0,0,0))
   //counter for number of viable tines in the forging window
-  var numTines = 1
-  //window of slots in which the player attempts to extend tines
-  val adversaryWindow = 100
 
   val challengers: Array[Honest] = Array.range(0,numHonest).map(p => Honest(0,p,stakeDist(p)))
   val players: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(-p-1,stakeDist(p)))
 
-  var numConvergence = 0
-
   uniqueSlots.update(0,Seq(blockDb(0)))
+
+  //distribution of settlements
+  var settlements:List[Int] = List()
+  //settlement counter, resets when adaptive adversary restarts balanced fork attack
+  var k:Int = 1
+  //slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
+  var s:Int = 0
+  // Delta, the total delay in slots in the bounded delay semi-synchronous setting
+  val bounded_delay = 10
+  // Tracks honest blocks for delivery after set delay of bounded_delay slots, delay decrements with time step
+  val deliverySchedule:mutable.Map[Int,Int] = mutable.Map.empty
+  // Adversarial reserve
+  var covertBlocks:List[Block] =  List.empty
+  // Leading Unique Honest block
+  var leadingBlock:Int = 0
+  // Block ids that the adversary may respond to, key is the honest block id, value is the adversarial id
+  var blockResponses:mutable.Map[Int,Int] = mutable.Map.empty
+
+  /**
+   * Blocks contain only information needed to construct tines
+   * @param id unique block identifier (uniform random number)
+   * @param pid parent block identifier (parent uniform random number)
+   * @param n block number (label)
+   * @param sl slot (label)
+   * @param psl parent slot (parent label)
+   * @param nonce eligibility (label)
+   * @param adv adversarial block (boolean, default to false)
+   */
+  case class Block(
+                    id:Int,
+                    pid:Int,
+                    n:Int,
+                    sl:Int,
+                    psl:Int,
+                    nonce:Double,
+                    adv:Boolean = false
+                  )
+
+  //challengers
+  case class Honest(var head:Int, id:Int, alpha:Double) {
+
+    def chainSelect(b:Block):Unit = {
+        val cloc = blockDb(head)
+        if (b.n > cloc.n) head = b.id //longest chain
+    }
+
+    def test(sl:Int):Option[Block] = {
+      val pb = blockDb(head)
+      val y = y_test(sl,id)
+      val thr = phi(sl-pb.sl,alpha)
+      if (y < thr) {
+        Some(Block(
+          rnd.nextInt(),
+          pb.id,
+          pb.n+1,
+          sl,
+          pb.sl,
+          y
+        ))
+      } else {
+        None
+      }
+    }
+  }
+
+  //players
+  case class Adversarial(id:Int,alpha:Double) {
+
+    def test(sl:Int,head:Int):Option[Block] = {
+      val pb = blockDb(head)
+      val y = y_test(sl,id)
+      val thr = phi(sl-pb.sl,alpha)
+      if (y < thr) {
+        Some(Block(
+          rnd.nextInt(),
+          pb.id,
+          pb.n+1,
+          sl,
+          pb.sl,
+          y,
+          adv = true
+        ))
+      } else {
+        None
+      }
+    }
+
+  }
+
+  //makes a copy of a block with the same labels but a different unique identifier
+  def copyBlock(b:Block):Block = {
+    Block(
+      rnd.nextInt(), //make an arbitrary new fork
+      b.pid,
+      b.n,
+      b.sl,
+      b.psl,
+      b.nonce,
+      adv = true
+    )
+  }
+
+  //threshold phi(delta,alpha)
+  def phi(d:Int,a:Double): Double = {
+    1.0 - math.pow(1-f(d),a)
+  }
+
+  //difficulty curve
+  def f(d:Int):Double = {
+    d match {
+      case _ if d > gamma => f_B
+      case _ if d < psi => 0.0
+      case _ => f_A*(d-psi)/(gamma-psi).toDouble
+    }
+  }
+
+  //some uniform randomness
+  def sha256(bytes: Array[Byte]):Array[Byte] = {
+    val digest = MessageDigest.getInstance("SHA-256")
+    digest.update(bytes)
+    digest.digest()
+  }
+
+  //testing is assumed to follow VRF ideal functionality
+  def y_test(sl:Int,id:Int):Double = {
+    val testBytes = 2
+    val uniqueBytes = sha256(Ints.toByteArray(sl)++Ints.toByteArray(id)++seed).take(testBytes)
+    var net:Ratio = Ratio(0)
+    var i:Int = 0
+    for (byte <- uniqueBytes){
+      i += 1
+      val n = BigInt(byte & 0xff)
+      val d = BigInt(2).pow(8*i)
+      net = net + new Ratio(n,d)
+    }
+    net.toDouble
+  }
 
   def update(b:Option[Block]):Block = {
     blockDb.update(b.get.id,b.get)
     b.get
   }
 
-  //distribution of settlements
-  var settlements:List[Int] = List()
-  //settlement counter
-  var k:Int = 1
-
-  var windowBlocks:List[Block] = List(blockDb(0))
-
-  def filterWindow(sl:Int):Unit =
-    windowBlocks = windowBlocks.filter(b => b.sl > sl - adversaryWindow)
-
-  //player will forge this number of blocks in each round where eligible
-  //set to 0 for default behavior
-  val spam_blocks = 0
-  val Delay = 10
-  var lastUniqueSlot = 0
   //start the simulation
-  for (i <- 1 to T) {
+  for (t <- 1 to T) {
 
+    /**
+     * Honest activity is represented here at the beginning of each round
+     * Challengers chain select and deliver blocks to one another in order with a forced delay in slots
+     * Every Delta-divergence is forced to
+     */
+    for ((id,delay) <- Random.shuffle(deliverySchedule.toList)) {
+      if (delay > 0) {
+        deliverySchedule.update(id,delay-1) //decrement delay
+      } else {
+        deliverySchedule.remove(id)
+        blockResponses.get(id) match {
+          case None => challengers.map(h => h.chainSelect(blockDb(id))) //deliver blocks
+          case Some(rid) =>
+            challengers.take(challengers.length/2).foreach(h => h.chainSelect(blockDb(id)))
+            challengers.takeRight(challengers.length/2).foreach(h => h.chainSelect(blockDb(rid)))
+        }
+
+      }
+    }
     //challengers make blocks
-    val honestBlocks = Random.shuffle(challengers.map(h => h.test(i)).filter(_.isDefined).map(update).toList).take(2)
+    val honestBlocks = challengers.map(h => h.test(t)).filter(_.isDefined).map(update).toList
+    //challengers diffuse blocks with a fixed delay
+    for (block <- honestBlocks) {
+      deliverySchedule.update(block.id,bounded_delay)
+    }
 
-    //get the most common block id corresponding to the head of the chain among all challengers
-    val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
+    //get the set of distinct ids corresponding to the head of the chain among all challengers
+    //size of this set is the number of forks or diverging node views among the challengers
+    val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
 
-    val staticAdversaryBlocks:List[Block] = players.map(a => a.test(i,commonId)).filter(_.isDefined) match {
-      case blocks if blocks.length > 0 && spam_blocks > 0 =>
-        val b = blocks.head.get
-        Array.range(0,spam_blocks).toList.map(_ => Some(Block(
-          rnd.nextInt(), //make an arbitrary new fork, while copying the labels of the block, making 2 blocks
-          b.pid,
-          b.n,
-          b.sl,
-          b.psl,
-          b.nonce,
-          adv = true
-        ))).map(update)
-      //static adversary creates two blocks with each leadership eligibility
-      case blocks if blocks.length >= 2 => blocks.take(2).map(update).toList //player is only interested in 2 blocks
+    val staticAdversaryBlocks:List[Block] = players.map(a => a.test(t,challengerHeads.head)).filter(_.isDefined) match {
+      //static adversary creates at least two blocks with each leadership eligibility
+      case blocks if blocks.length >= 2 => blocks.map(update).toList
       case blocks if blocks.length == 1 =>
         val b = blocks.head.get
         List(
           Some(b),
-          Some(Block(
-            rnd.nextInt(), //make an arbitrary new fork, while copying the labels of the block, making 2 blocks
-            b.pid,
-            b.n,
-            b.sl,
-            b.psl,
-            b.nonce,
-            adv = true
-          ))).map(update)
+          Some(copyBlock(b))
+        ).map(update)
       case _ =>
         List()
     }
-    //main game logic
+
+    if (staticAdversaryBlocks.nonEmpty) covertBlocks ::= staticAdversaryBlocks.head
+
+    //player reacts to new blocks
     (honestBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
       /**
        * Empty trials, player does nothing
        */
       case (false,false) => // perpendicular symbol, do nothing
       /**
-       * Unique honest trials, player resets game
+       * Unique honest trials
        */
-      case (true,false) if honestBlocks.size == 1 => // H_0, unique block, player sets k = 1
-        numTines match { case 2 => numTines -= 1 case _ => }
-        if (printGame) println("|   0")
-
-        // Adding Network Delay
-        if( (i <= Delay || (i - lastUniqueSlot) > Delay )){
-
-          println("Unique honest slots: "+lastUniqueSlot)
-
-
-          lastUniqueSlot = i
-
-          uniqueSlots.update(i,honestBlocks)
-          if(uniqueSlots.size > forkedSlots.size){
-            numConvergence += 1
-            settlements ::= k
-            k = 1
-          }
-          else{
-            k +=1
+      case (true,false) if honestBlocks.size == 1 => // H_0, unique block
+        //update latest unique honest block
+        val latestBlock = honestBlocks.head
+        val leadBlockNumber = blockDb(leadingBlock).n
+        if (leadBlockNumber < latestBlock.n) {
+          leadingBlock = honestBlocks.head.id
+          covertBlocks.find(b => b.n == latestBlock.n) match {
+            case Some(block) =>
+              blockResponses.update(latestBlock.id,block.id)
+              println("| | 0")
+            case None if deliverySchedule.nonEmpty =>
+            case _ =>
+              if (k > 1) println("| x 0") else println("|   0")
+              settlements ::= k
+              k = 1
+              s = t
+              covertBlocks = List.empty
           }
         }
-        else{
-          k +=1
-        }
-
-        Random.shuffle(challengers.toList).foreach(h => {
-          h.chainSelect(honestBlocks.head)
-        })
-
-
-
-
       /**
-       * Adversarial and Honest ties, player constructs malicious tines to bias challengers and extend balanced fork
-       * AMS 2021:  Optimal player strategy is to be determined, for now static player strategy is deployed
+       * Honest ties, H_1 symbol:
        */
-      case _ => //H_1 and A_1 symbols, player may construct arbitrary forks
-        numTines match {
-          case 2 => if (printGame) println("| | 1")
-          case 1 =>
-            numTines += 1
-            if (printGame) println("|\\  1")
-        }
+      case (true,false) if honestBlocks.size > 1 =>
+        if (printGame && k == 1) println("|\\  1")
+        if (printGame && k > 1) println("| | 1")
+        blockResponses.update(honestBlocks.head.id,honestBlocks(1).id)
         k += 1
-        forkedSlots.update(i,honestBlocks++staticAdversaryBlocks)
-        Random.shuffle(challengers.toList).foreach(h => {
-          Random.shuffle(honestBlocks++staticAdversaryBlocks).foreach(b => {
-            h.chainSelect(b)
-          })
-        })
+      /**
+       * Adversarial leader elected, A_1 symbol: player may construct arbitrary forks covertly
+       */
+      case _ =>
+        if (printGame && k == 1) println("|\\  1")
+        if (printGame && k > 1) println("| | 1")
+        k += 1
     }
   }
 
@@ -309,9 +319,16 @@ class CsgSimulation {
       }
     }
   }
-  println(s"************** Static Adversary ******************")
-  println(s"Number of convergence opportunities: ${numConvergence}")
-  println(s"Number of adversarial blocks: ${forkedSlots.size}")
+
+  println(
+    "*************************************************************************************"+
+      "\n Settlement Game Simulation:"+
+      "\n Challengers are honestly behaving automata"+
+      "\n Players are adaptive adversaries attempting to execute a balanced fork attack"+
+      "\n*************************************************************************************"
+  )
+
+  println(s"Player Score:")
   println(s"Proportion of adversarial blocks on dominant tine: ${numAdvBlocks.toDouble/maxBlockNumber}")
   println(s"Proportion of adversarial stake: ${players.map(_.alpha).sum}")
   println(s"Proportion of unique slots p_0/(p_0+p_1) = ${uniqueSlots.keySet.size.toDouble/(uniqueSlots.keySet.size+forkedSlots.keySet.size)}")
