@@ -42,7 +42,7 @@ class CsgSimulation {
   //map of slots that have one block
   val uniqueSlots:mutable.Map[Int,Seq[Block]] = mutable.Map.empty
   //forging window cutoff
-  val gamma = 40
+  val gamma = 0
   //slot gap
   val psi = 0
   //max difficulty
@@ -71,7 +71,7 @@ class CsgSimulation {
   //slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
   var s:Int = 0
   // Delta, the total delay in slots in the bounded delay semi-synchronous setting
-  val bounded_delay = 10
+  val bounded_delay = 0
   // Tracks honest blocks for delivery after set delay of bounded_delay slots, delay decrements with time step
   val deliverySchedule:mutable.Map[Int,Int] = mutable.Map.empty
   // Adversarial reserve
@@ -150,6 +150,19 @@ class CsgSimulation {
       }
     }
 
+    def test_forward(t:Int,blocks:List[Block]): List[Block] = {
+      var newBlocks:List[Block] = List()
+      for (block <- blocks) {
+        for (i <- block.sl to t) {
+          test(i,block.id) match {
+            case Some(newBlock) => newBlocks ::= newBlock
+            case None =>
+          }
+        }
+      }
+      newBlocks
+    }
+
   }
 
   //makes a copy of a block with the same labels but a different unique identifier
@@ -220,14 +233,29 @@ class CsgSimulation {
       } else {
         deliverySchedule.remove(id)
         blockResponses.get(id) match {
-          case None => challengers.map(h => h.chainSelect(blockDb(id))) //deliver blocks
-          case Some(rid) =>
+          case None =>
+            challengers.foreach(h => h.chainSelect(blockDb(id))) //deliver blocks
+            val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
+            if (challengerHeads.size == 1) {
+              uniqueSlots.update(t,challengerHeads.map(blockDb(_)).toList)
+            } else {
+              forkedSlots.update(t,challengerHeads.map(blockDb(_)).toList)
+            }
+          case Some(rid) => //segment the network in 2, either due to honest tie, or player delivery of block response
+            assert(blockDb(id).n == blockDb(rid).n)
             challengers.take(challengers.length/2).foreach(h => h.chainSelect(blockDb(id)))
             challengers.takeRight(challengers.length/2).foreach(h => h.chainSelect(blockDb(rid)))
+            val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
+            if (challengerHeads.size == 1) {
+              uniqueSlots.update(t,challengerHeads.map(blockDb(_)).toList)
+            } else {
+              forkedSlots.update(t,challengerHeads.map(blockDb(_)).toList)
+            }
         }
 
       }
     }
+
     //challengers make blocks
     val honestBlocks = challengers.map(h => h.test(t)).filter(_.isDefined).map(update).toList
     //challengers diffuse blocks with a fixed delay
@@ -254,6 +282,7 @@ class CsgSimulation {
 
     if (staticAdversaryBlocks.nonEmpty) covertBlocks ::= staticAdversaryBlocks.head
 
+
     //player reacts to new blocks
     (honestBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
       /**
@@ -272,10 +301,7 @@ class CsgSimulation {
           covertBlocks.find(b => b.n == latestBlock.n) match {
             case Some(block) =>
               blockResponses.update(latestBlock.id,block.id)
-              println("| | 0")
-            case None if deliverySchedule.nonEmpty =>
-            case _ =>
-              if (k > 1) println("| x 0") else println("|   0")
+            case None =>
               settlements ::= k
               k = 1
               s = t
@@ -286,16 +312,13 @@ class CsgSimulation {
        * Honest ties, H_1 symbol:
        */
       case (true,false) if honestBlocks.size > 1 =>
-        if (printGame && k == 1) println("|\\  1")
-        if (printGame && k > 1) println("| | 1")
+        //two of the honest blocks are scheduled to be delivered together so the challengers are forked
         blockResponses.update(honestBlocks.head.id,honestBlocks(1).id)
         k += 1
       /**
        * Adversarial leader elected, A_1 symbol: player may construct arbitrary forks covertly
        */
       case _ =>
-        if (printGame && k == 1) println("|\\  1")
-        if (printGame && k > 1) println("| | 1")
         k += 1
     }
   }
