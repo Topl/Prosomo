@@ -46,7 +46,6 @@ class SettlementGameSim{
                     var gap: Int,
                     var reserve: Int,
                     var reach: Int,
-                    var leading:Boolean = false,
                     blocks: mutable.Map[Int,Block]
                   )
 
@@ -58,20 +57,20 @@ class SettlementGameSim{
 
 
 
-  def getLongestTine(): Prefixes = {
+  def getLongestTine(): Int = {
     var maxLength = 0
     var maxTineId = 0
     val Z: mutable.Set[Int] = mutable.Set.empty
     val R: mutable.Set[Int] = mutable.Set.empty
-    for(i <- 0 until fork.size){
-      if(fork(i).tine.blocks.size  > maxLength ){
-        maxLength = fork(i).tine.blocks.size
-        maxTineId = i
+
+    for(tine <- fork){
+
+      if(tine._2.tine.blocks.size >= maxLength ){
+        maxLength = tine._2.tine.blocks.size
+        maxTineId = tine._2.tine.TineId
       }
     }
-    val bestTine = fork(maxTineId)
-    bestTine.tine.leading = true
-    bestTine
+    maxTineId
   }
 
   def getZeroReachandMaxReachSets(): (mutable.Set[Prefixes],mutable.Set[Prefixes]) = {
@@ -82,7 +81,7 @@ class SettlementGameSim{
     var MaxReach: Int = 0
 
     for(tine <- fork){
-      println("FORK SIZE: "+fork.size)
+
       if(tine._2.tine.reach >= MaxReach){
         MaxReach = tine._2.tine.reach
       }
@@ -120,7 +119,7 @@ class SettlementGameSim{
     var MaxReach: Int = 0
 
     for(tine <- fork){
-      println("FORK SIZE: "+fork.size)
+
       if(tine._2.tine.reach >= MaxReach){
         MaxReach = tine._2.tine.reach
       }
@@ -136,9 +135,18 @@ class SettlementGameSim{
     R
   }
   def updateGap() {
-    val bestTine = getLongestTine()
+    val bestTineId = getLongestTine()
+    var maxTine = 0
     for(tine <- fork){
-      tine._2.tine.gap = bestTine.tine.blocks.size - tine._2.tine.blocks.size
+      if(tine._2.tine.TineId == bestTineId){
+        maxTine = tine._2.tine.blocks.size
+      }
+
+    }
+
+    for(tine <- fork){
+
+      tine._2.tine.gap = maxTine - tine._2.tine.blocks.size
     }
 
   }
@@ -172,17 +180,17 @@ class SettlementGameSim{
 
       if(fork.size == 0){
         val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
-        val tine: Tine = Tine(rnd.nextInt(),0,0,0,true,temp)
+        val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
         val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
         fork = mutable.Map(t -> timeWithPrefixes)
       }
       else{
         if(w.toList(t).equals('h')) {
-          val bestTine = getLongestTine()
+          val bestTineId = getLongestTine()
 
 
           for(tine <- fork){
-            if(tine._2.tine.TineId == bestTine.tine.TineId){
+            if(tine._2.tine.TineId == bestTineId){
               tine._2.tine.blocks += (t -> newBlock)
             }
           }
@@ -199,31 +207,30 @@ class SettlementGameSim{
           var min = 99999999
 
           val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
-          val tine: Tine = Tine(rnd.nextInt(),0,0,0,true,temp)
+          val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
           val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
           var r_1: Prefixes = Prefixes(tine, mutable.Map.empty)
           var z_1: Prefixes = Prefixes(tine, mutable.Map.empty)
 
 
-          println("Z size: "+Z.size)
+
           for(r <- R){
             for(z <- Z){
 
-              println("INSIDE: "+fork.size)
 
               if(r.positions.getOrElse(z.tine.TineId,0) < min){
                  min = r.positions.getOrElse(z.tine.TineId,0)
                  r_1 = r
-                 z_1 = r
+                 z_1 = z
               }
             }
           }
 
-          println("Tine Size: "+r_1.tine.blocks.size)
+
           //extend two tines
           if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
 
-            val tine: Tine = Tine(rnd.nextInt(),0,0,0,true,temp)
+            val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
             val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
             val r_new: Prefixes = z_1.copy()
             //update r_1 id to make it a new tine
@@ -232,7 +239,7 @@ class SettlementGameSim{
             r_new.positions += (z_1.tine.TineId -> t)
             println("Size: "+fork.size)
             println("slot: "+t)
-            println("New tine length: "+r_1.tine.blocks.size)
+            println("New tine length: "+r_new.tine.blocks.size)
 
             fork += (t -> r_new)
 
@@ -260,8 +267,8 @@ class SettlementGameSim{
 
           }
 
-          //updateGap()
-          //updateReserve(t,w)
+          updateGap()
+          updateReserve(t,w)
 
 
         }
