@@ -64,22 +64,31 @@ class CsgSimulation {
 
   uniqueSlots.update(0,Seq(blockDb(0)))
 
-  //distribution of settlements
+  // distribution of settlements
   var settlements:List[Int] = List()
-  //settlement counter, resets when adaptive adversary restarts balanced fork attack
+  // settlement counter, resets when adaptive adversary restarts balanced fork attack
   var k:Int = 1
-  //slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
+  // slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
   var s:Int = 0
+  // block id of the x point of the balanced fork
+  var xid:Int = 0
   // Delta, the total delay in slots in the bounded delay semi-synchronous setting
-  val bounded_delay = 0
+  val bounded_delay = 10
   // Tracks honest blocks for delivery after set delay of bounded_delay slots, delay decrements with time step
+  // Key is block id, value is delay that decrements with each time step
   val deliverySchedule:mutable.Map[Int,Int] = mutable.Map.empty
   // Adversarial reserve
   var covertBlocks:List[Block] =  List.empty
+  // Honest blocks in the current branch
+  var honestBlocks:List[Block] = List.empty
   // Leading Unique Honest block
   var leadingBlock:Int = 0
   // Block ids that the adversary may respond to, key is the honest block id, value is the adversarial id
   var blockResponses:mutable.Map[Int,Int] = mutable.Map.empty
+  // Threshold cache for adversary
+  var thrCache:mutable.Map[(Int,Double),Double] = mutable.Map.empty
+  // Test nonce cache for adversary
+  var testCache:mutable.Map[(Int,Int),Double] = mutable.Map.empty
 
   /**
    * Blocks contain only information needed to construct tines
@@ -133,8 +142,23 @@ class CsgSimulation {
 
     def test(sl:Int,head:Int):Option[Block] = {
       val pb = blockDb(head)
-      val y = y_test(sl,id)
-      val thr = phi(sl-pb.sl,alpha)
+      val delta = sl-pb.sl
+      val y = testCache.get((sl,id)) match {
+        case Some(value) => value
+        case None =>
+          val newValue = y_test(sl,id)
+          testCache.update((sl,id),newValue)
+          newValue
+      }
+
+      val thr = thrCache.get((delta,alpha)) match {
+        case Some(value) => value
+        case None =>
+          val newValue = phi(delta,alpha)
+          thrCache.update((delta,alpha),newValue)
+          newValue
+      }
+
       if (y < thr) {
         Some(Block(
           rnd.nextInt(),
@@ -150,19 +174,16 @@ class CsgSimulation {
       }
     }
 
-    def test_forward(t:Int,blocks:List[Block]): List[Block] = {
-      var newBlocks:List[Block] = List()
-      for (block <- blocks) {
-        for (i <- block.sl to t) {
-          test(i,block.id) match {
-            case Some(newBlock) => newBlocks ::= newBlock
-            case None =>
-          }
+    def test_forward(t:Int,b:Block): List[Option[Block]] = {
+      var out:List[Option[Block]] = List.empty
+      for (i <- b.sl+1 to t) {
+        test(i,b.id) match {
+          case Some(block) => out ::= Some(block)
+          case None =>
         }
       }
-      newBlocks
+      out
     }
-
   }
 
   //makes a copy of a block with the same labels but a different unique identifier
@@ -214,7 +235,7 @@ class CsgSimulation {
     net.toDouble
   }
 
-  def update(b:Option[Block]):Block = {
+  def updateDatabase(b:Option[Block]):Block = {
     blockDb.update(b.get.id,b.get)
     b.get
   }
@@ -257,9 +278,9 @@ class CsgSimulation {
     }
 
     //challengers make blocks
-    val honestBlocks = challengers.map(h => h.test(t)).filter(_.isDefined).map(update).toList
+    val challengerBlocks = challengers.map(h => h.test(t)).filter(_.isDefined).map(updateDatabase).toList
     //challengers diffuse blocks with a fixed delay
-    for (block <- honestBlocks) {
+    for (block <- challengerBlocks) {
       deliverySchedule.update(block.id,bounded_delay)
     }
 
@@ -269,57 +290,64 @@ class CsgSimulation {
 
     val staticAdversaryBlocks:List[Block] = players.map(a => a.test(t,challengerHeads.head)).filter(_.isDefined) match {
       //static adversary creates at least two blocks with each leadership eligibility
-      case blocks if blocks.length >= 2 => blocks.map(update).toList
+      case blocks if blocks.length >= 2 => blocks.map(updateDatabase).toList
       case blocks if blocks.length == 1 =>
         val b = blocks.head.get
         List(
           Some(b),
           Some(copyBlock(b))
-        ).map(update)
+        ).map(updateDatabase)
       case _ =>
         List()
     }
 
     if (staticAdversaryBlocks.nonEmpty) covertBlocks ::= staticAdversaryBlocks.head
-
+    if (challengerBlocks.nonEmpty) honestBlocks ::= challengerBlocks
 
     //player reacts to new blocks
-    (honestBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
+    (challengerBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
       /**
-       * Empty trials, player does nothing
+       * Empty trials, player does nothing, perpendicular symbol
        */
-      case (false,false) => // perpendicular symbol, do nothing
+      case (false,false) =>
       /**
        * Unique honest trials
        */
-      case (true,false) if honestBlocks.size == 1 => // H_0, unique block
+      case (true,false) if challengerBlocks.size == 1 => // H_0, unique block
         //update latest unique honest block
-        val latestBlock = honestBlocks.head
+        val latestBlock = challengerBlocks.head
         val leadBlockNumber = blockDb(leadingBlock).n
         if (leadBlockNumber < latestBlock.n) {
-          leadingBlock = honestBlocks.head.id
+          leadingBlock = challengerBlocks.head.id
           covertBlocks.find(b => b.n == latestBlock.n) match {
             case Some(block) =>
               blockResponses.update(latestBlock.id,block.id)
+              k += 1
             case None =>
+              // Attempt to construct a maximum depth tine from all blocks in all branches
+
+
               settlements ::= k
               k = 1
               s = t
+              xid = leadingBlock
               covertBlocks = List.empty
+              honestBlocks = List.empty
+              testCache = mutable.Map.empty
+              thrCache = mutable.Map.empty
           }
         }
       /**
        * Honest ties, H_1 symbol:
        */
-      case (true,false) if honestBlocks.size > 1 =>
+      case (true,false) if challengerBlocks.size > 1 =>
         //two of the honest blocks are scheduled to be delivered together so the challengers are forked
-        blockResponses.update(honestBlocks.head.id,honestBlocks(1).id)
+        blockResponses.update(challengerBlocks.head.id,challengerBlocks(1).id)
         k += 1
       /**
        * Adversarial leader elected, A_1 symbol: player may construct arbitrary forks covertly
        */
       case _ =>
-        k += 1
     }
   }
 
