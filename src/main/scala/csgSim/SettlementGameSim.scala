@@ -50,7 +50,7 @@ class SettlementGameSim{
                   )
 
   case class Prefixes(
-                 val tine: Tine,
+                 var tine: Tine,
                  var positions: mutable.Map[Int, Int]
                  )
 
@@ -168,111 +168,133 @@ class SettlementGameSim{
 
 
 
-
+  def copyBlock(blocks: mutable.Map[Int,Block]): mutable.Map[Int,Block] = {
+    var newMapBlocks: mutable.Map[Int,Block] = mutable.Map.empty
+    for(block <- blocks){
+       val key = block._1
+       val value = block._2
+       newMapBlocks += (key -> value)
+    }
+    newMapBlocks
+  }
 
 
 
   val w = "hAhAhHAAH"
-
+  //Initilization
+  val newBlock: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
+  val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlock)
+  val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
+  val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
+  fork = mutable.Map(0 -> timeWithPrefixes)
+  println("First Block Id: "+newBlock.id)
   for (t <- 0 to w.length-1){
 
-      val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
 
-      if(fork.size == 0){
+
+
+
+      if(w.toList(t).equals('h')) {
+        println("T Unique: "+t)
+        val bestTineId = getLongestTine()
+        val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
+
+        for(tine <- fork){
+          if(tine._2.tine.TineId == bestTineId){
+            tine._2.tine.blocks += (t+1 -> newBlock)
+          }
+        }
+        updateGap()
+        updateReserve(t,w)
+      }
+      else if (w(t).equals('H')){
+        println("T Honest Tie: "+t)
+        val Z: mutable.Set[Prefixes] = getZeroReachSet()
+        val R: mutable.Set[Prefixes] = getMaxReachSet()
+
+        //val (Z,R) = getZeroReachandMaxReachSets()
+        // find r_1 and z_1
+        var min = 99999999
+
         val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
         val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
         val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
-        fork = mutable.Map(t -> timeWithPrefixes)
-      }
-      else{
-        if(w.toList(t).equals('h')) {
-          val bestTineId = getLongestTine()
+        var r_1: Prefixes = Prefixes(tine, mutable.Map.empty)
+        var z_1: Prefixes = Prefixes(tine, mutable.Map.empty)
 
 
+
+        for(r <- R){
+          for(z <- Z){
+
+
+            if(r.positions.getOrElse(z.tine.TineId,0) < min){
+               min = r.positions.getOrElse(z.tine.TineId,0)
+               r_1 = r
+               z_1 = z
+            }
+          }
+        }
+
+
+        //extend two tines
+        if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
+
+
+
+
+          val copiedBlocks = copyBlock(z_1.tine.blocks)
+
+          val tineNew: Tine = Tine(rnd.nextInt(),z_1.tine.gap,z_1.tine.reserve,z_1.tine.reach,copiedBlocks)
+
+          val r_new: Prefixes = Prefixes(tineNew, z_1.positions)
+          //update r_1 id to make it a new tine
+          r_new.tine.TineId = rnd.nextInt()
+          println("Old Id: "+z_1.tine.TineId)
+          println("New Id: "+r_new.tine.TineId)
+          println("Before Old Tine Length: "+z_1.tine.blocks.size)
+          println("Before New Tine Length: "+r_new.tine.blocks.size)
+          r_new.tine.blocks += (t+1 -> newBlock)
+          r_new.positions += (z_1.tine.TineId -> t)
+          println("Old Tine Length: "+z_1.tine.blocks.size)
+          println("New Tine Length: "+r_new.tine.blocks.size)
+
+
+          fork += (t -> r_new)
+
+
+          // update the slot where the fork begins
+          val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
           for(tine <- fork){
-            if(tine._2.tine.TineId == bestTineId){
-              tine._2.tine.blocks += (t -> newBlock)
+            if(tine._2.tine.TineId == z_1.tine.TineId){
+              tine._2.positions += (r_new.tine.TineId -> t)
+              tine._2.tine.blocks += (t+1 -> newBlockTwo)
+            }
+            else{
+              tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
             }
           }
-          updateGap()
-          updateReserve(t,w)
         }
-        else if (w(t).equals('H')){
-
-          val Z: mutable.Set[Prefixes] = getZeroReachSet()
-          val R: mutable.Set[Prefixes] = getMaxReachSet()
-
-          //val (Z,R) = getZeroReachandMaxReachSets()
-          // find r_1 and z_1
-          var min = 99999999
-
-          val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
-          val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-          val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
-          var r_1: Prefixes = Prefixes(tine, mutable.Map.empty)
-          var z_1: Prefixes = Prefixes(tine, mutable.Map.empty)
-
-
-
-          for(r <- R){
-            for(z <- Z){
-
-
-              if(r.positions.getOrElse(z.tine.TineId,0) < min){
-                 min = r.positions.getOrElse(z.tine.TineId,0)
-                 r_1 = r
-                 z_1 = z
-              }
+        else{
+          for(tine <- fork){
+            if(tine._2.tine.TineId == r_1.tine.TineId){
+              r_1.tine.blocks += (t+1 -> newBlock)
+            }
+            if(tine._2.tine.TineId == z_1.tine.TineId){
+              val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
+              z_1.tine.blocks += (t+1 ->newBlockTwo)
             }
           }
-
-
-          //extend two tines
-          if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
-
-            val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-            val timeWithPrefixes = Prefixes(tine, mutable.Map.empty)
-            val r_new: Prefixes = z_1.copy()
-            //update r_1 id to make it a new tine
-            r_new.tine.TineId = rnd.nextInt()
-            r_new.tine.blocks += (t -> newBlock)
-            r_new.positions += (z_1.tine.TineId -> t)
-            println("Size: "+fork.size)
-            println("slot: "+t)
-            println("New tine length: "+r_new.tine.blocks.size)
-
-            fork += (t -> r_new)
-
-
-            // update the slot where the fork begins
-            for(tine <- fork){
-              if(tine._2.tine.TineId == z_1.tine.TineId){
-                tine._2.positions += (r_new.tine.TineId -> t)
-              }
-              else{
-                tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
-              }
-            }
-          }
-          else{
-            for(tine <- fork){
-              if(tine._2.tine.TineId == r_1.tine.TineId){
-                r_1.tine.blocks += (t -> newBlock)
-              }
-              if(tine._2.tine.TineId == z_1.tine.TineId){
-                z_1.tine.blocks += (t ->newBlock)
-              }
-            }
-
-
-          }
-
-          updateGap()
-          updateReserve(t,w)
 
 
         }
+
+        updateGap()
+        updateReserve(t,w)
+
+
       }
+
 
 
   }
@@ -283,9 +305,16 @@ class SettlementGameSim{
       "\n*************************************************************************************"
   )
   println("Number of tines: "+fork.size)
+  for(tine <- fork){
+    println("Tine: "+tine._2.tine.blocks.toSeq.sortWith(_._1 < _._1))
+  }
 
 }
 
-object SettlementGameSim extends App {
-  new SettlementGameSim
+object SettlementGameSim {
+
+
+  def main(args: Array[String]): Unit = {
+    new SettlementGameSim
+  }
 }
