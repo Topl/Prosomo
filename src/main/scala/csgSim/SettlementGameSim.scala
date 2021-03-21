@@ -294,8 +294,8 @@ class SettlementGameSim{
 
         }
 
-        //updateGap()
-        //updateReserve(t,w)
+        updateGap()
+        updateReserve(t,w)
 
 
       }
