@@ -57,6 +57,7 @@ class SettlementGameSim{
 
 
 
+  // This function returns ID of a longest tine
   def getLongestTine(): Int = {
     var maxLength = 0
     var maxTineId = 0
@@ -73,33 +74,8 @@ class SettlementGameSim{
     maxTineId
   }
 
-  def getZeroReachandMaxReachSets(): (mutable.Set[Prefixes],mutable.Set[Prefixes]) = {
 
-    var Z: mutable.Set[Prefixes] = mutable.Set.empty
-    var Z_2: mutable.Map[Int,Prefixes] = mutable.Map.empty
-    var R: mutable.Set[Prefixes] = mutable.Set.empty
-    var MaxReach: Int = 0
-
-    for(tine <- fork){
-
-      if(tine._2.tine.reach >= MaxReach){
-        MaxReach = tine._2.tine.reach
-      }
-      if(tine._2.tine.reach  == 0 ){
-          Z_2 += (Z_2.size+1 -> tine._2)
-
-      }
-    }
-    for(tine <- fork){
-
-      if(tine._2.tine.reach  == MaxReach ){
-        R += tine._2
-      }
-    }
-
-    (Z,R)
-  }
-
+  // This function returns a set of zero-reach tines
   def getZeroReachSet(): mutable.Set[Prefixes] = {
 
     var Z: mutable.Set[Prefixes] = mutable.Set.empty
@@ -112,6 +88,7 @@ class SettlementGameSim{
     Z
   }
 
+  // This function returns a set of maximum-reach tines
   def getMaxReachSet(): mutable.Set[Prefixes] = {
 
 
@@ -134,6 +111,8 @@ class SettlementGameSim{
 
     R
   }
+
+  // This funtion updates gaps of tines
   def updateGap() {
     val bestTineId = getLongestTine()
     var maxTine = 0
@@ -151,6 +130,7 @@ class SettlementGameSim{
 
   }
 
+  // This function updates reserves of tines
   def updateReserve(currSlot: Int, charString: String){
     var reserve = 0
     for(i <- currSlot to charString.length-1){
@@ -168,6 +148,7 @@ class SettlementGameSim{
 
 
 
+  // Copy function so that updating the copy will no change the original
   def copyBlock(blocks: mutable.Map[Int,Block]): mutable.Map[Int,Block] = {
     var newMapBlocks: mutable.Map[Int,Block] = mutable.Map.empty
     for(block <- blocks){
@@ -189,7 +170,7 @@ class SettlementGameSim{
     newMapPos
   }
   val w = "hAhAhHAAH"
-  //Initilization
+  //Initialization
   val newBlockInit: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
   val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlockInit)
   val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
@@ -202,7 +183,7 @@ class SettlementGameSim{
 
 
 
-      if(w.toList(t).equals('h')) {
+      if(w.toList(t).equals('h')) {       // Create one single block and extend the longest tine
         val bestTineId = getLongestTine()
         val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
 
@@ -231,7 +212,7 @@ class SettlementGameSim{
         for(r <- R){
           for(z <- Z){
 
-            // prefer having two different tines with two different head
+            // prefer finding two different tines one from Z one from R
             if(r.tine.TineId != z.tine.TineId){
               if(r.positions.getOrElse(z.tine.TineId,0) < min){
                 min = r.positions.getOrElse(z.tine.TineId,0)
@@ -242,6 +223,7 @@ class SettlementGameSim{
           }
         }
 
+        //if can't find two different tines
         if(r_1.positions.isEmpty && z_1.positions.isEmpty){
           for(r <- R){
             for(z <- Z){
@@ -255,14 +237,14 @@ class SettlementGameSim{
         }
 
 
-        //extend two tines
-        if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
+        //if there is only a single chain, then create another new tine
+        if(r_1.tine.TineId == z_1.tine.TineId){
 
           val tineNew: Tine = Tine(rnd.nextInt(),z_1.tine.gap,z_1.tine.reserve,z_1.tine.reach,copyBlock(z_1.tine.blocks))
           val r_new: Prefixes = Prefixes(tineNew, copyPositions(z_1.positions))
           //update r_1 id to make it a new tine
           r_new.tine.TineId = rnd.nextInt()
-          r_new.tine.blocks += (t+1 -> newBlock)
+          r_new.tine.blocks += (t+1 -> newBlock) // adding a new block to this new tine
           r_new.positions += (z_1.tine.TineId -> t)
 
           fork += (t -> r_new)
@@ -273,7 +255,7 @@ class SettlementGameSim{
           for(tine <- fork){
             if(tine._2.tine.TineId == z_1.tine.TineId){
               tine._2.positions += (r_new.tine.TineId -> t)
-              tine._2.tine.blocks += (t+1 -> newBlockTwo)
+              tine._2.tine.blocks += (t+1 -> newBlockTwo) // adding a new block to the original tine
             }
             else if (tine._2.tine.TineId  != r_new.tine.TineId){
               tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
