@@ -169,7 +169,29 @@ class SettlementGameSim{
     }
     newMapPos
   }
+
+  def checkSettlement(k: Int): Boolean ={
+    val Z: mutable.Set[Prefixes] = getZeroReachSet()
+    val R: mutable.Set[Prefixes] = getMaxReachSet()
+    var out: Boolean = false
+    if(R.size == 1){
+      out = true
+    }
+    else{
+      val l: List[Prefixes] = R.toList
+      val settlement = l(0).tine.blocks.size - l(0).positions.getOrElse(l(1).tine.TineId,99999)
+      if(settlement <=  k){
+        out = true
+      }
+      else{
+        out = false
+      }
+    }
+    out
+  }
   val w = "hAhAhHAAH"
+  val k = 2
+  var settleTime = 999999
   //Initialization
   val newBlockInit: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
   val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlockInit)
@@ -245,7 +267,7 @@ class SettlementGameSim{
           //update r_1 id to make it a new tine
           r_new.tine.TineId = rnd.nextInt()
           r_new.tine.blocks += (t+1 -> newBlock) // adding a new block to this new tine
-          r_new.positions += (z_1.tine.TineId -> t)
+          r_new.positions += (z_1.tine.TineId -> z_1.tine.blocks.size)
 
           fork += (t -> r_new)
 
@@ -254,7 +276,7 @@ class SettlementGameSim{
           val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
           for(tine <- fork){
             if(tine._2.tine.TineId == z_1.tine.TineId){
-              tine._2.positions += (r_new.tine.TineId -> t)
+              tine._2.positions += (r_new.tine.TineId -> r_new.tine.blocks.size)
               tine._2.tine.blocks += (t+1 -> newBlockTwo) // adding a new block to the original tine
             }
             else if (tine._2.tine.TineId  != r_new.tine.TineId){
@@ -292,6 +314,13 @@ class SettlementGameSim{
       "\n*************************************************************************************"
   )
   println("Number of tines: "+fork.size)
+  if(checkSettlement(k)){
+    println("The fork is "+k+"-settled")
+  }
+  else{
+    println("The fork is not "+k+"-settled")
+  }
+
   for(tine <- fork){
     println("Tine: "+tine._2.tine.blocks.toSeq.sortWith(_._1 < _._1))
     //println("Tine: "+tine._2.tine)
