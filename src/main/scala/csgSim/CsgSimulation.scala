@@ -302,7 +302,7 @@ class CsgSimulation {
     }
 
     if (staticAdversaryBlocks.nonEmpty) covertBlocks ::= staticAdversaryBlocks.head
-    if (challengerBlocks.nonEmpty) honestBlocks ::= challengerBlocks
+    if (challengerBlocks.nonEmpty) honestBlocks = honestBlocks ++ challengerBlocks
 
     //player reacts to new blocks
     (challengerBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
