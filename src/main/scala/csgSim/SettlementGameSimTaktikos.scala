@@ -505,6 +505,7 @@ class SettlementGameSimTaktikos{
   )
 
   var wt = ""
+  var wT = ""
   //Initilization
   val newBlockInit: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
   val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlockInit)
@@ -512,6 +513,7 @@ class SettlementGameSimTaktikos{
   val tineWithPrefixes: Prefixes = Prefixes(tine, mutable.Map.empty)
 
   fork = mutable.Map(0 -> tineWithPrefixes)
+
 
   //start the simulation
   for (t <- 1 to T) {
@@ -588,6 +590,7 @@ class SettlementGameSimTaktikos{
         */
       case (true,false) if challengerBlocks.size == 1 => // unique block
         wt ++= "h"
+        wT ++= "h"
         println("h")
         //update latest unique honest block
         val latestBlock = challengerBlocks.head
@@ -634,6 +637,7 @@ class SettlementGameSimTaktikos{
         */
       case (true,false) if challengerBlocks.size > 1 =>
         wt ++= "H"
+        wT ++= "H"
         println("H")
         //two of the honest blocks are scheduled to be delivered together so the challengers are forked
         blockResponses.update(challengerBlocks.head.id,challengerBlocks(1).id)
@@ -762,15 +766,21 @@ class SettlementGameSimTaktikos{
   println(s"Expectation of settlement depth in blocks: ${settlements.sum.toDouble/settlements.size}")
 
 
-  println("Number of tines: "+fork.size)
+  println("Number of tines in batches: "+fork.size)
 
-  for(tine <- fork){
+  /*for(tine <- fork){
     println("Tine: "+tine._2.tine.blocks.toSeq.sortWith(_._1 < _._1))
     //println("Tine: "+tine._2.tine)
     println("Position: "+tine._2.positions)
-  }
+  }*/
 
 
+  // Create a characteristic string, then form a fork
+  fork = mutable.Map(0 -> tineWithPrefixes)
+  println("Characteristic String: "+wT)
+  createFork(wT)
+
+  println("Number of tines in one run: "+fork.size)
 }
 
 object SettlementGameSimTaktikos extends App {
