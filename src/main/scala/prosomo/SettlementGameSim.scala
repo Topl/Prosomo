@@ -7,7 +7,6 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
-import scala.util.control.Breaks.{break, breakable}
 
 /**
  * AMS 2021: Conditional Settlement Game Simulator
@@ -17,19 +16,21 @@ import scala.util.control.Breaks.{break, breakable}
  * are implemented with the intention of numerical efficiency.  This provides a performant test bed
  * to explore the nature of the adaptive adversary with a conditional leader election process.
  * Block ids are represented with randomly generated integers and the structure of tines can be constructed from the
- * labels (slots, nonces, and block number)
+ * labels (slots, nonces)
  */
 
 class SettlementGameSim{
 
-  //print visuals as the simulation executes
+  //print as the simulation executes
   val printGame = true
   //total number of automata
   val numHolders = 100
   //total number of players
-  val numAdversary = 40
+  val numAdversary = 1
   //total number of challengers
   val numHonest:Int = numHolders - numAdversary
+  //proportion of adversarial stake
+  val alpha:Double = 0.4
   //number of rounds to be executed
   val T = 10000
   //generates random IDs for blocks
@@ -38,55 +39,25 @@ class SettlementGameSim{
   val seed:Array[Byte] = Array.fill(32){0x00.toByte}
   rnd.nextBytes(seed)
   //map of slots that have more than one block
-  val forkedSlots:mutable.Map[Int,Seq[Block]] = mutable.Map.empty
+  val forkedSlots:mutable.Map[Int,Set[Int]] = mutable.Map.empty
   //map of slots that have one block
-  val uniqueSlots:mutable.Map[Int,Seq[Block]] = mutable.Map.empty
+  val uniqueSlots:mutable.Map[Int,Set[Int]] = mutable.Map.empty
   //forging window cutoff
-  val gamma = 0
+  val gamma = 40
   //slot gap
   val psi = 0
   //max difficulty
   val f_A = 0.4
   //base difficulty
   val f_B = 0.05
-  //initial stake distribution split into uniform 'coins' across all automata
-  val stakeDist:mutable.Map[Int,Double] = {
-    val out:mutable.Map[Int,Double] = mutable.Map.empty
-    Array.range(0,numHolders).foreach(i=>out.update(i,1.0/numHolders))
-    out
-  }
+
   //database of all blocks, begins with genesis block, key is block id
   val blockDb:mutable.Map[Int,Block] = mutable.Map(0 -> Block(0,0,0,0,0,0))
-  //counter for number of viable tines in the forging window
-
-  val challengers: Array[Honest] = Array.range(0,numHonest).map(p => Honest(0,p,stakeDist(p)))
-  val players: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(-p-1,stakeDist(p)))
-
-  uniqueSlots.update(0,Seq(blockDb(0)))
-
-  var fork: mutable.Map[Int, Prefixes] = mutable.Map.empty
-
-  // distribution of settlements
-  var settlements:List[Int] = List()
-  // settlement counter, resets when adaptive adversary restarts balanced fork attack
-  var k:Int = 1
-  // slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
-  var s:Int = 0
-  // block id of the x point of the balanced fork
-  var xid:Int = 0
   // Delta, the total delay in slots in the bounded delay semi-synchronous setting
   val bounded_delay = 10
   // Tracks honest blocks for delivery after set delay of bounded_delay slots, delay decrements with time step
   // Key is block id, value is delay that decrements with each time step
   val deliverySchedule:mutable.Map[Int,Int] = mutable.Map.empty
-  // Adversarial reserve
-  var covertBlocks:List[Block] =  List.empty
-  // Honest blocks in the current branch
-  var honestBlocks:List[Block] = List.empty
-  // Leading Unique Honest block
-  var leadingBlock:Int = 0
-  // Block ids that the adversary may respond to, key is the honest block id, value is the adversarial id
-  var blockResponses:mutable.Map[Int,Int] = mutable.Map.empty
   // Threshold cache for adversary
   var thrCache:mutable.Map[(Int,Double),Double] = mutable.Map.empty
   // Test nonce cache for adversary
@@ -112,33 +83,60 @@ class SettlementGameSim{
                     adv:Boolean = false
                   )
 
+  /**
+   * Tines are a set of block ids with a head and a prefix
+   * @param tineId
+   * @param blockIds
+   * @param prefix
+   */
   case class Tine(
-                   var TineId: Int,
-                   var gap: Int,
-                   var reserve: Int,
-                   var reach: Int,
-                   blocks: mutable.Map[Int,Block]
-                 )
+                   var tineId: Int, //id of the head of this tine
+                   blockIds:mutable.Set[Int], //block identifiers comprising this tine
+                   prefix:Int //id of the parent block at the beginning of this tine
+                 ) {
+    def extend(block:Block):Unit = {
+      val headBlock = blockDb(tineId)
+      //check for consistent labelling
+      assert(block.pid == tineId)
+      assert(block.sl > headBlock.sl)
+      assert(block.n == headBlock.n+1)
+      blockIds.add(block.id)
+      tineId = block.id
+    }
+  }
 
-  case class Prefixes(
-                       var tine: Tine,
-                       var positions: mutable.Map[Int, Int]
-                     )
-
-
+  def reserve(tine:Tine,globalSlot:Int):Int = ???
+  def gap(maxTine:Tine,tine:Tine):Int = ???
+  def reach(maxTine:Tine,globalSlot:Int):Int = ???
+  def margin(maxTine:Tine,tine:Tine,globalSlot:Int):Int = ???
 
   //challengers
-  case class Honest(var head:Int, id:Int, alpha:Double) {
-
+  case class Honest(var head:Int, id:Int, relativeStake:Double) {
+    //default chain selection rule
     def chainSelect(b:Block):Unit = {
       val cloc = blockDb(head)
       if (b.n > cloc.n) head = b.id //longest chain
     }
 
+    //taktikos chain selection rule
+    def chainSelect_tk(b:Block):Unit = {
+      val cloc = blockDb(head)
+      if (b.n > cloc.n) head = b.id //longest chain
+      if (b.n == cloc.n && b.sl < cloc.sl) head = b.id
+    }
+
+    //arbitrary tie breaking rule, simply prefers lower block ids acting as a stand in for a VRF
+    def chainSelect_tb(b:Block):Unit = {
+      val cloc = blockDb(head)
+      if (b.n > cloc.n) head = b.id
+      if (b.n == cloc.n && b.id < cloc.id) head = b.id
+    }
+
+    //honest vrf test procedure
     def test(sl:Int):Option[Block] = {
       val pb = blockDb(head)
       val y = y_test(sl,id)
-      val thr = phi(sl-pb.sl,alpha)
+      val thr = phi(sl-pb.sl,relativeStake)
       if (y < thr) {
         Some(Block(
           rnd.nextInt(),
@@ -155,11 +153,17 @@ class SettlementGameSim{
   }
 
   //players
-  case class Adversarial(id:Int,alpha:Double) {
-
+  case class Adversarial(id:Int, relativeStake:Double) {
+    /**
+     * Defualt test strategy on the specified block identifier
+     * @param sl slot to test
+     * @param head parent block identifier
+     * @return optional new block
+     */
     def test(sl:Int,head:Int):Option[Block] = {
       val pb = blockDb(head)
       val delta = sl-pb.sl
+      //cache test values
       val y = testCache.get((sl,id)) match {
         case Some(value) => value
         case None =>
@@ -167,15 +171,15 @@ class SettlementGameSim{
           testCache.update((sl,id),newValue)
           newValue
       }
-
-      val thr = thrCache.get((delta,alpha)) match {
+      //cache threshold values
+      val thr = thrCache.get((delta,relativeStake)) match {
         case Some(value) => value
         case None =>
-          val newValue = phi(delta,alpha)
-          thrCache.update((delta,alpha),newValue)
+          val newValue = phi(delta,relativeStake)
+          thrCache.update((delta,relativeStake),newValue)
           newValue
       }
-
+      //test
       if (y < thr) {
         Some(Block(
           rnd.nextInt(),
@@ -191,6 +195,12 @@ class SettlementGameSim{
       }
     }
 
+    /**
+     * Adversarial testing strategy to produce branching tines
+     * @param t time step to test up-to and including
+     * @param b parent block
+     * @return optional list of any blocks produced between parent slot and time step, all with same parent
+     */
     def test_forward(t:Int,b:Block): List[Option[Block]] = {
       var out:List[Option[Block]] = List.empty
       for (i <- b.sl+1 to t) {
@@ -203,8 +213,10 @@ class SettlementGameSim{
     }
   }
 
-  //makes a copy of a block with the same labels but a different unique identifier
-  def copyBlock(b:Block):Block = {
+  /**
+   * Makes a copy of a block with the same labels and parent but a different unique identifier
+   */
+  def copyBlock_changeId(b:Block):Block = {
     Block(
       rnd.nextInt(), //make an arbitrary new fork
       b.pid,
@@ -257,264 +269,46 @@ class SettlementGameSim{
     b.get
   }
 
-  def getLongestTine(): Int = {
-    var maxLength = 0
-    var maxTineId = 0
-    val Z: mutable.Set[Int] = mutable.Set.empty
-    val R: mutable.Set[Int] = mutable.Set.empty
-
-    for(tine <- fork){
-
-      if(tine._2.tine.blocks.size >= maxLength ){
-        maxLength = tine._2.tine.blocks.size
-        maxTineId = tine._2.tine.TineId
-      }
-    }
-    maxTineId
-  }
-
-  def getZeroReachandMaxReachSets(): (mutable.Set[Prefixes],mutable.Set[Prefixes]) = {
-
-    var Z: mutable.Set[Prefixes] = mutable.Set.empty
-    var Z_2: mutable.Map[Int,Prefixes] = mutable.Map.empty
-    var R: mutable.Set[Prefixes] = mutable.Set.empty
-    var MaxReach: Int = 0
-
-    for(tine <- fork){
-
-      if(tine._2.tine.reach >= MaxReach){
-        MaxReach = tine._2.tine.reach
-      }
-      if(tine._2.tine.reach  == 0 ){
-        Z_2 += (Z_2.size+1 -> tine._2)
-
-      }
-    }
-    for(tine <- fork){
-
-      if(tine._2.tine.reach  == MaxReach ){
-        R += tine._2
-      }
-    }
-
-    (Z,R)
-  }
-
-  def getZeroReachSet(): mutable.Set[Prefixes] = {
-
-    var Z: mutable.Set[Prefixes] = mutable.Set.empty
-
-    for(tine <- fork){
-      if(tine._2.tine.reach  == 0 ){
-        Z.add(tine._2)
-      }
-    }
-    Z
-  }
-
-  def getMaxReachSet(): mutable.Set[Prefixes] = {
-
-
-    var R: mutable.Set[Prefixes] = mutable.Set.empty
-    var MaxReach: Int = 0
-
-    for(tine <- fork){
-
-      if(tine._2.tine.reach >= MaxReach){
-        MaxReach = tine._2.tine.reach
-      }
-
-    }
-    for(tine <- fork){
-
-      if(tine._2.tine.reach  == MaxReach ){
-        R.add(tine._2)
-      }
-    }
-
-    R
-  }
-  def updateGap() {
-    val bestTineId = getLongestTine()
-    var maxTine = 0
-    for(tine <- fork){
-      if(tine._2.tine.TineId == bestTineId){
-        maxTine = tine._2.tine.blocks.size
-      }
-    }
-
-    for(tine <- fork){
-      tine._2.tine.gap = maxTine - tine._2.tine.blocks.size
-    }
-
-  }
-
-  def updateReserve(currSlot: Int, charString: String){
-    var reserve = 0
-    for(i <- currSlot until charString.length){
-      if(charString(i).equals("A")){
-        reserve += 1
-      }
-    }
-
-    // update reserve and reach
-    for(tine <- fork){
-      tine._2.tine.reserve = reserve
-      tine._2.tine.reach= reserve - tine._2.tine.gap
-    }
-  }
-
-
-
-  def copyBlocks(blocks: mutable.Map[Int,Block]): mutable.Map[Int,Block] = {
-    var newMapBlocks: mutable.Map[Int,Block] = mutable.Map.empty
-    for(block <- blocks){
-      val key = block._1
-      val value = block._2
-      newMapBlocks += (key -> value)
-    }
-    newMapBlocks
-  }
-
-
-  def copyPositions(positions: mutable.Map[Int, Int]): mutable.Map[Int, Int] = {
-    var newMapPos: mutable.Map[Int, Int] = mutable.Map.empty
-    for (position <- positions) {
-      val key = position._1
-      val value = position._2
-      newMapPos += (key -> value)
-    }
-    newMapPos
-  }
-
-  if (true) {
-    val w = "hAhAhHAAH"
-    //Initilization
-    val newBlockInit: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
-    val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlockInit)
-    val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-    val tineWithPrefixes: Prefixes = Prefixes(tine, mutable.Map.empty)
-
-    fork = mutable.Map(0 -> tineWithPrefixes)
-
-    for (t <- 0 until w.length){
-
-      if(w.toList(t).equals('h')) {
-        val bestTineId = getLongestTine()
-        val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-
-        for(tine <- fork){
-          if(tine._2.tine.TineId == bestTineId){
-            tine._2.tine.blocks += (t+1 -> newBlock)
-          }
-        }
-        updateGap()
-        updateReserve(t,w)
-      }
-      else if (w(t).equals('H')){
-        val Z: mutable.Set[Prefixes] = getZeroReachSet()
-        val R: mutable.Set[Prefixes] = getMaxReachSet()
-
-        //val (Z,R) = getZeroReachandMaxReachSets()
-        // find r_1 and z_1
-        var min = 99999999
-        val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-        val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
-        val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-        val tineWithPrefixes = Prefixes(tine, mutable.Map.empty)
-        var r_1: Prefixes = Prefixes(tine, mutable.Map.empty)
-        var z_1: Prefixes = Prefixes(tine, mutable.Map.empty)
-
-        for(r <- R){
-          for(z <- Z){
-
-            // prefer having two different tines with two different head
-            if(r.tine.TineId != z.tine.TineId){
-              if(r.positions.getOrElse(z.tine.TineId,0) < min){
-                min = r.positions.getOrElse(z.tine.TineId,0)
-                r_1 = r
-                z_1 = z
-              }
-            }
-          }
-        }
-
-        if(r_1.positions.isEmpty && z_1.positions.isEmpty){
-          for(r <- R){
-            for(z <- Z){
-              if(r.positions.getOrElse(z.tine.TineId,0) < min){
-                min = r.positions.getOrElse(z.tine.TineId,0)
-                r_1 = r
-                z_1 = z
-              }
-            }
-          }
-        }
-
-
-        //extend two tines
-        if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
-
-          val tineNew: Tine = Tine(rnd.nextInt(),z_1.tine.gap,z_1.tine.reserve,z_1.tine.reach,copyBlocks(z_1.tine.blocks))
-          val r_new: Prefixes = Prefixes(tineNew, copyPositions(z_1.positions))
-          //update r_1 id to make it a new tine
-          r_new.tine.TineId = rnd.nextInt()
-          r_new.tine.blocks += (t+1 -> newBlock)
-          r_new.positions += (z_1.tine.TineId -> t)
-
-          fork += (t -> r_new)
-
-          // update the slot where the fork begins
-          val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-          for(tine <- fork){
-            if(tine._2.tine.TineId == z_1.tine.TineId){
-              tine._2.positions += (r_new.tine.TineId -> t)
-              tine._2.tine.blocks += (t+1 -> newBlockTwo)
-            }
-            else if (tine._2.tine.TineId  != r_new.tine.TineId){
-              tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
-            }
-          }
-        } else {
-          for(tine <- fork){
-            if(tine._2.tine.TineId == r_1.tine.TineId){
-              r_1.tine.blocks += (t+1 -> newBlock)
-            }
-            if(tine._2.tine.TineId == z_1.tine.TineId){
-              val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-              z_1.tine.blocks += (t+1 ->newBlockTwo)
-            }
-          }
-        }
-        updateGap()
-        updateReserve(t,w)
-      }
-    }
-
-  }
-
   println(
     "*************************************************************************************"+
       "\n Settlement Game Simulation"+
       "\n*************************************************************************************"
   )
 
+  //initial stake distribution split into uniform 'coins' across all automata
+  val stakeDist:mutable.Map[Int,Double] = {
+    val out:mutable.Map[Int,Double] = mutable.Map.empty
+    Array.range(0,numAdversary).foreach(i=>out.update(i,alpha/numAdversary))
+    Array.range(numAdversary,numHolders).foreach(i=>out.update(i,(1.0-alpha)/numHonest))
+    out
+  }
+
+  val players: Array[Adversarial] = Array.range(0,numAdversary).map(p => Adversarial(p,stakeDist(p)))
+  val challengers: Array[Honest] = Array.range(numAdversary,numHolders).map(p => Honest(0,p,stakeDist(p)))
+
+  uniqueSlots.update(0,Set(0))
+
+  // ids that the adversary may respond to, key is the honest block id, value is the adversarial id
+  var blockResponses:mutable.Map[Int,Int] = mutable.Map.empty
+  // distribution of settlements
+  var settlements:List[Int] = List()
+  // settlement counter, resets when adaptive adversary restarts balanced fork attack
+  var k:Int = 1
+  // slot that represents the beginning of the balanced fork that the adaptive adversary is constructing
+  var s:Int = 0
+  //empty string to be populated as sim executes, label space is {h,H,A}
   var wt = ""
-  //Initilization
-  val newBlockInit: Block = Block(rnd.nextInt(), 0, 0, 0, 0, rnd.nextInt())
-  val temp:mutable.Map[Int,Block] =  mutable.Map(0 -> newBlockInit)
-  val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-  val tineWithPrefixes: Prefixes = Prefixes(tine, mutable.Map.empty)
 
-  fork = mutable.Map(0 -> tineWithPrefixes)
-
-  //start the simulation
+  /**
+   * Main simulation loop
+   * Player is attempting to diverge the node-view of the challengers as much as possible
+   */
   for (t <- 1 to T) {
 
     /**
      * Honest activity is represented here at the beginning of each round
      * Challengers chain select and deliver blocks to one another in order with a forced delay in slots
-     * Every Delta-divergence is forced to
+     * Every Delta-divergence is forced among challengers and the player may deliver blocks to the challenger any time
      */
     for ((id,delay) <- Random.shuffle(deliverySchedule.toList)) {
       if (delay > 0) {
@@ -524,233 +318,60 @@ class SettlementGameSim{
         blockResponses.get(id) match {
           case None =>
             challengers.foreach(h => h.chainSelect(blockDb(id))) //deliver blocks
-            val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
-            if (challengerHeads.size == 1) {
-              uniqueSlots.update(t,challengerHeads.map(blockDb(_)).toList)
-            } else {
-              forkedSlots.update(t,challengerHeads.map(blockDb(_)).toList)
-            }
-          case Some(rid) => //segment the network in 2, either due to honest tie, or player delivery of block response
+          case Some(rid) =>
+            //segment the network in 2, either due to honest tie, or player delivery of block response
             assert(blockDb(id).n == blockDb(rid).n)
             challengers.take(challengers.length/2).foreach(h => h.chainSelect(blockDb(id)))
             challengers.takeRight(challengers.length/2).foreach(h => h.chainSelect(blockDb(rid)))
-            val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
-            if (challengerHeads.size == 1) {
-              uniqueSlots.update(t,challengerHeads.map(blockDb(_)).toList)
-            } else {
-              forkedSlots.update(t,challengerHeads.map(blockDb(_)).toList)
-            }
         }
-
       }
     }
 
-    //challengers make blocks
+    val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
+
+    if (challengerHeads.size == 1) {
+      //only one node view among challengers, corresponds to unique convergence and settlement game should be reset!
+      uniqueSlots.update(t,challengerHeads)
+    } else {
+      //more than one node view among challengers, settlement game keeps going...
+      forkedSlots.update(t,challengerHeads)
+    }
+
+    //challengers make blocks with honest test strategy
     val challengerBlocks = challengers.map(h => h.test(t)).filter(_.isDefined).map(updateDatabase).toList
+
     //challengers diffuse blocks with a fixed delay
     for (block <- challengerBlocks) {
       deliverySchedule.update(block.id,bounded_delay)
     }
 
-    //get the set of distinct ids corresponding to the head of the chain among all challengers
-    //size of this set is the number of forks or diverging node views among the challengers
-    val challengerHeads:Set[Int] = challengers.map(h => h.head).toSet
-
-    val staticAdversaryBlocks:List[Block] = players.map(a => a.test(t,challengerHeads.head)).filter(_.isDefined) match {
-      //static adversary creates at least two blocks with each leadership eligibility
-      case blocks if blocks.length >= 2 => blocks.map(updateDatabase).toList
-      case blocks if blocks.length == 1 =>
-        val b = blocks.head.get
-        List(
-          Some(b),
-          Some(copyBlock(b))
-        ).map(updateDatabase)
-      case _ =>
-        List()
-    }
-
-    if (staticAdversaryBlocks.nonEmpty) covertBlocks ::= staticAdversaryBlocks.head
-    if (challengerBlocks.nonEmpty) honestBlocks = honestBlocks ++ challengerBlocks
-
     //player reacts to new blocks
-    (challengerBlocks.nonEmpty,staticAdversaryBlocks.nonEmpty) match {
+    challengerBlocks.nonEmpty match {
+
       /**
        * Empty trials, perpendicular symbol
        */
-      case (false,false) => //player does nothing
+      case false => //player does nothing
+
       /**
        * Unique honest trials, h symbol
        */
-      case (true,false) if challengerBlocks.size == 1 => // unique block
-        wt ++= "h"
-        println("h")
-        //update latest unique honest block
-        val latestBlock = challengerBlocks.head
+      case true if challengerBlocks.size == 1 => // unique block
 
-        val bestTineId = getLongestTine()
-
-        for(tine <- fork){
-          if(tine._2.tine.TineId == bestTineId){
-            tine._2.tine.blocks += (t+1 -> latestBlock)
-          }
-        }
-        updateGap()
-        updateReserve(t,wt)
-        val leadBlockNumber = blockDb(leadingBlock).n
-        if (leadBlockNumber < latestBlock.n) {
-          leadingBlock = challengerBlocks.head.id
-          covertBlocks.find(b => b.n == latestBlock.n) match {
-            case Some(block) =>
-              blockResponses.update(latestBlock.id,block.id)
-              k += 1
-            case None =>
-              // Attempt to construct a maximum depth tine from all blocks in all branches
-              settlements ::= k
-              k = 1
-              s = t
-              xid = leadingBlock
-              covertBlocks = List.empty
-              honestBlocks = List.empty
-              testCache = mutable.Map.empty
-              thrCache = mutable.Map.empty
-          }
-        }
+        //player will construct a balanced fork
 
       /**
        * Honest ties, H symbol:
        */
-      case (true,false) if challengerBlocks.size > 1 =>
-        wt ++= "H"
-        println("H")
-        //two of the honest blocks are scheduled to be delivered together so the challengers are forked
-        blockResponses.update(challengerBlocks.head.id,challengerBlocks(1).id)
-        k += 1
-        val Z: mutable.Set[Prefixes] = getZeroReachSet()
-        val R: mutable.Set[Prefixes] = getMaxReachSet()
-        //val (Z,R) = getZeroReachandMaxReachSets()
-        // find r_1 and z_1
-        var min = 99999999
-        val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-        val temp:mutable.Map[Int,Block] =  mutable.Map(t -> newBlock)
-        val tine: Tine = Tine(rnd.nextInt(),0,0,0,temp)
-        val tineWithPrefixes = Prefixes(tine, mutable.Map.empty)
-        var r_1: Prefixes = Prefixes(tine, mutable.Map.empty)
-        var z_1: Prefixes = Prefixes(tine, mutable.Map.empty)
+      case true if challengerBlocks.size > 1 => // honest tie
 
-        for(r <- R){
-          for(z <- Z){
-            // prefer having two different tines with two different head
-            if(r.tine.TineId != z.tine.TineId){
-              if(r.positions.getOrElse(z.tine.TineId,0) < min){
-                min = r.positions.getOrElse(z.tine.TineId,0)
-                r_1 = r
-                z_1 = z
-              }
-            }
-          }
-        }
+        //player will make an extension that breaks the tie
 
-        if(r_1.positions.isEmpty && z_1.positions.isEmpty){
-          for(r <- R){
-            for(z <- Z){
-              if(r.positions.getOrElse(z.tine.TineId,0) < min){
-                min = r.positions.getOrElse(z.tine.TineId,0)
-                r_1 = r
-                z_1 = z
-              }
-            }
-          }
-        }
-
-        //extend two tines
-        if(r_1.tine.TineId == z_1.tine.TineId){   // creation of a new tine
-          val tineNew: Tine = Tine(rnd.nextInt(),z_1.tine.gap,z_1.tine.reserve,z_1.tine.reach,copyBlocks(z_1.tine.blocks))
-          val r_new: Prefixes = Prefixes(tineNew, copyPositions(z_1.positions))
-          //update r_1 id to make it a new tine
-          r_new.tine.TineId = rnd.nextInt()
-          r_new.tine.blocks += (t+1 -> newBlock)
-          r_new.positions += (z_1.tine.TineId -> t)
-
-          fork += (t -> r_new)
-
-          // update the slot where the fork begins
-          val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-          for(tine <- fork){
-            if(tine._2.tine.TineId == z_1.tine.TineId){
-              tine._2.positions += (r_new.tine.TineId -> t)
-              tine._2.tine.blocks += (t+1 -> newBlockTwo)
-            }
-            else if (tine._2.tine.TineId  != r_new.tine.TineId){
-              tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
-            }
-          }
-        } else {
-          for(tine <- fork){
-            if(tine._2.tine.TineId == r_1.tine.TineId){
-              r_1.tine.blocks += (t+1 -> newBlock)
-            }
-            if(tine._2.tine.TineId == z_1.tine.TineId){
-              val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-              z_1.tine.blocks += (t+1 ->newBlockTwo)
-            }
-          }
-        }
-
-        updateGap()
-        updateReserve(t,wt)
-
-      /**
-       * Adversarial leader elected, A symbol: player may construct arbitrary forks covertly
-       */
-      case _ =>
-        wt ++= "A"
-        println("A")
     }
   }
-
-  //retrieves the mode of the head among challenger's local chain
-  val commonId:Int = challengers.map(h => blockDb(h.head).id).groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
-  val maxBlockNumber:Int = blockDb(commonId).n
-  println("Local chain head id and block number: "+commonId.toString+", "+maxBlockNumber.toString)
-  var numAdvBlocks = 0
-  breakable {
-    var head = commonId
-    while (true) {
-      val block = blockDb(head)
-      if (block.n > 0) {
-        if (block.adv) {
-          numAdvBlocks += 1
-        }
-        head = block.pid
-      } else {
-        break()
-      }
-    }
-  }
-
-  println(
-    "*************************************************************************************"+
-      "\n Settlement Game Simulation:"+
-      "\n Challengers are honestly behaving automata"+
-      "\n Players are adaptive adversaries attempting to execute a balanced fork attack"+
-      "\n*************************************************************************************"
-  )
-
-  println(s"Player Score:")
-  println(s"Proportion of adversarial blocks on dominant tine: ${numAdvBlocks.toDouble/maxBlockNumber}")
-  println(s"Proportion of adversarial stake: ${players.map(_.alpha).sum}")
-  println(s"Proportion of unique slots p_0/(p_0+p_1) = ${uniqueSlots.keySet.size.toDouble/(uniqueSlots.keySet.size+forkedSlots.keySet.size)}")
-  println(s"Expectation of settlement depth in blocks: ${settlements.sum.toDouble/settlements.size}")
-
-
-
-
-
 }
 
 object SettlementGameSim {
-
-
   def main(args: Array[String]): Unit = {
     new SettlementGameSim
   }
