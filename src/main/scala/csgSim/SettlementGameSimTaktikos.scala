@@ -335,10 +335,10 @@ class SettlementGameSimTaktikos{
     R
   }
   def updateGap() {
-    val bestTineId = getLongestTine()
+    val bestTine = getLongestTine()
     var maxTine = 0
     for(tine <- fork){
-      if(tine._2.tine.TineId == bestTineId){
+      if(tine._2.tine.TineId == bestTine){
         maxTine = tine._2.tine.blocks.size
       }
     }
@@ -389,15 +389,16 @@ class SettlementGameSimTaktikos{
 
   def createFork(w: String) ={
 
-    for (t <- 0 until w.length){
+    for (t <- 0 until w.length-1){
 
       if(w.toList(t).equals('h')) {
-        val bestTineId = getLongestTine()
+        val bestTine = getLongestTine()
         val newBlock: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
 
         for(tine <- fork){
-          if(tine._2.tine.TineId == bestTineId){
-            tine._2.tine.blocks += (t+1 -> newBlock)
+          if(tine._2.tine.TineId == bestTine){
+            tine._2.tine.blocks += (tine._2.tine.blocks.size+1 -> newBlock)
+            //println("Length of longest tine: "+tine._2.tine.blocks.size)
           }
         }
         updateGap()
@@ -451,7 +452,7 @@ class SettlementGameSimTaktikos{
           val r_new: Prefixes = Prefixes(tineNew, copyPositions(z_1.positions))
           //update r_1 id to make it a new tine
           r_new.tine.TineId = rnd.nextInt()
-          r_new.tine.blocks += (t+1 -> newBlock)
+          r_new.tine.blocks += (r_new.tine.blocks .size+1 -> newBlock)
           r_new.positions += (z_1.tine.TineId -> t)
 
           fork += (t -> r_new)
@@ -461,7 +462,7 @@ class SettlementGameSimTaktikos{
           for(tine <- fork){
             if(tine._2.tine.TineId == z_1.tine.TineId){
               tine._2.positions += (r_new.tine.TineId -> t)
-              tine._2.tine.blocks += (t+1 -> newBlockTwo)
+              tine._2.tine.blocks += (tine._2.tine.blocks.size+1 -> newBlockTwo)
             }
             else if (tine._2.tine.TineId  != r_new.tine.TineId){
               tine._2.positions += (r_new.tine.TineId -> z_1.positions.getOrElse(tine._2.tine.TineId,0))
@@ -470,11 +471,11 @@ class SettlementGameSimTaktikos{
         } else {
           for(tine <- fork){
             if(tine._2.tine.TineId == r_1.tine.TineId){
-              r_1.tine.blocks += (t+1 -> newBlock)
+              r_1.tine.blocks += (r_1.tine.blocks.size+1 -> newBlock)
             }
             if(tine._2.tine.TineId == z_1.tine.TineId){
               val newBlockTwo: Block = Block(rnd.nextInt(), t, t, t, t, rnd.nextInt())
-              z_1.tine.blocks += (t+1 ->newBlockTwo)
+              z_1.tine.blocks += (z_1.tine.blocks.size+1 ->newBlockTwo)
             }
           }
         }
@@ -604,10 +605,7 @@ class SettlementGameSimTaktikos{
         }
         updateGap()
         updateReserve(t,wt)*/
-        if(t % gamma == 0 || t == T){
-          createFork(wt)
-          wt = ""
-        }
+
 
 
 
@@ -643,10 +641,6 @@ class SettlementGameSimTaktikos{
         blockResponses.update(challengerBlocks.head.id,challengerBlocks(1).id)
         k += 1
 
-        if(t % gamma == 0 || t == T){
-          createFork(wt)
-          wt = ""
-        }
 
         /*val Z: mutable.Set[Prefixes] = getZeroReachSet()
         val R: mutable.Set[Prefixes] = getMaxReachSet()
@@ -727,8 +721,15 @@ class SettlementGameSimTaktikos{
         */
       case _ =>
         wt ++= "A"
+        wT ++= "A"
         println("A")
     }
+    if(wt.length() == gamma || t == T){
+      println(wt)
+      createFork(wt)
+      wt = ""
+    }
+
   }
 
   //retrieves the mode of the head among challenger's local chain
@@ -768,6 +769,14 @@ class SettlementGameSimTaktikos{
 
   println("Number of tines in batches: "+fork.size)
 
+  var TineId = getLongestTine()
+
+  for(tine <- fork){
+    if(tine._2.tine.TineId == TineId){
+      println("Length of longest tine: "+tine._2.tine.blocks.size)
+
+    }
+  }
   /*for(tine <- fork){
     println("Tine: "+tine._2.tine.blocks.toSeq.sortWith(_._1 < _._1))
     //println("Tine: "+tine._2.tine)
@@ -781,6 +790,14 @@ class SettlementGameSimTaktikos{
   createFork(wT)
 
   println("Number of tines in one run: "+fork.size)
+
+  val TineId2 = getLongestTine()
+  for(tine <- fork){
+    if(tine._2.tine.TineId == TineId2){
+      println("Length of longest tine: "+tine._2.tine.blocks.size)
+
+    }
+  }
 }
 
 object SettlementGameSimTaktikos extends App {
