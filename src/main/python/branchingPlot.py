@@ -14,7 +14,7 @@ x = np.arange(N)
 # Nonces
 ys = np.random.rand(N)
 # Proportion of adversarial stake
-alpha = 0.5
+alpha = 1.0
 # Forging window
 gamma = 15
 # Snow plow amplitude
@@ -99,7 +99,7 @@ for y in ys:
             parentSlot[1] = parentSlot[1]+1
             subPlotLeft.plot([x[i],x[i]],[oldParent,parentSlot[0]])
         if gamma>0:
-            trails[oldParent,int(x[i])] = int(min(x[i]-oldParent,gamma))
+            trails[oldParent,int(x[i])] = int(min(x[i]-oldParent,gamma+1))
         else:
             trails[oldParent,int(x[i])] = int(x[i]-oldParent)
     for entry in newParents:
@@ -125,9 +125,9 @@ j = 0
 for n in np.arange(N):
     for m in np.arange(N):
         if gamma>0:
-            if trails[i,j] < gamma and trails[i,j] > 0:
-                subPlotLeft.scatter(n,m,s=trails[i,j],c=spectrum[trails[i,j]].reshape(1,-1),alpha=0.5)
-            if trails[i,j] == gamma:
+            if trails[i,j] < gamma+1 and trails[i,j] > 0:
+                subPlotLeft.scatter(n,m,s=trails[i,j],c=spectrum[trails[i,j]-1].reshape(1,-1),alpha=0.5)
+            if trails[i,j] > gamma:
                 subPlotLeft.scatter(n,m,s=int(gamma*fb/fa),c=spectrum[int(gamma*fb/fa)].reshape(1,-1),alpha=0.5)
         else:
             if trails[i,j] > 0:
