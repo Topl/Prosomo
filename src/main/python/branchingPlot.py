@@ -2,22 +2,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-#AMS 2021: Visualization of nothing-at-stake branching
+# AMS 2021: Visualization of nothing-at-stake branching
+# Local difficulty adjustments are shown with tracer colors in the branching diagram (left).
+# Adversarial pseudo-predictable nonces are shown in the nonce distribution (right).
+# The pseudo-predictable nonces are super-imposed along the diagonal of the branching diagram.
+# Vertical solid lines represent extensions, many extensions may overlap with random colors to show complexity.
+# Automata are represented as branches (parent slot / block number pairs).
+# Honest extensions assume 1-alpha resources split among each maximum length branch with distinct parent slots.
 
 # Set seed for reproducibility
-#np.random.seed(123)
+# np.random.seed(123)
 
 # Number of Slots
 N = 100
 # Slots
 x = np.arange(N)
-# Nonces
+# Adversarial nonces
 ys = np.random.rand(N)
 # Proportion of adversarial stake
-alpha = 1.0
+alpha = 0.5
 # Forging window
 gamma = 15
-# Snow plow amplitude
+# Snowplow amplitude
 fa = 0.5
 # Set slope of snowplow
 c = 0.0
@@ -26,8 +32,8 @@ if gamma>0:
 # Baseline difficulty
 fb = 0.05
 # Maximum difference between leading block number and viable branches
-# branches that don't meet this threshold are cut
-branchDepth = 3
+# branches with a gap greater than branchDepth are cut
+branchDepth = 4
 
 # Snowplow curve
 def f(d):
@@ -43,7 +49,6 @@ def phi(d,a):
 # Nonce distribution plot area and colors
 area = []
 colors = []
-
 
 # Generates the spectrum of colors for trails in branching diagram
 def genSpectrum(g):
@@ -65,7 +70,8 @@ subPlotRight = fig.add_subplot(122)
 
 # Empty string with genesis prefix
 # rows are branches, columns are parent slot / block number
-parentSlots = np.zeros((1,2),dtype=int)
+branches = np.zeros((1, 2), dtype=int)
+honestHeads = np.array([[0,1.0-alpha,0]])
 
 i = 0
 for y in ys:
@@ -91,7 +97,7 @@ for y in ys:
             colors.append(spectrum[0])
             subPlotLeft.scatter(x[i], x[i], s=25.0, c=spectrum[0].reshape(1,-1),alpha=0.5)
     newParents = []
-    for parentSlot in parentSlots:
+    for parentSlot in branches:
         oldParent = parentSlot[0]
         if y < phi(x[i]-parentSlot[0],alpha):
             newParents.append([parentSlot[0],parentSlot[1]])
@@ -102,21 +108,38 @@ for y in ys:
             trails[oldParent,int(x[i])] = int(min(x[i]-oldParent,gamma+1))
         else:
             trails[oldParent,int(x[i])] = int(x[i]-oldParent)
+    def honestTest():
+        for head in honestHeads:
+            if np.random.uniform(0.0,1.0) < phi(x[i]-head[0],head[1]):
+                newParents.append([x[i],int(head[2]+1)])
+                subPlotLeft.plot([x[i],x[i]],[oldParent,x[i]])
+                return 0
+        return 1
+    test = honestTest()
     for entry in newParents:
-        parentSlots = np.vstack([parentSlots,entry])
-    parentSlots = np.unique(parentSlots, axis=0)
+        branches = np.vstack([branches, entry])
+    branches = np.unique(branches, axis=0)
     slotSet = set()
-    for parentSlot in parentSlots:
+    for parentSlot in branches:
         slotSet.add(parentSlot[0])
     parentSlotMaxBlockNumber = {x: -1 for x in slotSet}
     maxBlockNumber = 0
     for slot in slotSet:
-        for entry in parentSlots:
+        for entry in branches:
             if entry[0] == slot:
                 if entry[1] > parentSlotMaxBlockNumber[slot]:
                     parentSlotMaxBlockNumber[slot] = entry[1]
                     maxBlockNumber = max(maxBlockNumber,parentSlotMaxBlockNumber[slot])
-    parentSlots = np.array(list(filter(lambda x: maxBlockNumber-x[1] < branchDepth ,list(parentSlotMaxBlockNumber.items()))))
+    branches = np.array(list(filter(lambda x: maxBlockNumber - x[1] < branchDepth, list(parentSlotMaxBlockNumber.items()))))
+    if test<1:
+        newHeads = []
+        for branch in branches:
+            if branch[1] == maxBlockNumber:
+                newHeads.append(branch)
+        print("H:"+str(len(newHeads)))
+        honestHeads = np.empty([1,3])
+        for newHead in newHeads:
+            honestHeads = np.vstack([honestHeads,[newHead[0],(1.0-alpha)/len(newHeads),newHead[1]]])
     i = i+1
 
 # Plot the tracer points of all branches
@@ -136,8 +159,6 @@ for n in np.arange(N):
     j = j+1
     i = 0
 
-
-
 subPlotRight.scatter(x, ys, s=area, c=colors)
 subPlotRight.set_xlabel("Slot")
 subPlotRight.set_ylabel("Y")
@@ -146,10 +167,10 @@ subPlotRight.set_title("Nonce distribution, "+r'$\alpha$ = '+str(alpha))
 
 maxL = 0
 numBranch = 0
-for parentSlot in parentSlots:
+for parentSlot in branches:
     maxL = max(parentSlot[1],maxL)
     numBranch = numBranch+1
-hudStr = ("Maximum block number: "+str(maxL))+("\nFinal number of branches: "+str(numBranch))+("\nParent slot / block number pairs:\n")+str(parentSlots)
+hudStr = ("Maximum block number: "+str(maxL))+("\nFinal number of branches: "+str(numBranch))+("\nParent slot / block number pairs:\n")+str(branches)
 subPlotLeft.text(0.01, 0.99, hudStr, ha='left', va='top', transform=subPlotLeft.transAxes)
 subPlotLeft.set_xlabel("Slot")
 subPlotLeft.set_ylabel("Parent slot")
