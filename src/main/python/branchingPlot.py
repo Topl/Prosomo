@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-# AMS 2021: Visualization of nothing-at-stake branching
+# AMS 2021: Visualization of nothing-at-stake branching with local dynamic difficulty leader eligibility.
 # Local difficulty adjustments are shown with tracer colors in the branching diagram (left).
 # Adversarial pseudo-predictable nonces are shown in the nonce distribution (right).
 # The pseudo-predictable nonces are super-imposed along the diagonal of the branching diagram.
@@ -97,13 +97,13 @@ for y in ys:
             colors.append(spectrum[0])
             subPlotLeft.scatter(x[i], x[i], s=25.0, c=spectrum[0].reshape(1,-1),alpha=0.5)
     newParents = []
-    for parentSlot in branches:
-        oldParent = parentSlot[0]
-        if y < phi(x[i]-parentSlot[0],alpha):
-            newParents.append([parentSlot[0],parentSlot[1]])
-            parentSlot[0] = x[i]
-            parentSlot[1] = parentSlot[1]+1
-            subPlotLeft.plot([x[i],x[i]],[oldParent,parentSlot[0]])
+    for branch in branches:
+        oldParent = branch[0]
+        if y < phi(x[i]-branch[0],alpha):
+            newParents.append([branch[0],branch[1]])
+            branch[0] = x[i]
+            branch[1] = branch[1]+1
+            subPlotLeft.plot([x[i],x[i]],[oldParent,branch[0]])
         if gamma>0:
             trails[oldParent,int(x[i])] = int(min(x[i]-oldParent,gamma+1))
         else:
@@ -120,17 +120,17 @@ for y in ys:
         branches = np.vstack([branches, entry])
     branches = np.unique(branches, axis=0)
     slotSet = set()
-    for parentSlot in branches:
-        slotSet.add(parentSlot[0])
-    parentSlotMaxBlockNumber = {x: -1 for x in slotSet}
+    for branch in branches:
+        slotSet.add(branch[0])
+    branchMaxBlockNumber = {x: -1 for x in slotSet}
     maxBlockNumber = 0
     for slot in slotSet:
         for entry in branches:
             if entry[0] == slot:
-                if entry[1] > parentSlotMaxBlockNumber[slot]:
-                    parentSlotMaxBlockNumber[slot] = entry[1]
-                    maxBlockNumber = max(maxBlockNumber,parentSlotMaxBlockNumber[slot])
-    branches = np.array(list(filter(lambda x: maxBlockNumber - x[1] < branchDepth, list(parentSlotMaxBlockNumber.items()))))
+                if entry[1] > branchMaxBlockNumber[slot]:
+                    branchMaxBlockNumber[slot] = entry[1]
+                    maxBlockNumber = max(maxBlockNumber,branchMaxBlockNumber[slot])
+    branches = np.array(list(filter(lambda x: maxBlockNumber - x[1] < branchDepth, list(branchMaxBlockNumber.items()))))
     if test<1:
         newHeads = []
         for branch in branches:
@@ -167,8 +167,8 @@ subPlotRight.set_title("Nonce distribution, "+r'$\alpha$ = '+str(alpha))
 
 maxL = 0
 numBranch = 0
-for parentSlot in branches:
-    maxL = max(parentSlot[1],maxL)
+for branch in branches:
+    maxL = max(branch[1],maxL)
     numBranch = numBranch+1
 hudStr = ("Maximum block number: "+str(maxL))+("\nFinal number of branches: "+str(numBranch))+("\nParent slot / block number pairs:\n")+str(branches)
 subPlotLeft.text(0.01, 0.99, hudStr, ha='left', va='top', transform=subPlotLeft.transAxes)
