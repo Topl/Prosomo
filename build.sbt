@@ -79,6 +79,12 @@ libraryDependencies ++= Seq(
   scorexUtil
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
+resolvers += Resolver.bintrayRepo("cibotech", "public")
+libraryDependencies += "com.cibo" %% "evilplot-repl" % "0.6.3" // Use %%% instead of %% if you're using ScalaJS
+
+libraryDependencies += "org.plotly-scala" %%% "plotly-render" % "0.7.1"
+
+
 scalacOptions ++= Seq(
   "-Xfatal-warnings",
   "-feature",
