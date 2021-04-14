@@ -2,29 +2,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-# AMS 2021: Visualization of nothing-at-stake branching with local dynamic difficulty leader eligibility.
-# Local difficulty adjustments are shown with tracer colors in the branching diagram (left).
-# Adversarial pseudo-predictable nonces are shown in the nonce distribution (right).
-# The pseudo-predictable nonces are super-imposed along the diagonal of the branching diagram.
-# Vertical solid lines represent extensions, many extensions may overlap with random colors to show complexity.
-# Automata are represented as branches (parent slot / block number pairs).
-# Honest extensions assume 1-alpha resources split among each maximum length branch with distinct parent slots.
-
 # Set seed for reproducibility
 np.random.seed(123)
 
+data = []
+file = open('nonce_data.txt', 'r')
+for y in file.read().split('\n'):
+    data.append(float(y))
+
+# Adversarial nonces
+ys = np.asarray(data)
+
 # Number of Slots
-N = 100
+N = len(ys)
 # Slots
 slots = np.arange(N)
-# Adversarial nonces
-ys = np.random.rand(N)
+
 # Proportion of adversarial stake
-alpha = 0.5
+alpha = 1.0
 # Forging window
-gamma = 15
+gamma = 40
 # Snowplow amplitude
-fa = 0.5
+fa = 0.4
 # Set slope of snowplow
 c = 0.0
 if gamma > 0:
@@ -35,10 +34,9 @@ fb = 0.05
 # branches with a gap greater than branchDepth are cut
 branchDepth = 6
 # use challenger model, honest extensions
-useChallenger = True
+useChallenger = False
 # calculate plots
 makePlots = True
-
 
 
 # Snowplow curve
