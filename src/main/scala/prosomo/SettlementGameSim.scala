@@ -1,13 +1,16 @@
 package prosomo
 
+import java.security.MessageDigest
+
 import com.google.common.primitives.Ints
+import plotly.{Plotly, Scatter}
+import plotly.element.ScatterMode
+import plotly.layout._
 import prosomo.primitives.Ratio
 
-import java.security.MessageDigest
 import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
-
 /**
  * AMS 2021: Conditional Settlement Game Simulator
  * This represents a simple toy model of adversarial behavior in the execution of Ouroboros.
@@ -54,7 +57,7 @@ class SettlementGameSim{
   //database of all blocks, begins with genesis block, key is block id
   val blockDb:mutable.Map[Int,Block] = mutable.Map(0 -> Block(0,0,0,0,0,0))
   // Delta, the total delay in slots in the bounded delay semi-synchronous setting
-  val bounded_delay = 10
+  val bounded_delay = 0
   // Tracks honest blocks for delivery after set delay of bounded_delay slots, delay decrements with time step
   // Key is block id, value is delay that decrements with each time step
   val deliverySchedule:mutable.Map[Int,Int] = mutable.Map.empty
@@ -62,6 +65,29 @@ class SettlementGameSim{
   var thrCache:mutable.Map[(Int,Double),Double] = mutable.Map.empty
   // Test nonce cache for adversary
   var testCache:mutable.Map[(Int,Int),Double] = mutable.Map.empty
+
+  var fork: mutable.Map[Int, Tine] = mutable.Map.empty
+  var testForwardTineDB: mutable.Map[Int, Tine] = mutable.Map.empty
+  var testForwardBlockDB: mutable.Map[Int, Tine] = mutable.Map.empty
+  val initTine: Tine = Tine(rnd.nextInt(),mutable.Seq.empty, mutable.Map.empty)
+  fork += (initTine.tineId -> initTine)
+
+
+  val numForwardSlots = 500
+  val depth = 4
+
+  var x: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+  var y: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+
+  var xGame: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+  var yGame: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+
+  var xForward: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+  var yForward: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+  var xForwardMax: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+  var yForwardMax: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
+
+  val forwardBlockDb:mutable.Map[Int,Block] = mutable.Map.empty
 
   /**
    * Blocks contain only information needed to construct tines
@@ -87,27 +113,57 @@ class SettlementGameSim{
    * Tines are a set of block ids with a head and a prefix
    * @param tineId
    * @param blockIds
-   * @param prefix
+   * @param prefixes
    */
   case class Tine(
                    var tineId: Int, //id of the head of this tine
-                   blockIds:mutable.Set[Int], //block identifiers comprising this tine
-                   prefix:Int //id of the parent block at the beginning of this tine
+                   var blockIds:mutable.Seq[Int], //block identifiers comprising this tine
+                   prefixes:mutable.Map[Int,Int] //id of the parent block at the beginning of this tine
                  ) {
-    def extend(block:Block):Unit = {
+    /*def extend(block:Block):Unit = {
       val headBlock = blockDb(tineId)
       //check for consistent labelling
-      assert(block.pid == tineId)
+      //assert(block.pid == tineId)
       assert(block.sl > headBlock.sl)
       assert(block.n == headBlock.n+1)
       blockIds.add(block.id)
-      tineId = block.id
-    }
+      //tineId = block.id
+    }*/
   }
 
-  def reserve(tine:Tine,globalSlot:Int):Int = ???
-  def gap(maxTine:Tine,tine:Tine):Int = ???
-  def reach(maxTine:Tine,globalSlot:Int):Int = ???
+  // This function returns ID of a longest tine
+  def getLongestTine(): Tine = {
+    var maxLength = 0
+    var maxTineId = 0
+    val Z: mutable.Set[Int] = mutable.Set.empty
+    val R: mutable.Set[Int] = mutable.Set.empty
+
+    for(tine <- fork){
+
+      if(tine._2.blockIds.size>= maxLength ){
+        maxLength = tine._2.blockIds.size
+        maxTineId = tine._1
+      }
+    }
+    fork(maxTineId)
+  }
+  def reserve(tine:Tine,numSlot: Int):Int = {
+
+    val headTine = blockDb(tine.blockIds.head)
+
+    val listBlocks = players.map(h => h.test_forward(numSlot,tine)).toList
+
+    listBlocks(0).size-1
+  }
+  def gap(maxTine:Tine,tine:Tine):Int = {
+    val gap = maxTine.blockIds.size - tine.blockIds.size
+    gap
+  }
+  def reach(tine:Tine):Int = {
+    val longestTine = getLongestTine()
+    val gapValue = gap(longestTine,tine)
+    reserve(tine,numForwardSlots) - gapValue
+  }
   def margin(maxTine:Tine,tine:Tine,globalSlot:Int):Int = ???
 
   //challengers
@@ -195,13 +251,79 @@ class SettlementGameSim{
       }
     }
 
+
+    def testFromAnyBlock(sl:Int,pb:Block):Option[Block] = {
+      //val pb = blockDb(head)
+      val delta = sl-pb.sl
+      //cache test values
+      val y = testCache.get((sl,id)) match {
+        case Some(value) => value
+        case None =>
+          val newValue = y_test(sl,id)
+          testCache.update((sl,id),newValue)
+          newValue
+      }
+      //cache threshold values
+      val thr = thrCache.get((delta,relativeStake)) match {
+        case Some(value) => value
+        case None =>
+          val newValue = phi(delta,relativeStake)
+          thrCache.update((delta,relativeStake),newValue)
+          newValue
+      }
+      //test
+      if (y < thr) {
+        Some(Block(
+          rnd.nextInt(),
+          pb.id,
+          pb.n+1,
+          sl,
+          pb.sl,
+          y,
+          adv = true
+        ))
+      } else {
+        None
+      }
+    }
+
+    def checkTestForwardTineDB(sl: Int): Boolean = {
+      var out: Boolean = false
+      for(temp <- testForwardTineDB){
+        if(temp._1 == sl){
+          out = true
+        }
+      }
+      out
+    }
+
+    def checkTineHeight(forwardFork :  mutable.Map[Int,Tine], height: Int, pSlot: Int): Boolean = {
+      var out: Boolean = false
+      for(temp <- forwardFork){
+        if(temp._2.blockIds.size == height && forwardBlockDb(temp._2.blockIds.last).sl == pSlot){
+          out = true
+        }
+      }
+      out
+    }
+
+    def MaxLengthForwardTine(forwardFork :  mutable.Map[Int,Tine]) : Tine = {
+
+      var maxTineTemp: Tine = Tine(rnd.nextInt(),mutable.Seq.empty, mutable.Map.empty)
+      for(tine <- forwardFork){
+        if(tine._2.blockIds.size >= maxTineTemp.blockIds.size){
+          maxTineTemp = tine._2
+        }
+      }
+      maxTineTemp
+    }
     /**
      * Adversarial testing strategy to produce branching tines
      * @param t time step to test up-to and including
-     * @param b parent block
+     * @param tineInput parent tine
      * @return optional list of any blocks produced between parent slot and time step, all with same parent
      */
-    def test_forward(t:Int,b:Block): List[Option[Block]] = {
+    /*def test_forward(t:Int,b:Block): List[Option[Block]] = {
       var out:List[Option[Block]] = List.empty
       for (i <- b.sl+1 to t) {
         test(i,b.id) match {
@@ -210,7 +332,80 @@ class SettlementGameSim{
         }
       }
       out
+    }*/
+    def test_forward(t:Int,tineInput: Tine): List[Option[Block]] = {
+      var out:List[Option[Block]] = List.empty
+      var outTine: Tine = Tine(0,mutable.Seq.empty,mutable.Map.empty)
+      var pb: Block = Block(0, 0, 0, t, 0, 0)
+      if(!tineInput.blockIds.isEmpty){
+        pb = blockDb(tineInput.blockIds.last)
+      }
+
+
+      // Idea here is that we set the initial parent block (head of the tine) as a genesis block, and create all possible tines.
+      var forwardFork: mutable.Map[Int, Tine] = mutable.Map.empty
+
+
+      val tine: Tine = Tine(rnd.nextInt(),mutable.Seq(pb.id), mutable.Map.empty)
+      forwardFork = mutable.Map(tine.tineId -> tine)
+
+
+
+
+      //check if this tine is already tested forward
+      if(checkTestForwardTineDB(pb.sl) == false){
+
+        forwardBlockDb += (pb.id -> pb)
+        for (i <- pb.sl+1 to pb.sl+t) {
+          val maxTineForward = MaxLengthForwardTine(forwardFork)
+          for(tempTine <- forwardFork){
+            //if(maxTineForward.blockIds.size - tempTine._2.blockIds.size <= depth){
+
+              testFromAnyBlock(i,forwardBlockDb(tempTine._2.blockIds.last)) match {
+                case Some(block) => {
+                  forwardBlockDb += (block.id -> block)
+                  println("Block number "+block.n)
+                  val newTine = copyTine_changeId(tempTine._2,block)
+                  if(checkTineHeight(forwardFork, newTine.blockIds.size, i) == false){
+                    forwardFork += (newTine.tineId -> newTine)
+                    xForward = xForward  :+ forwardBlockDb(block.id).n.toDouble
+                    yForward = yForward :+ forwardBlockDb(block.id).psl.toDouble
+                  }
+
+                  //x +:= block.sl.toDouble
+                  //y+:= block.psl.toDouble
+
+                }
+                case None =>
+              }
+            //}
+
+
+          }
+
+        }
+        println("Check test forward "+pb.sl)
+        outTine = MaxLengthForwardTine(forwardFork)
+
+        testForwardTineDB += (pb.sl -> outTine)
+
+      }
+      else{
+        outTine  = testForwardTineDB(pb.sl)
+      }
+
+
+      for(b <- outTine.blockIds){
+        out ::= Some(forwardBlockDb(b))
+        //x +:= forwardBlockDb(b).sl.toDouble
+        //y +:= forwardBlockDb(b).psl.toDouble
+        xForwardMax = xForwardMax :+ forwardBlockDb(b).n.toDouble
+        yForwardMax = yForwardMax :+ forwardBlockDb(b).psl.toDouble
+
+      }
+      out
     }
+
   }
 
   /**
@@ -228,6 +423,25 @@ class SettlementGameSim{
     )
   }
 
+
+  def copyTine_changeId(tine: Tine,block: Block): Tine = {
+
+    //copy blockIDs
+    var newBlockIds: mutable.Seq[Int] = mutable.Seq.empty
+    val newPrefixes: mutable.Map[Int, Int] = mutable.Map.empty
+
+    for(id <- tine.blockIds){
+      newBlockIds = newBlockIds :+ id
+    }
+
+    for(prefix <- tine.prefixes){
+      newPrefixes += (prefix._1 -> prefix._2)
+    }
+
+    newBlockIds = newBlockIds :+ (block.id)
+    val newTine: Tine = Tine(rnd.nextInt(),newBlockIds,newPrefixes)
+    newTine
+  }
   //threshold phi(delta,alpha)
   def phi(d:Int,a:Double): Double = {
     1.0 - math.pow(1-f(d),a)
@@ -345,7 +559,9 @@ class SettlementGameSim{
       deliverySchedule.update(block.id,bounded_delay)
     }
 
+    val maxTine = getLongestTine()
     //player reacts to new blocks
+
     challengerBlocks.nonEmpty match {
 
       /**
@@ -356,19 +572,122 @@ class SettlementGameSim{
       /**
        * Unique honest trials, h symbol
        */
+
       case true if challengerBlocks.size == 1 => // unique block
 
         //player will construct a balanced fork
+
+        //fork(maxTine.tineId).blockIds.add(challengerBlocks.head.id)
+        println("Unique Block"+t)
+        for(tine <- fork){
+          if(tine._1 == maxTine.tineId){
+            tine._2.blockIds = tine._2.blockIds :+ (challengerBlocks.toList(0).id)
+            println("New head: "+blockDb(challengerBlocks.toList(0).id).sl)
+            println("New head: "+blockDb(tine._2.blockIds.last).sl)
+          }
+          players.map(h => h.test_forward(numForwardSlots,tine._2)).toList
+        }
+
+
+        xGame +:= challengerBlocks.head.sl.toDouble
+        yGame +:= challengerBlocks.head.psl.toDouble
 
       /**
        * Honest ties, H symbol:
        */
       case true if challengerBlocks.size > 1 => // honest tie
-
+        println("Honest Tie "+t)
         //player will make an extension that breaks the tie
+        var maxReach = 0
+        var maxReachId = 0
+        for(tine <- fork){
+          val tempReach = reach(tine._2)
+          if(maxReach <= reach(tine._2)){
+            maxReachId = tine._1
+            maxReach = tempReach
+          }
+        }
+
+
+
+        fork(maxTine.tineId).blockIds = fork(maxTine.tineId).blockIds :+ (challengerBlocks.toList(0).id)
+        if(maxReachId == maxTine.tineId){
+
+          val newTine = copyTine_changeId(maxTine,challengerBlocks.toList(1))
+          fork += (newTine.tineId -> newTine)
+        }
+        else{
+          fork(maxReachId).blockIds = fork(maxReachId).blockIds :+ (challengerBlocks.toList(1).id)
+        }
+        println("Fork Size "+fork.size)
+
+        xGame +:= challengerBlocks.toList(0).sl.toDouble
+        yGame +:= challengerBlocks.toList(0).psl.toDouble
+
+        xGame +:= challengerBlocks.toList(1).sl.toDouble
+        yGame +:= challengerBlocks.toList(1).psl.toDouble
 
     }
   }
+
+
+
+
+  /*for(tine <- fork){
+    for(id <- tine._2.blockIds){
+      print(blockDb(id).sl.toDouble)
+      x :+= blockDb(id).sl.toDouble
+      y :+= blockDb(id).nonce.toDouble
+    }
+    val trace1 = Scatter(
+      x,
+      y,
+      mode = ScatterMode(ScatterMode.Markers)
+    )
+    val layout = Layout(
+      title = "Taktikos Simulation"
+    )
+
+    val data = Seq(trace1)
+    Plotly.plot("plot.html", data, layout)
+
+
+    println("X"+x)
+    println("Y"+y)
+  }*/
+
+    val trace = Scatter(
+      x,
+      y,
+      mode = ScatterMode(ScatterMode.Markers)
+    )
+
+  val traceGame = Scatter(
+    xGame,
+    yGame,
+    mode = ScatterMode(ScatterMode.Markers)
+  )
+    val layout = Layout(
+      title = "Test Forward"
+    )
+
+    //val data_forward = Seq(traceGame,trace)
+
+  val trace_forward = Scatter(
+    xForward,
+    yForward,
+    mode = ScatterMode(ScatterMode.Markers)
+  )
+  val traceMaxforward = Scatter(
+    xForwardMax,
+    yForwardMax,
+    mode = ScatterMode(ScatterMode.Markers)
+  )
+  val data_forward = Seq(trace_forward,traceMaxforward)
+
+  Plotly.plot("plot_forward.html", data_forward, layout)
+
+    //Plotly.plot("plot_forward.html", data_forward, layout)
 }
 
 object SettlementGameSim {
