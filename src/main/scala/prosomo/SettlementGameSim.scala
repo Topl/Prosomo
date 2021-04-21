@@ -1,9 +1,10 @@
 package prosomo
 
+import java.io.{File, PrintWriter}
 import java.security.MessageDigest
 
 import com.google.common.primitives.Ints
-import plotly.{Plotly, Scatter}
+import plotly.Scatter
 import plotly.element.ScatterMode
 import plotly.layout._
 import prosomo.primitives.Ratio
@@ -12,15 +13,15 @@ import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
 /**
- * AMS 2021: Conditional Settlement Game Simulator
- * This represents a simple toy model of adversarial behavior in the execution of Ouroboros.
- * The adaptive adversary using local-dynamic-difficulty is modeled with a set of automata that behave according
- * to a longest chain selection rule.  Idealized representations of the leadership election mechanism and selection rule
- * are implemented with the intention of numerical efficiency.  This provides a performant test bed
- * to explore the nature of the adaptive adversary with a conditional leader election process.
- * Block ids are represented with randomly generated integers and the structure of tines can be constructed from the
- * labels (slots, nonces)
- */
+  * AMS 2021: Conditional Settlement Game Simulator
+  * This represents a simple toy model of adversarial behavior in the execution of Ouroboros.
+  * The adaptive adversary using local-dynamic-difficulty is modeled with a set of automata that behave according
+  * to a longest chain selection rule.  Idealized representations of the leadership election mechanism and selection rule
+  * are implemented with the intention of numerical efficiency.  This provides a performant test bed
+  * to explore the nature of the adaptive adversary with a conditional leader election process.
+  * Block ids are represented with randomly generated integers and the structure of tines can be constructed from the
+  * labels (slots, nonces)
+  */
 
 class SettlementGameSim{
 
@@ -33,14 +34,14 @@ class SettlementGameSim{
   //total number of challengers
   val numHonest:Int = numHolders - numAdversary
   //proportion of adversarial stake
-  val alpha:Double = 0.4
+  val alpha:Double = 1.0
   //number of rounds to be executed
-  val T = 10000
+  val T = 1000
   //generates random IDs for blocks
   val rnd:Random = new Random
   //epoch nonce in VRF tests
-  val seed:Array[Byte] = Array.fill(32){0x00.toByte}
-  rnd.nextBytes(seed)
+  val seed:Array[Byte] = Array.fill(32){123.toByte}
+  //rnd.nextBytes(seed)
   //map of slots that have more than one block
   val forkedSlots:mutable.Map[Int,Set[Int]] = mutable.Map.empty
   //map of slots that have one block
@@ -69,11 +70,11 @@ class SettlementGameSim{
   var fork: mutable.Map[Int, Tine] = mutable.Map.empty
   var testForwardTineDB: mutable.Map[Int, Tine] = mutable.Map.empty
   var testForwardBlockDB: mutable.Map[Int, Tine] = mutable.Map.empty
-  val initTine: Tine = Tine(rnd.nextInt(),mutable.Seq.empty, mutable.Map.empty)
+  var initTine: Tine = Tine(rnd.nextInt(), mutable.Seq(0), mutable.Map.empty)
   fork += (initTine.tineId -> initTine)
 
 
-  val numForwardSlots = 500
+  val numForwardSlots = 100
   val depth = 4
 
   var x: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
@@ -87,18 +88,32 @@ class SettlementGameSim{
   var xForwardMax: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
   var yForwardMax: mutable.IndexedSeq[Double] = mutable.IndexedSeq.empty
 
-  val forwardBlockDb:mutable.Map[Int,Block] = mutable.Map.empty
+  var forwardBlockDb: mutable.Map[Int, Block] = mutable.Map.empty
+
+  var printCount = 0
+  var Height: mutable.Seq[Int] = mutable.Seq.empty
+
+  var nonceSet: mutable.LinkedHashMap[Int, Double] = mutable.LinkedHashMap.empty
+  var blockSet: mutable.LinkedHashMap[Int, Int] = mutable.LinkedHashMap.empty
+  var occurNonce: mutable.Map[Double,Int] = mutable.LinkedHashMap.empty
+  var nonceCount: mutable.Map[Int, Int] = mutable.Map.empty
+
+  var EligibleNonce: mutable.Map[Double, mutable.Map[Int,Int]] = mutable.Map.empty
+  for(i <- 0 to numForwardSlots){
+    nonceCount += (i -> 0)
+
+  }
 
   /**
-   * Blocks contain only information needed to construct tines
-   * @param id unique block identifier (uniform random number)
-   * @param pid parent block identifier (parent uniform random number)
-   * @param n block number (label)
-   * @param sl slot (label)
-   * @param psl parent slot (parent label)
-   * @param nonce eligibility (label)
-   * @param adv adversarial block (boolean, default to false)
-   */
+    * Blocks contain only information needed to construct tines
+    * @param id unique block identifier (uniform random number)
+    * @param pid parent block identifier (parent uniform random number)
+    * @param n block number (label)
+    * @param sl slot (label)
+    * @param psl parent slot (parent label)
+    * @param nonce eligibility (label)
+    * @param adv adversarial block (boolean, default to false)
+    */
   case class Block(
                     id:Int,
                     pid:Int,
@@ -110,11 +125,11 @@ class SettlementGameSim{
                   )
 
   /**
-   * Tines are a set of block ids with a head and a prefix
-   * @param tineId
-   * @param blockIds
-   * @param prefixes
-   */
+    * Tines are a set of block ids with a head and a prefix
+    * @param tineId
+    * @param blockIds
+    * @param prefixes
+    */
   case class Tine(
                    var tineId: Int, //id of the head of this tine
                    var blockIds:mutable.Seq[Int], //block identifiers comprising this tine
@@ -211,11 +226,11 @@ class SettlementGameSim{
   //players
   case class Adversarial(id:Int, relativeStake:Double) {
     /**
-     * Defualt test strategy on the specified block identifier
-     * @param sl slot to test
-     * @param head parent block identifier
-     * @return optional new block
-     */
+      * Defualt test strategy on the specified block identifier
+      * @param sl slot to test
+      * @param head parent block identifier
+      * @return optional new block
+      */
     def test(sl:Int,head:Int):Option[Block] = {
       val pb = blockDb(head)
       val delta = sl-pb.sl
@@ -271,6 +286,7 @@ class SettlementGameSim{
           thrCache.update((delta,relativeStake),newValue)
           newValue
       }
+      nonceSet.update(sl,y)
       //test
       if (y < thr) {
         Some(Block(
@@ -311,18 +327,104 @@ class SettlementGameSim{
 
       var maxTineTemp: Tine = Tine(rnd.nextInt(),mutable.Seq.empty, mutable.Map.empty)
       for(tine <- forwardFork){
+
         if(tine._2.blockIds.size >= maxTineTemp.blockIds.size){
+
           maxTineTemp = tine._2
         }
+        else if(tine._2.blockIds.size == maxTineTemp.blockIds.size){
+          if(!tine._2.blockIds.isEmpty && maxTineTemp.blockIds.isEmpty){
+            if(forwardBlockDb(tine._2.blockIds.last).n > forwardBlockDb(maxTineTemp.blockIds.last).n){
+              maxTineTemp = tine._2
+            }
+          }
+        }
+
       }
       maxTineTemp
     }
+    def findNumBranches(forwardFork: mutable.Map[Int, Tine]): Int ={
+      var count = 0
+      println("Fork size: "+forwardFork.size)
+      for(tine <- forwardFork){
+        var check = true
+        val arr1 = tine._2.blockIds.toList
+        var arr1Str = ""
+        for(id <- arr1){
+          arr1Str = arr1Str + " " + forwardBlockDb(id).sl.toString
+        }
+        for(tineN <- forwardFork){
+          if(tine._1 != tineN._1){
+
+            val arr2 = tineN._2.blockIds.toList
+            if(arr1.size <= arr2.size){
+              val subArr2 = arr2.dropRight(arr2.size - arr1.size)
+
+              var arr2Str = ""
+
+              for(id <- subArr2){
+                arr2Str = arr2Str +" " + forwardBlockDb(id).sl.toString
+              }
+
+
+              if(arr1Str == arr2Str){
+                check = false
+
+              }
+
+            }
+          }
+
+        }
+        if(check == true){
+          println(arr1Str)
+          count = count + 1
+          for(id <- arr1){
+            val pSlot = forwardBlockDb(id).psl
+            val nonce = forwardBlockDb(id).nonce
+            nonceCount.update(pSlot,nonceCount(pSlot) + 1)
+
+            // making plots
+            /*val numOccur = EligibleNonce(pSlot)
+            //numOccur.update(nonce,pSlot)
+            //EligibleNonce.update(pSlot,numOccur)
+            if(nonce != 0.toDouble){
+              if(!occurNonce.isDefinedAt(nonce)){
+                occurNonce += (nonce -> 0)
+              }
+              else{
+                occurNonce.update(nonce,occurNonce(nonce)+1)
+              }
+
+              if(!EligibleNonce.isDefinedAt(nonce)){
+                EligibleNonce += (nonce -> mutable.Map(pSlot-> 1))
+              }
+              else{
+                occurNonce.update(nonce,occurNonce(nonce)+1)
+                val temp = EligibleNonce(nonce)
+                if(!temp.isDefinedAt(pSlot)){
+                  temp += (pSlot -> 1)
+                }
+
+                EligibleNonce.update(nonce, temp)
+              }
+            }*/
+
+          }
+
+        }
+      }
+      count
+    }
+
+
     /**
-     * Adversarial testing strategy to produce branching tines
-     * @param t time step to test up-to and including
-     * @param tineInput parent tine
-     * @return optional list of any blocks produced between parent slot and time step, all with same parent
-     */
+      * Adversarial testing strategy to produce branching tines
+      * @param t time step to test up-to and including
+      * @param tineInput parent tine
+      * @return optional list of any blocks produced between parent slot and time step, all with same parent
+      */
+
     /*def test_forward(t:Int,b:Block): List[Option[Block]] = {
       var out:List[Option[Block]] = List.empty
       for (i <- b.sl+1 to t) {
@@ -353,7 +455,7 @@ class SettlementGameSim{
 
 
       //check if this tine is already tested forward
-      if(checkTestForwardTineDB(pb.sl) == false){
+      if(checkTestForwardTineDB(pb.sl) == false){   // If the tine is tested forward then ignore
 
         forwardBlockDb += (pb.id -> pb)
         for (i <- pb.sl+1 to pb.sl+t) {
@@ -361,23 +463,26 @@ class SettlementGameSim{
           for(tempTine <- forwardFork){
             //if(maxTineForward.blockIds.size - tempTine._2.blockIds.size <= depth){
 
-              testFromAnyBlock(i,forwardBlockDb(tempTine._2.blockIds.last)) match {
-                case Some(block) => {
-                  forwardBlockDb += (block.id -> block)
-                  println("Block number "+block.n)
-                  val newTine = copyTine_changeId(tempTine._2,block)
-                  if(checkTineHeight(forwardFork, newTine.blockIds.size, i) == false){
-                    forwardFork += (newTine.tineId -> newTine)
-                    xForward = xForward  :+ forwardBlockDb(block.id).n.toDouble
-                    yForward = yForward :+ forwardBlockDb(block.id).psl.toDouble
-                  }
+            testFromAnyBlock(i,forwardBlockDb(tempTine._2.blockIds.last)) match {
+              case Some(block) => {
+                forwardBlockDb += (block.id -> block)
+                val newTine = copyTine_changeId(tempTine._2,block)
+                //if(checkTineHeight(forwardFork, newTine.blockIds.size, i) == false){
+                forwardFork += (newTine.tineId -> newTine)
 
-                  //x +:= block.sl.toDouble
-                  //y+:= block.psl.toDouble
+                //}
 
+                if(!blockSet.isDefinedAt(block.sl)){
+                  blockSet += (block.sl -> block.n)
                 }
-                case None =>
+                else{
+                  if(block.n > blockSet(block.sl)){
+                    blockSet.update(block.sl,block.n )
+                  }
+                }
               }
+              case None =>
+            }
             //}
 
 
@@ -403,14 +508,32 @@ class SettlementGameSim{
         yForwardMax = yForwardMax :+ forwardBlockDb(b).psl.toDouble
 
       }
+
+      //printing all tines
+      /*for(tempTine <- forwardFork){
+        for(id <- tempTine._2.blockIds){
+          print(forwardBlockDb(id).sl+" ")
+        }
+        print("\n")
+
+      }*/
+      print("Max Tine: ")
+      for(id <- outTine.blockIds){
+        print(forwardBlockDb(id).sl+" ")
+      }
+      print("\n")
+      println("Height: "+forwardBlockDb(outTine.blockIds.last).n)
+      Height = Height :+ forwardBlockDb(outTine.blockIds.last).n
+
+      println("Number of branches: "+findNumBranches(forwardFork))
       out
     }
 
   }
 
   /**
-   * Makes a copy of a block with the same labels and parent but a different unique identifier
-   */
+    * Makes a copy of a block with the same labels and parent but a different unique identifier
+    */
   def copyBlock_changeId(b:Block):Block = {
     Block(
       rnd.nextInt(), //make an arbitrary new fork
@@ -513,11 +636,38 @@ class SettlementGameSim{
   //empty string to be populated as sim executes, label space is {h,H,A}
   var wt = ""
 
+
+  // Write ordered nonces to a file
+  val pw = new PrintWriter(new File("nonce_data.txt" ))
+  for(tine <- fork){
+    val tempReach = reach(tine._2)
+  }
+  val nonceSetOrdered = mutable.LinkedHashMap(nonceSet.toSeq.sortBy(_._1):_*)
+  for(nonce <- nonceSetOrdered){
+    if(nonce._1 == 100){
+      pw.write(nonce._2.toString)
+    }
+    else{
+      pw.write(nonce._2.toString+"\n")
+    }
+
+  }
+  fork = mutable.Map.empty
+  testForwardTineDB = mutable.Map.empty
+  testForwardBlockDB = mutable.Map.empty
+  initTine = Tine(rnd.nextInt(),mutable.Seq(0), mutable.Map.empty)
+  fork += (initTine.tineId -> initTine)
+  forwardBlockDb = mutable.Map.empty
+
+
+
+  nonceSet = mutable.LinkedHashMap.empty
+  pw.close
   /**
-   * Main simulation loop
-   * Player is attempting to diverge the node-view of the challengers as much as possible
-   */
-  for (t <- 1 to T) {
+    * Main simulation loop
+    * Player is attempting to diverge the node-view of the challengers as much as possible
+    */
+  /*for (t <- 1 to T) {
 
     /**
      * Honest activity is represented here at the beginning of each round
@@ -630,7 +780,7 @@ class SettlementGameSim{
     }
   }
 
-
+*/
 
 
   /*for(tine <- fork){
@@ -656,22 +806,42 @@ class SettlementGameSim{
     println("Y"+y)
   }*/
 
-    val trace = Scatter(
-      x,
-      y,
-      mode = ScatterMode(ScatterMode.Markers)
-    )
+  /*for(psl <- nonceCount){
+  if(psl._1 != 0 && psl._2 != 0){
+    xForward = xForward  :+ psl._1.toDouble
+    yForward = yForward :+ psl._2.toDouble
+  }
+
+}*/
+
+  //Print out Parent Slot and Block number pairs
+  val nonceBlockOrdered = mutable.LinkedHashMap(blockSet.toSeq.sortBy(_._1):_*)
+  println("Parent Slot - Block Number")
+  for(pair <- nonceBlockOrdered){
+    println("["+pair._1+","+pair._2+"]")
+  }
+  /*
+  for(nonce <- EligibleNonce){
+      xForward = xForward  :+ nonce._1.toDouble
+     // yForward = yForward :+ nonce._2.
+
+  }*/
+  val trace = Scatter(
+    x,
+    y,
+    mode = ScatterMode(ScatterMode.Markers)
+  )
 
   val traceGame = Scatter(
     xGame,
     yGame,
     mode = ScatterMode(ScatterMode.Markers)
   )
-    val layout = Layout(
-      title = "Test Forward"
-    )
+  val layout = Layout(
+    title = "Test Forward"
+  )
 
-    //val data_forward = Seq(traceGame,trace)
+  //val data_forward = Seq(traceGame,trace)
 
   val trace_forward = Scatter(
     xForward,
@@ -685,9 +855,8 @@ class SettlementGameSim{
   )
   val data_forward = Seq(trace_forward,traceMaxforward)
 
-  Plotly.plot("plot_forward.html", data_forward, layout)
+  //Plotly.plot("plot_forward.html", data_forward, layout)
 
-    //Plotly.plot("plot_forward.html", data_forward, layout)
 }
 
 object SettlementGameSim {
