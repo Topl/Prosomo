@@ -1,14 +1,10 @@
-package prosomo
+package csgSim
+
+import com.google.common.primitives.Ints
+import prosomo.primitives.Ratio
 
 import java.io.{File, PrintWriter}
 import java.security.MessageDigest
-
-import com.google.common.primitives.Ints
-import plotly.Scatter
-import plotly.element.ScatterMode
-import plotly.layout._
-import prosomo.primitives.Ratio
-
 import scala.collection.mutable
 import scala.math.BigInt
 import scala.util.Random
@@ -23,7 +19,7 @@ import scala.util.Random
   * labels (slots, nonces)
   */
 
-class SettlementGameSim{
+class SettlementGame{
 
   //print as the simulation executes
   val printGame = true
@@ -826,41 +822,41 @@ class SettlementGameSim{
      // yForward = yForward :+ nonce._2.
 
   }*/
-  val trace = Scatter(
-    x,
-    y,
-    mode = ScatterMode(ScatterMode.Markers)
-  )
-
-  val traceGame = Scatter(
-    xGame,
-    yGame,
-    mode = ScatterMode(ScatterMode.Markers)
-  )
-  val layout = Layout(
-    title = "Test Forward"
-  )
-
-  //val data_forward = Seq(traceGame,trace)
-
-  val trace_forward = Scatter(
-    xForward,
-    yForward,
-    mode = ScatterMode(ScatterMode.Markers)
-  )
-  val traceMaxforward = Scatter(
-    xForwardMax,
-    yForwardMax,
-    mode = ScatterMode(ScatterMode.Markers)
-  )
-  val data_forward = Seq(trace_forward,traceMaxforward)
+//  val trace = Scatter(
+//    x,
+//    y,
+//    mode = ScatterMode(ScatterMode.Markers)
+//  )
+//
+//  val traceGame = Scatter(
+//    xGame,
+//    yGame,
+//    mode = ScatterMode(ScatterMode.Markers)
+//  )
+//  val layout = Layout(
+//    title = "Test Forward"
+//  )
+//
+//  //val data_forward = Seq(traceGame,trace)
+//
+//  val trace_forward = Scatter(
+//    xForward,
+//    yForward,
+//    mode = ScatterMode(ScatterMode.Markers)
+//  )
+//  val traceMaxforward = Scatter(
+//    xForwardMax,
+//    yForwardMax,
+//    mode = ScatterMode(ScatterMode.Markers)
+//  )
+//  val data_forward = Seq(trace_forward,traceMaxforward)
 
   //Plotly.plot("plot_forward.html", data_forward, layout)
 
 }
 
-object SettlementGameSim {
+object SettlementGame {
   def main(args: Array[String]): Unit = {
-    new SettlementGameSim
+    new SettlementGame
   }
 }
